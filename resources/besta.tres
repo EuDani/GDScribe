@@ -3,12 +3,15 @@
 [ext_resource type="Script" uid="uid://crmjns4d70w7d" path="res://scripts/resources/ability_resource.gd" id="1_esd3p"]
 [ext_resource type="Script" uid="uid://blq621386htl8" path="res://scripts/resources/card_resource.gd" id="2_5hjgv"]
 [ext_resource type="Texture2D" uid="uid://gu7unkujadh" path="res://artwork/besta.jpg" id="2_qynnk"]
+[ext_resource type="Resource" path="res://resources/abilities/ataque_a_distancia.tres" id="3_distancia"]
 
 [resource]
 script = ExtResource("2_5hjgv")
 id = "008"
 card_name = "Besta"
+description = "Uma besta montada sobre rodas, pesada demais pra carregar, mas capaz de perfurar qualquer coisa que se mova pelo campo — inclusive no ar."
 artwork = ExtResource("2_qynnk")
 category = 1
 attack = 2
+abilities = Array[ExtResource("1_esd3p")]([ExtResource("3_distancia")])
 metadata/_custom_type_script = "uid://blq621386htl8"

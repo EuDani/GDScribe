@@ -12,7 +12,19 @@ extends Resource
 @export var icon: Texture2D
 
 @export_group("Execução")
-## Determina quando/como a habilidade é disparada (ex: ao entrar no campo, ao atacar, ao morrer, etc)
-## String livre por enquanto; valores usados até agora seguem o padrão
-## "ON_<EVENTO>" (ex.: "ON_PLAY" = ao ser invocada em campo).
+## Determina quando/como a habilidade é disparada. String livre por
+## enquanto (sem enum, pra não travar a criação de novas habilidades antes
+## do motor de execução existir), mas os valores usados na biblioteca em
+## resources/abilities/ seguem este vocabulário:
+## - "ON_PLAY": ao ser invocada em campo
+## - "ON_HIT": ao ser atingida em combate
+## - "ON_ATTACK": ao atacar
+## - "ON_DEATH": ao morrer (por qualquer causa)
+## - "ON_ALLY_DEATH": quando outra carta sua morre em combate
+## - "ON_SACRIFICE": ao ser sacrificada pelo barril de Sangue
+## - "ON_DRAW": ao ser comprada do baralho
+## - "ON_TURN_START": no início do turno do dono
+## - "ON_SURVIVE_TURN": ao sobreviver um turno inteiro em campo
+## - "PASSIVE_STATIC": efeito permanente, sem gatilho pontual (ex.: Voar,
+##   Liderança) — vale enquanto a carta estiver viva/em campo
 @export var trigger_type: String = "ON_PLAY"

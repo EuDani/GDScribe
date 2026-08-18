@@ -3,13 +3,16 @@
 [ext_resource type="Script" uid="uid://crmjns4d70w7d" path="res://scripts/resources/ability_resource.gd" id="1_8acop"]
 [ext_resource type="Script" uid="uid://blq621386htl8" path="res://scripts/resources/card_resource.gd" id="2_8y1vm"]
 [ext_resource type="Texture2D" uid="uid://d3rc5cwskse6f" path="res://artwork/barbaro.jpg" id="2_m3mle"]
+[ext_resource type="Resource" path="res://resources/abilities/investida_brutal.tres" id="3_investida"]
 
 [resource]
 script = ExtResource("2_8y1vm")
 id = "006"
 card_name = "Barbaro"
+description = "Não conhece formação nem estratégia — só a fúria de atravessar qualquer linha de frente que encontrar pela frente."
 artwork = ExtResource("2_m3mle")
 blood_cost = 3
 attack = 3
 defense = 2
+abilities = Array[ExtResource("1_8acop")]([ExtResource("3_investida")])
 metadata/_custom_type_script = "uid://blq621386htl8"

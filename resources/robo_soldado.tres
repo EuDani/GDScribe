@@ -3,14 +3,17 @@
 [ext_resource type="Script" uid="uid://crmjns4d70w7d" path="res://scripts/resources/ability_resource.gd" id="1_0rhkc"]
 [ext_resource type="Texture2D" uid="uid://dschdt116pcxw" path="res://artwork/soldado_robo.jpg" id="2_0rhkc"]
 [ext_resource type="Script" uid="uid://blq621386htl8" path="res://scripts/resources/card_resource.gd" id="3_np4rb"]
+[ext_resource type="Resource" path="res://resources/abilities/golpe_duplo.tres" id="4_golpe_duplo"]
 
 [resource]
 script = ExtResource("3_np4rb")
 id = "robo_soldado"
 card_name = "Robo Soldado"
+description = "Construído pra repetir o mesmo golpe sem cansar, sem hesitar e sem parar."
 artwork = ExtResource("2_0rhkc")
 category = 3
 blood_cost = 3
 attack = 3
 defense = 3
+abilities = Array[ExtResource("1_0rhkc")]([ExtResource("4_golpe_duplo")])
 metadata/_custom_type_script = "uid://blq621386htl8"

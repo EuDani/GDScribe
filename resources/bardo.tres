@@ -3,12 +3,16 @@
 [ext_resource type="Script" uid="uid://crmjns4d70w7d" path="res://scripts/resources/ability_resource.gd" id="1_8tw34"]
 [ext_resource type="Script" uid="uid://blq621386htl8" path="res://scripts/resources/card_resource.gd" id="2_becm6"]
 [ext_resource type="Texture2D" uid="uid://dl223dpaj0d1w" path="res://artwork/bardo.jpg" id="2_ejltx"]
+[ext_resource type="Resource" path="res://resources/abilities/lideranca.tres" id="3_lideranca"]
+[ext_resource type="Resource" path="res://resources/abilities/grito_de_socorro.tres" id="4_grito"]
 
 [resource]
 script = ExtResource("2_becm6")
 id = "007"
 card_name = "Bardo"
+description = "Suas canções não ferem ninguém, mas erguem o moral de um exército inteiro e trazem mais braços pra luta."
 artwork = ExtResource("2_ejltx")
 blood_cost = 0
 attack = 0
+abilities = Array[ExtResource("1_8tw34")]([ExtResource("3_lideranca"), ExtResource("4_grito")])
 metadata/_custom_type_script = "uid://blq621386htl8"

@@ -38,6 +38,16 @@ func _ready() -> void:
 	_base_scale = scale
 
 
+## Além do preenchimento visual herdado, aplica a regra especial de cartas
+## com a habilidade "Passo Rápido" (CardResource.can_attack_on_turn_created):
+## essas nascem sem doença de invocação e já podem atacar no turno em que
+## foram invocadas.
+func update_visuals() -> void:
+	super.update_visuals()
+	if card_data:
+		is_summoning_sick = not card_data.can_attack_on_turn_created
+
+
 ## Regra de elegibilidade para ser escolhida como atacante nesta fase de
 ## combate: precisa ter passado por pelo menos um início de turno do dono
 ## desde que foi invocada, e ainda não ter atacado neste turno.

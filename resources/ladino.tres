@@ -3,13 +3,16 @@
 [ext_resource type="Script" uid="uid://crmjns4d70w7d" path="res://scripts/resources/ability_resource.gd" id="1_iiwjo"]
 [ext_resource type="Script" uid="uid://blq621386htl8" path="res://scripts/resources/card_resource.gd" id="2_bs5p8"]
 [ext_resource type="Texture2D" uid="uid://cpfj25hq8r2bl" path="res://artwork/ladino.jpg" id="2_v4nd6"]
+[ext_resource type="Resource" path="res://resources/abilities/capa_do_enganador.tres" id="3_capa"]
 
 [resource]
 script = ExtResource("2_bs5p8")
 id = "ladino"
 card_name = "Ladino"
+description = "Nunca está onde parece estar — quando a lâmina inimiga chega, ele já foi embora."
 artwork = ExtResource("2_v4nd6")
 blood_cost = 2
 attack = 2
 defense = 2
+abilities = Array[ExtResource("1_iiwjo")]([ExtResource("3_capa")])
 metadata/_custom_type_script = "uid://blq621386htl8"

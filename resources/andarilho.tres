@@ -3,11 +3,15 @@
 [ext_resource type="Script" uid="uid://crmjns4d70w7d" path="res://scripts/resources/ability_resource.gd" id="1_veh4o"]
 [ext_resource type="Script" uid="uid://blq621386htl8" path="res://scripts/resources/card_resource.gd" id="2_p0has"]
 [ext_resource type="Texture2D" uid="uid://bqryr2aefp6q3" path="res://artwork/andarilho.jpg" id="2_pnu1q"]
+[ext_resource type="Resource" path="res://resources/abilities/passo_rapido.tres" id="3_passo_rapido"]
 
 [resource]
 script = ExtResource("2_p0has")
 id = "andarilho"
 card_name = "Andarilho"
+description = "Percorreu estradas que ninguém mais ousa pisar, sempre um passo à frente de qualquer perigo — ou de qualquer exército."
 artwork = ExtResource("2_pnu1q")
 defense = 3
+can_attack_on_turn_created = true
+abilities = Array[ExtResource("1_veh4o")]([ExtResource("3_passo_rapido")])
 metadata/_custom_type_script = "uid://blq621386htl8"

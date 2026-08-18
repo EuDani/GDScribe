@@ -3,10 +3,13 @@
 [ext_resource type="Script" uid="uid://crmjns4d70w7d" path="res://scripts/resources/ability_resource.gd" id="1_e5881"]
 [ext_resource type="Script" uid="uid://blq621386htl8" path="res://scripts/resources/card_resource.gd" id="2_3wu60"]
 [ext_resource type="Texture2D" uid="uid://de5iypclt8mvm" path="res://artwork/crianca_cavaleiro.jpg" id="2_ul2ve"]
+[ext_resource type="Resource" path="res://resources/abilities/recruta_promissor.tres" id="3_promissor"]
 
 [resource]
 script = ExtResource("2_3wu60")
 id = "knight_kid"
 card_name = "Criança Cavaleiro"
+description = "Muito jovem pra guerra, mas convencida de que vai crescer pra se tornar o maior cavaleiro do reino."
 artwork = ExtResource("2_ul2ve")
+abilities = Array[ExtResource("1_e5881")]([ExtResource("3_promissor")])
 metadata/_custom_type_script = "uid://blq621386htl8"

@@ -3,14 +3,18 @@
 [ext_resource type="Script" uid="uid://crmjns4d70w7d" path="res://scripts/resources/ability_resource.gd" id="1_gf654"]
 [ext_resource type="Texture2D" uid="uid://cyvhaxe3fsydu" path="res://artwork/mago_sombrio.jpg" id="2_3tltx"]
 [ext_resource type="Script" uid="uid://blq621386htl8" path="res://scripts/resources/card_resource.gd" id="2_igyie"]
+[ext_resource type="Resource" path="res://resources/abilities/golpe_fatal.tres" id="3_golpe_fatal"]
+[ext_resource type="Resource" path="res://resources/abilities/resgate.tres" id="4_resgate"]
 
 [resource]
 script = ExtResource("2_igyie")
 id = "mago_sombrio"
 card_name = "Mago Sombrio"
+description = "Negociou poder com forças que preferem não ser nomeadas — e, quando morre, elas cobram o que lhes é devido."
 artwork = ExtResource("2_3tltx")
 category = 2
 blood_cost = 4
 attack = 3
 defense = 3
+abilities = Array[ExtResource("1_gf654")]([ExtResource("3_golpe_fatal"), ExtResource("4_resgate")])
 metadata/_custom_type_script = "uid://blq621386htl8"

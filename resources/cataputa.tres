@@ -3,13 +3,16 @@
 [ext_resource type="Script" uid="uid://crmjns4d70w7d" path="res://scripts/resources/ability_resource.gd" id="1_8qug6"]
 [ext_resource type="Texture2D" uid="uid://c6k2nebrr48a8" path="res://artwork/cataputa.jpg" id="2_jxmkd"]
 [ext_resource type="Script" uid="uid://blq621386htl8" path="res://scripts/resources/card_resource.gd" id="2_v3cbf"]
+[ext_resource type="Resource" path="res://resources/abilities/furia_total.tres" id="3_furia"]
 
 [resource]
 script = ExtResource("2_v3cbf")
 id = "008"
 card_name = "Catapulta"
+description = "Arremessa pedras capazes de esmagar uma linha inteira de defesa de uma só vez."
 artwork = ExtResource("2_jxmkd")
 category = 1
 blood_cost = 3
 attack = 5
+abilities = Array[ExtResource("1_8qug6")]([ExtResource("3_furia")])
 metadata/_custom_type_script = "uid://blq621386htl8"

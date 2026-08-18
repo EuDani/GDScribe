@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="AbilityResource" format=3]
+
+[ext_resource type="Script" uid="uid://crmjns4d70w7d" path="res://scripts/resources/ability_resource.gd" id="1_ability"]
+
+[resource]
+script = ExtResource("1_ability")
+id = "armadilha_de_aco"
+ability_name = "Armadilha de Aço"
+description = "Se esta carta morrer bloqueando um ataque, a atacante também morre junto com ela."
+trigger_type = "ON_DEATH"
+metadata/_custom_type_script = "uid://crmjns4d70w7d"

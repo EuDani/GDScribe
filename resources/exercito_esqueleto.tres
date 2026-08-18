@@ -3,14 +3,18 @@
 [ext_resource type="Script" uid="uid://crmjns4d70w7d" path="res://scripts/resources/ability_resource.gd" id="1_im71t"]
 [ext_resource type="Texture2D" uid="uid://df3dg24qf0g3b" path="res://artwork/exercito_esqueletos.jpg" id="2_bg7q2"]
 [ext_resource type="Script" uid="uid://blq621386htl8" path="res://scripts/resources/card_resource.gd" id="2_voar3"]
+[ext_resource type="Resource" path="res://resources/abilities/rei_ossudo.tres" id="3_rei_ossudo"]
+[ext_resource type="Resource" path="res://resources/abilities/gemeos_de_batalha.tres" id="4_gemeos"]
 
 [resource]
 script = ExtResource("2_voar3")
 id = "exercito_esqueleto"
 card_name = "Exercito de Esqueleto"
+description = "Um comandante caído que se recusa a deixar seus soldados descansarem, nem depois da morte."
 artwork = ExtResource("2_bg7q2")
 blood_cost = 3
 attack = 4
 defense = 2
 horde = 3
+abilities = Array[ExtResource("1_im71t")]([ExtResource("3_rei_ossudo"), ExtResource("4_gemeos")])
 metadata/_custom_type_script = "uid://blq621386htl8"

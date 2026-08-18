@@ -3,14 +3,18 @@
 [ext_resource type="Script" uid="uid://crmjns4d70w7d" path="res://scripts/resources/ability_resource.gd" id="1_ucc3c"]
 [ext_resource type="Texture2D" uid="uid://bx0hagxliueij" path="res://artwork/lobsomem.jpg" id="2_jpbfu"]
 [ext_resource type="Script" uid="uid://blq621386htl8" path="res://scripts/resources/card_resource.gd" id="2_ur46r"]
+[ext_resource type="Resource" path="res://resources/abilities/recruta_promissor.tres" id="3_promissor"]
+[ext_resource type="Resource" path="res://resources/abilities/intimidacao.tres" id="4_intimidacao"]
 
 [resource]
 script = ExtResource("2_ur46r")
 id = "lobsomem"
 card_name = "Lobsomem"
+description = "Sob a lua cheia, o homem desaparece e só resta a fera — mais forte a cada noite que sobrevive."
 artwork = ExtResource("2_jpbfu")
 category = 2
 blood_cost = 3
 attack = 3
 defense = 4
+abilities = Array[ExtResource("1_ucc3c")]([ExtResource("3_promissor"), ExtResource("4_intimidacao")])
 metadata/_custom_type_script = "uid://blq621386htl8"

@@ -3,6 +3,8 @@
 [ext_resource type="Script" uid="uid://crmjns4d70w7d" path="res://scripts/resources/ability_resource.gd" id="1_xoytj"]
 [ext_resource type="Texture2D" uid="uid://b2r1liclew5gv" path="res://artwork/alquimista.jpg" id="2_p7kht"]
 [ext_resource type="Script" uid="uid://blq621386htl8" path="res://scripts/resources/card_resource.gd" id="2_yecxa"]
+[ext_resource type="Resource" path="res://resources/abilities/batedor.tres" id="3_batedor"]
+[ext_resource type="Resource" path="res://resources/abilities/alistador.tres" id="4_alistador"]
 
 [resource]
 script = ExtResource("2_yecxa")
@@ -11,4 +13,5 @@ card_name = "Alquimista"
 description = "Um estudioso obcecado por transformar matéria e vida, manipulando substâncias misteriosas em busca de algo maior."
 artwork = ExtResource("2_p7kht")
 defense = 2
+abilities = Array[ExtResource("1_xoytj")]([ExtResource("3_batedor"), ExtResource("4_alistador")])
 metadata/_custom_type_script = "uid://blq621386htl8"

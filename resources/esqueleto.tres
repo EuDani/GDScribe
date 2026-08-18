@@ -3,12 +3,15 @@
 [ext_resource type="Script" uid="uid://crmjns4d70w7d" path="res://scripts/resources/ability_resource.gd" id="1_vsotx"]
 [ext_resource type="Script" uid="uid://blq621386htl8" path="res://scripts/resources/card_resource.gd" id="2_gtgvm"]
 [ext_resource type="Texture2D" uid="uid://cvjsavybhnyky" path="res://artwork/esqueleto.jpg" id="2_nj3ir"]
+[ext_resource type="Resource" path="res://resources/abilities/ultima_vontade.tres" id="3_ultima_vontade"]
 
 [resource]
 script = ExtResource("2_gtgvm")
 id = "esqueleto"
 card_name = "Esqueleto"
+description = "Já morreu uma vez. Isso não parece incomodá-lo."
 artwork = ExtResource("2_nj3ir")
 category = 2
 attack = 2
+abilities = Array[ExtResource("1_vsotx")]([ExtResource("3_ultima_vontade")])
 metadata/_custom_type_script = "uid://blq621386htl8"

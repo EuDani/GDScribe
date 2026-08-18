@@ -3,15 +3,18 @@
 [ext_resource type="Script" uid="uid://crmjns4d70w7d" path="res://scripts/resources/ability_resource.gd" id="1_gvbw4"]
 [ext_resource type="Texture2D" uid="uid://iitbi8xeudnm" path="res://artwork/armadilha.jpg" id="2_pxvnx"]
 [ext_resource type="Script" uid="uid://blq621386htl8" path="res://scripts/resources/card_resource.gd" id="2_wjvqt"]
+[ext_resource type="Resource" path="res://resources/abilities/emboscada.tres" id="3_emboscada"]
+[ext_resource type="Resource" path="res://resources/abilities/armadilha_de_aco.tres" id="4_armadilha_aco"]
 
 [resource]
 script = ExtResource("2_wjvqt")
 id = "armadilha"
 card_name = "Armadilha"
-description = "	"
+description = "Nenhuma lâmina, nenhum grito de guerra — só o estalo súbito de um mecanismo escondido no chão."
 artwork = ExtResource("2_pxvnx")
 category = 1
 blood_cost = 2
 attack = 0
 defense = 3
+abilities = Array[ExtResource("1_gvbw4")]([ExtResource("3_emboscada"), ExtResource("4_armadilha_aco")])
 metadata/_custom_type_script = "uid://blq621386htl8"

@@ -3,11 +3,14 @@
 [ext_resource type="Script" uid="uid://crmjns4d70w7d" path="res://scripts/resources/ability_resource.gd" id="1_1fexf"]
 [ext_resource type="Texture2D" uid="uid://cci0ta5babcg3" path="res://artwork/rato_alado.jpg" id="2_1fexf"]
 [ext_resource type="Script" uid="uid://blq621386htl8" path="res://scripts/resources/card_resource.gd" id="3_erep7"]
+[ext_resource type="Resource" path="res://resources/abilities/voar.tres" id="4_voar"]
 
 [resource]
 script = ExtResource("3_erep7")
 id = "rato_alado"
 card_name = "Rato Alado"
+description = "Pequeno demais pra ser uma ameaça sozinho, rápido demais pra ser alcançado no ar."
 artwork = ExtResource("2_1fexf")
 category = 2
+abilities = Array[ExtResource("1_1fexf")]([ExtResource("4_voar")])
 metadata/_custom_type_script = "uid://blq621386htl8"

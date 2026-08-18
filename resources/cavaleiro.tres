@@ -3,13 +3,17 @@
 [ext_resource type="Script" uid="uid://crmjns4d70w7d" path="res://scripts/resources/ability_resource.gd" id="1_mf8j8"]
 [ext_resource type="Script" uid="uid://blq621386htl8" path="res://scripts/resources/card_resource.gd" id="2_6prc4"]
 [ext_resource type="Texture2D" uid="uid://ss5y3pvo6kim" path="res://artwork/cavaleiro.jpg" id="2_v1hud"]
+[ext_resource type="Resource" path="res://resources/abilities/alcance.tres" id="3_alcance"]
+[ext_resource type="Resource" path="res://resources/abilities/sacrificio_nobre.tres" id="4_sacrificio"]
 
 [resource]
 script = ExtResource("2_6prc4")
 id = "cavaleiro"
 card_name = "Cavaleiro"
+description = "Jurou proteger o reino com a própria vida — e a lança longa o suficiente pra alcançar até quem tenta fugir pelo ar."
 artwork = ExtResource("2_v1hud")
 blood_cost = 2
 attack = 3
 defense = 2
+abilities = Array[ExtResource("1_mf8j8")]([ExtResource("3_alcance"), ExtResource("4_sacrificio")])
 metadata/_custom_type_script = "uid://blq621386htl8"

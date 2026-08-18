@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="AbilityResource" format=3]
+
+[ext_resource type="Script" uid="uid://crmjns4d70w7d" path="res://scripts/resources/ability_resource.gd" id="1_ability"]
+
+[resource]
+script = ExtResource("1_ability")
+id = "saqueador"
+ability_name = "Saqueador"
+description = "Ao ser invocada, seu dono ganha 1 de Sangue extra imediatamente."
+trigger_type = "ON_PLAY"
+metadata/_custom_type_script = "uid://crmjns4d70w7d"

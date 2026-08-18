@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="AbilityResource" format=3]
+
+[ext_resource type="Script" uid="uid://crmjns4d70w7d" path="res://scripts/resources/ability_resource.gd" id="1_ability"]
+
+[resource]
+script = ExtResource("1_ability")
+id = "golpe_em_arco"
+ability_name = "Golpe em Arco"
+description = "Se o ataque desta carta for bloqueado, o excesso de dano também atinge outra carta aleatória do oponente."
+trigger_type = "ON_ATTACK"
+metadata/_custom_type_script = "uid://crmjns4d70w7d"

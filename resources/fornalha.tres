@@ -3,14 +3,17 @@
 [ext_resource type="Script" uid="uid://crmjns4d70w7d" path="res://scripts/resources/ability_resource.gd" id="1_y5hd7"]
 [ext_resource type="Script" uid="uid://blq621386htl8" path="res://scripts/resources/card_resource.gd" id="2_33acw"]
 [ext_resource type="Texture2D" uid="uid://bl6h07lnb604v" path="res://artwork/fornalha.jpg" id="2_41vp8"]
+[ext_resource type="Resource" path="res://resources/abilities/saqueador.tres" id="3_saqueador"]
 
 [resource]
 script = ExtResource("2_33acw")
 id = "fornalha"
 card_name = "Fornalha"
+description = "Queima dia e noite, forjando armas e fundindo tudo que os batedores trazem do campo de batalha."
 artwork = ExtResource("2_41vp8")
 category = 3
 blood_cost = 3
 attack = 2
 defense = 4
+abilities = Array[ExtResource("1_y5hd7")]([ExtResource("3_saqueador")])
 metadata/_custom_type_script = "uid://blq621386htl8"

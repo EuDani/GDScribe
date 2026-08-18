@@ -3,12 +3,16 @@
 [ext_resource type="Script" uid="uid://crmjns4d70w7d" path="res://scripts/resources/ability_resource.gd" id="1_t6ebg"]
 [ext_resource type="Texture2D" uid="uid://cojfbkeh34mok" path="res://artwork/pacifista.jpg" id="2_t6ebg"]
 [ext_resource type="Script" uid="uid://blq621386htl8" path="res://scripts/resources/card_resource.gd" id="3_ayqnv"]
+[ext_resource type="Resource" path="res://resources/abilities/aura_pacifica.tres" id="4_aura"]
+[ext_resource type="Resource" path="res://resources/abilities/purificador.tres" id="5_purificador"]
 
 [resource]
 script = ExtResource("3_ayqnv")
 id = "pacifista"
 card_name = "Robo Pacifista"
+description = "Programado apenas para proteger, nunca para atacar — nenhum comando consegue fazê-lo levantar uma arma."
 artwork = ExtResource("2_t6ebg")
 category = 3
 defense = 2
+abilities = Array[ExtResource("1_t6ebg")]([ExtResource("4_aura"), ExtResource("5_purificador")])
 metadata/_custom_type_script = "uid://blq621386htl8"

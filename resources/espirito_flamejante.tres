@@ -3,13 +3,17 @@
 [ext_resource type="Script" uid="uid://crmjns4d70w7d" path="res://scripts/resources/ability_resource.gd" id="1_vtcab"]
 [ext_resource type="Script" uid="uid://blq621386htl8" path="res://scripts/resources/card_resource.gd" id="2_0fbqf"]
 [ext_resource type="Texture2D" uid="uid://buwu2goodlwxd" path="res://artwork/espiritos_flamejantes.jpg" id="2_480if"]
+[ext_resource type="Resource" path="res://resources/abilities/golpe_fatal.tres" id="3_golpe_fatal"]
+[ext_resource type="Resource" path="res://resources/abilities/fantasma_do_campo.tres" id="4_fantasma"]
 
 [resource]
 script = ExtResource("2_0fbqf")
 id = "espirito_flamejante"
 card_name = "Espirito Flamejante"
+description = "Chamas que já foram um exército inteiro, agora vagando pelo campo sem corpo pra conter seu ódio."
 artwork = ExtResource("2_480if")
 category = 2
 blood_cost = 0
 horde = 2
+abilities = Array[ExtResource("1_vtcab")]([ExtResource("3_golpe_fatal"), ExtResource("4_fantasma")])
 metadata/_custom_type_script = "uid://blq621386htl8"

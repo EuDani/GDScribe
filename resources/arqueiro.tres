@@ -3,12 +3,15 @@
 [ext_resource type="Script" uid="uid://crmjns4d70w7d" path="res://scripts/resources/ability_resource.gd" id="1_5os2d"]
 [ext_resource type="Script" uid="uid://blq621386htl8" path="res://scripts/resources/card_resource.gd" id="2_o4a37"]
 [ext_resource type="Texture2D" uid="uid://b7wlhlx1njyjs" path="res://artwork/arqueiro.jpg" id="2_tbh3s"]
+[ext_resource type="Resource" path="res://resources/abilities/ataque_a_distancia.tres" id="3_distancia"]
 
 [resource]
 script = ExtResource("2_o4a37")
 id = "005"
 card_name = "Arqueiro"
+description = "Treinado para acertar o alvo antes mesmo que ele perceba estar na mira — mesmo que esteja voando."
 artwork = ExtResource("2_tbh3s")
 blood_cost = 2
 attack = 2
+abilities = Array[ExtResource("1_5os2d")]([ExtResource("3_distancia")])
 metadata/_custom_type_script = "uid://blq621386htl8"

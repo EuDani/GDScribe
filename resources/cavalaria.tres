@@ -3,14 +3,18 @@
 [ext_resource type="Script" uid="uid://crmjns4d70w7d" path="res://scripts/resources/ability_resource.gd" id="1_7vojj"]
 [ext_resource type="Script" uid="uid://blq621386htl8" path="res://scripts/resources/card_resource.gd" id="2_mw2ip"]
 [ext_resource type="Texture2D" uid="uid://dnm31r7v11je5" path="res://artwork/cavalaria.jpg" id="2_uvdtr"]
+[ext_resource type="Resource" path="res://resources/abilities/investida_brutal.tres" id="3_investida"]
+[ext_resource type="Resource" path="res://resources/abilities/arauto.tres" id="4_arauto"]
 
 [resource]
 script = ExtResource("2_mw2ip")
 id = "cavalaria"
 card_name = "Cavalaria"
+description = "Uma carga de cascos e lanças que anuncia sua chegada antes mesmo de ser vista."
 artwork = ExtResource("2_uvdtr")
 category = 1
 blood_cost = 3
 attack = 3
 defense = 3
+abilities = Array[ExtResource("1_7vojj")]([ExtResource("3_investida"), ExtResource("4_arauto")])
 metadata/_custom_type_script = "uid://blq621386htl8"

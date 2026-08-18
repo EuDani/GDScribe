@@ -3,11 +3,15 @@
 [ext_resource type="Script" uid="uid://crmjns4d70w7d" path="res://scripts/resources/ability_resource.gd" id="1_qesw2"]
 [ext_resource type="Texture2D" uid="uid://h884py0wtg3w" path="res://artwork/estandarte.jpg" id="2_f1vou"]
 [ext_resource type="Script" uid="uid://blq621386htl8" path="res://scripts/resources/card_resource.gd" id="2_jlnin"]
+[ext_resource type="Resource" path="res://resources/abilities/lideranca.tres" id="3_lideranca"]
+[ext_resource type="Resource" path="res://resources/abilities/recrutador.tres" id="4_recrutador"]
 
 [resource]
 script = ExtResource("2_jlnin")
 id = "estandarte"
 card_name = "Estandarte"
+description = "Erguido no meio do caos, é só um pedaço de pano — mas nenhum soldado por perto ousa recuar enquanto ele estiver de pé."
 artwork = ExtResource("2_f1vou")
 category = 1
+abilities = Array[ExtResource("1_qesw2")]([ExtResource("3_lideranca"), ExtResource("4_recrutador")])
 metadata/_custom_type_script = "uid://blq621386htl8"

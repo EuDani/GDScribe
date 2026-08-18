@@ -3,14 +3,18 @@
 [ext_resource type="Script" uid="uid://crmjns4d70w7d" path="res://scripts/resources/ability_resource.gd" id="1_j5xg0"]
 [ext_resource type="Texture2D" uid="uid://dd2n3f47wue1p" path="res://artwork/servo_vampiro.jpg" id="2_j5xg0"]
 [ext_resource type="Script" uid="uid://blq621386htl8" path="res://scripts/resources/card_resource.gd" id="3_qalpa"]
+[ext_resource type="Resource" path="res://resources/abilities/ultima_vontade.tres" id="4_ultima_vontade"]
+[ext_resource type="Resource" path="res://resources/abilities/fe_inabalavel.tres" id="5_fe"]
 
 [resource]
 script = ExtResource("3_qalpa")
 id = "Servo_Vampiro"
 card_name = "Servo Vampiro"
+description = "Serve ao seu mestre há tanto tempo que já esqueceu como era ter vontade própria — ou como era estar totalmente morto."
 artwork = ExtResource("2_j5xg0")
 category = 2
 blood_cost = 2
 attack = 2
 defense = 3
+abilities = Array[ExtResource("1_j5xg0")]([ExtResource("4_ultima_vontade"), ExtResource("5_fe")])
 metadata/_custom_type_script = "uid://blq621386htl8"

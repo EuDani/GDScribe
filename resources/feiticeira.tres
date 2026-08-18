@@ -3,12 +3,15 @@
 [ext_resource type="Script" uid="uid://crmjns4d70w7d" path="res://scripts/resources/ability_resource.gd" id="1_072su"]
 [ext_resource type="Script" uid="uid://blq621386htl8" path="res://scripts/resources/card_resource.gd" id="2_1g53d"]
 [ext_resource type="Texture2D" uid="uid://bin60b0p8s27m" path="res://artwork/feiticeira.jpg" id="2_je6op"]
+[ext_resource type="Resource" path="res://resources/abilities/metamorfo.tres" id="3_metamorfo"]
 
 [resource]
 script = ExtResource("2_1g53d")
 id = "feiticeira"
 card_name = "Feiticeira"
+description = "Domina magias que nem ela mesma entende completamente — e às vezes o feitiço sai diferente do que ela planejou."
 artwork = ExtResource("2_je6op")
 blood_cost = 3
 defense = 3
+abilities = Array[ExtResource("1_072su")]([ExtResource("3_metamorfo")])
 metadata/_custom_type_script = "uid://blq621386htl8"

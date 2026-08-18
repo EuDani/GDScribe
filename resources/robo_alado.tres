@@ -3,12 +3,15 @@
 [ext_resource type="Script" uid="uid://crmjns4d70w7d" path="res://scripts/resources/ability_resource.gd" id="1_3s7nc"]
 [ext_resource type="Texture2D" uid="uid://b5fwqaa8whkly" path="res://artwork/robo_alado.jpg" id="2_3s7nc"]
 [ext_resource type="Script" uid="uid://blq621386htl8" path="res://scripts/resources/card_resource.gd" id="3_5ji0k"]
+[ext_resource type="Resource" path="res://resources/abilities/voar.tres" id="4_voar"]
 
 [resource]
 script = ExtResource("3_5ji0k")
 id = "robo_alado"
 card_name = "Robo Alado"
+description = "Um autômato equipado com asas mecânicas, sobrevoando o campo fora do alcance de quem luta no chão."
 artwork = ExtResource("2_3s7nc")
 category = 3
 defense = 2
+abilities = Array[ExtResource("1_3s7nc")]([ExtResource("4_voar")])
 metadata/_custom_type_script = "uid://blq621386htl8"

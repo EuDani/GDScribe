@@ -3,13 +3,15 @@
 [ext_resource type="Script" uid="uid://crmjns4d70w7d" path="res://scripts/resources/ability_resource.gd" id="1_syyeq"]
 [ext_resource type="Texture2D" uid="uid://c2bbavtpfv2br" path="res://artwork/mosquito_gigante.jpg" id="2_syyeq"]
 [ext_resource type="Script" uid="uid://blq621386htl8" path="res://scripts/resources/card_resource.gd" id="3_yg8r7"]
+[ext_resource type="Resource" path="res://resources/abilities/voar.tres" id="4_voar"]
 
 [resource]
 script = ExtResource("3_yg8r7")
 id = "mosquito"
 card_name = "Mosquito Gigante"
-description = "Um estudioso obcecado por transformar matéria e vida, manipulando substâncias misteriosas em busca de algo maior."
+description = "Cresceu se alimentando do sangue derramado em batalhas antigas, e agora paira sobre o campo em busca de mais."
 artwork = ExtResource("2_syyeq")
 category = 2
 blood_cost = 4
+abilities = Array[ExtResource("1_syyeq")]([ExtResource("4_voar")])
 metadata/_custom_type_script = "uid://blq621386htl8"

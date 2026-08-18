@@ -3,14 +3,17 @@
 [ext_resource type="Script" uid="uid://crmjns4d70w7d" path="res://scripts/resources/ability_resource.gd" id="1_jerxo"]
 [ext_resource type="Texture2D" uid="uid://blrsfy25y5bso" path="res://artwork/parede_escudos.jpg" id="2_jtlww"]
 [ext_resource type="Script" uid="uid://blq621386htl8" path="res://scripts/resources/card_resource.gd" id="2_x7egr"]
+[ext_resource type="Resource" path="res://resources/abilities/sentinela.tres" id="3_sentinela"]
 
 [resource]
 script = ExtResource("2_x7egr")
 id = "parede_escudos"
 card_name = "Parede de Escudos"
+description = "Uma fileira de escudos erguidos lado a lado, absorvendo golpe atrás de golpe até que não sobre mais nada pra proteger."
 artwork = ExtResource("2_jtlww")
 category = 1
 blood_cost = 2
 attack = 0
 shild = 5
+abilities = Array[ExtResource("1_jerxo")]([ExtResource("3_sentinela")])
 metadata/_custom_type_script = "uid://blq621386htl8"
