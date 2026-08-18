@@ -6,6 +6,7 @@ extends Node
 
 @export var stub_phase_delay: float = 0.4
 
+@onready var duel_scene: DuelScene = $".."
 @onready var duel_state_chart: StateChart = $"../DuelStateChart"
 
 @onready var state_player_summon: AtomicState = $"../DuelStateChart/Root/PlayerTurn/PlayerSummon"
@@ -33,10 +34,15 @@ extends Node
 ## para liberar/bloquear arraste de cartas e o modo sacrifício.
 var is_player_summon_phase: bool = false
 
+## A primeiríssima entrada em PlayerSummon (início da partida) não compra
+## carta extra — a mão inicial já foi distribuída por DuelScene._ready().
+var _is_first_player_summon: bool = true
+
 var _selected_attackers: Array[CardInvocada] = []
 
 var _current_enemy_attackers: Array[CardInvocada] = []
-var _player_blocks: Dictionary = {}  # atacante inimigo -> bloqueador do jogador
+## Bloqueadora sendo "armada" pelo clique do jogador; o próximo clique num
+## atacante inimigo a associa a ele (ver _on_player_blocker_clicked).
 var _pending_blocker: CardInvocada = null
 
 
@@ -73,14 +79,39 @@ func _reset_turn_flags(field: Node3D) -> void:
 			card.has_attacked_this_turn = false
 
 
+## Esconde o TimeoutIndicador de todas as cartas de `field` — usado ao
+## sair de uma fase de seleção, ou quando ela é pulada por inteiro.
+func _hide_all_indicators(field: Node3D) -> void:
+	for card in field.get_children():
+		if card is CardInvocada:
+			card.set_selectable(true)
+
+
 #region Invocação do jogador
 func _on_player_summon_entered() -> void:
 	is_player_summon_phase = true
 	blood_manager.start_turn()
 	_reset_turn_flags(player_field)
+
+	if _is_first_player_summon:
+		_is_first_player_summon = false
+	else:
+		_draw_card_for_turn()
+
 	player_hand.set_interactive(true)
 	end_turn_button.visible = true
 	phase_label.text = "Invocação:\nJogador"
+
+
+## Compra 1 carta do baralho do jogador pra mão. Se o baralho (e o
+## descarte) estiverem totalmente vazios, DeckResource.draw_card() retorna
+## null e simplesmente não compra nada.
+func _draw_card_for_turn() -> void:
+	if not duel_scene.player_deck_data:
+		return
+	var card_data := duel_scene.player_deck_data.draw_card()
+	if card_data:
+		player_hand.add_card_to_hand(card_data)
 
 
 func _on_player_summon_exited() -> void:
@@ -91,14 +122,28 @@ func _on_player_summon_exited() -> void:
 
 
 #region Combate do jogador: seleção de atacantes
+## Se nenhuma carta do campo puder atacar, pula a fase direto (sem
+## esperar clique em nenhum botão).
 func _on_select_attackers_entered() -> void:
-	phase_label.text = "Combate:\nSelecione seus atacantes"
 	_selected_attackers.clear()
 
+	var eligible: Array[CardInvocada] = []
 	for card in player_field.get_children():
-		if card is CardInvocada and card.can_attack():
-			card.card_invocada_clicked.connect(_on_player_field_card_clicked)
+		if card is CardInvocada:
+			var can_attack_now: bool = card.can_attack()
+			card.set_selectable(can_attack_now)
+			if can_attack_now:
+				eligible.append(card)
 
+	if eligible.is_empty():
+		combat_manager.declared_attackers = []
+		duel_state_chart.send_event("attackers_confirmed")
+		return
+
+	for card in eligible:
+		card.card_invocada_clicked.connect(_on_player_field_card_clicked)
+
+	phase_label.text = "Combate:\nSelecione seus atacantes"
 	confirm_attack_button.visible = true
 
 
@@ -125,6 +170,8 @@ func _on_confirm_attack_pressed() -> void:
 		card.has_attacked_this_turn = true
 		card.set_selected(false)
 
+	_hide_all_indicators(player_field)
+
 	combat_manager.declared_attackers = _selected_attackers.duplicate()
 	_selected_attackers.clear()
 
@@ -133,17 +180,31 @@ func _on_confirm_attack_pressed() -> void:
 
 
 #region Combate do jogador: IA do oponente decide bloqueios
+## Se o jogador atacou com 0 cartas, não há nada pra IA decidir — pula
+## direto pra resolução (que também não terá nada a fazer).
 func _on_enemy_defends_entered() -> void:
+	if combat_manager.declared_attackers.is_empty():
+		combat_manager.blocks = {}
+		duel_state_chart.send_event("blockers_assigned")
+		return
+
 	phase_label.text = "Combate:\nOponente defende"
 	combat_manager.blocks = enemy_ai_controller.decide_blocks(combat_manager.declared_attackers)
+	combat_manager.refresh_attack_lines()
+
 	await get_tree().create_timer(stub_phase_delay).timeout
 	duel_state_chart.send_event("blockers_assigned")
 
 
 func _on_resolve_damage_player_entered() -> void:
-	phase_label.text = "Resolvendo dano..."
-	combat_manager.resolve(true)
-	await get_tree().create_timer(stub_phase_delay).timeout
+	var had_attackers := not combat_manager.declared_attackers.is_empty()
+	if had_attackers:
+		phase_label.text = "Resolvendo dano..."
+
+	await combat_manager.resolve(true)
+
+	if had_attackers:
+		await get_tree().create_timer(stub_phase_delay).timeout
 	duel_state_chart.send_event("damage_resolved")
 #endregion
 
@@ -160,7 +221,6 @@ func _on_enemy_invocation_entered() -> void:
 
 #region Combate do oponente: IA escolhe atacantes
 func _on_enemy_choose_attacker_entered() -> void:
-	phase_label.text = "Combate:\nOponente ataca"
 	_current_enemy_attackers = enemy_ai_controller.decide_attackers()
 
 	for card in _current_enemy_attackers:
@@ -169,38 +229,64 @@ func _on_enemy_choose_attacker_entered() -> void:
 
 	combat_manager.declared_attackers = _current_enemy_attackers.duplicate()
 
+	if _current_enemy_attackers.is_empty():
+		duel_state_chart.send_event("enemy_attackers_chosen")
+		return
+
+	phase_label.text = "Combate:\nOponente ataca"
 	await get_tree().create_timer(stub_phase_delay).timeout
 	duel_state_chart.send_event("enemy_attackers_chosen")
 #endregion
 
 
 #region Combate do oponente: jogador escolhe bloqueadores
+## Se o oponente não atacou com nada, ou se o jogador não tem nenhuma
+## carta disponível pra bloquear, pula a fase direto.
 func _on_player_defends_entered() -> void:
-	phase_label.text = "Combate:\nEscolha seus bloqueadores"
-	_player_blocks.clear()
+	combat_manager.blocks = {}
 	_pending_blocker = null
+
+	if _current_enemy_attackers.is_empty():
+		duel_state_chart.send_event("player_blockers_assigned")
+		return
+
+	var has_eligible_blocker := false
+	for card in player_field.get_children():
+		if card is CardInvocada:
+			var can_block_now: bool = card.can_block()
+			card.set_selectable(can_block_now)
+			if can_block_now:
+				has_eligible_blocker = true
+				card.card_invocada_clicked.connect(_on_player_blocker_clicked)
+
+	if not has_eligible_blocker:
+		_hide_all_indicators(player_field)
+		duel_state_chart.send_event("player_blockers_assigned")
+		return
 
 	for attacker in _current_enemy_attackers:
 		if is_instance_valid(attacker):
 			attacker.card_invocada_clicked.connect(_on_enemy_attacker_clicked)
 
-	for card in player_field.get_children():
-		if card is CardInvocada and card.can_block():
-			card.card_invocada_clicked.connect(_on_player_blocker_clicked)
-
+	phase_label.text = "Combate:\nEscolha seus bloqueadores"
 	confirm_defense_button.visible = true
 
 
-## Clique numa carta do jogador: escolhe/desmarca ela como bloqueadora
-## "pendente" — o próximo clique num atacante inimigo a escala pra ele.
+## Clique numa carta do jogador durante a fase de defesa: se ela já está
+## bloqueando algum atacante, o clique a desassocia (libera a carta). Caso
+## contrário, ela vira a bloqueadora "pendente" — o próximo clique num
+## atacante inimigo a associa a ele. Várias cartas podem virar
+## bloqueadoras pendentes em sequência e se acumular no mesmo atacante.
 func _on_player_blocker_clicked(card: CardInvocada, button_index: int) -> void:
 	if button_index != MOUSE_BUTTON_LEFT:
 		return
 
-	for attacker in _player_blocks.keys():
-		if _player_blocks[attacker] == card:
-			_player_blocks.erase(attacker)
+	for attacker in combat_manager.blocks.keys():
+		var blockers: Array = combat_manager.blocks[attacker]
+		if card in blockers:
+			blockers.erase(card)
 			card.set_selected(false)
+			combat_manager.refresh_attack_lines()
 			return
 
 	if _pending_blocker == card:
@@ -215,15 +301,21 @@ func _on_player_blocker_clicked(card: CardInvocada, button_index: int) -> void:
 	card.set_selected(true)
 
 
-## Clique num atacante inimigo: escala a bloqueadora pendente pra ele.
+## Clique num atacante inimigo: associa a bloqueadora pendente a ele. Não
+## há limite de bloqueadoras por atacante — o jogador pode escalar quantas
+## cartas disponíveis quiser pro mesmo alvo.
 func _on_enemy_attacker_clicked(card: CardInvocada, button_index: int) -> void:
 	if button_index != MOUSE_BUTTON_LEFT:
 		return
-	if not _pending_blocker or _player_blocks.has(card):
+	if not _pending_blocker:
 		return
 
-	_player_blocks[card] = _pending_blocker
+	if not combat_manager.blocks.has(card):
+		combat_manager.blocks[card] = []
+	combat_manager.blocks[card].append(_pending_blocker)
+
 	_pending_blocker = null
+	combat_manager.refresh_attack_lines()
 
 
 func _on_confirm_defense_pressed() -> void:
@@ -239,20 +331,25 @@ func _on_confirm_defense_pressed() -> void:
 				card.card_invocada_clicked.disconnect(_on_player_blocker_clicked)
 			card.set_selected(false)
 
-	combat_manager.blocks = _player_blocks.duplicate()
+	_hide_all_indicators(player_field)
 	_pending_blocker = null
 
 	duel_state_chart.send_event("player_blockers_assigned")
 
 
 func _on_resolve_damage_enemy_entered() -> void:
-	phase_label.text = "Resolvendo dano..."
+	var had_attackers := not _current_enemy_attackers.is_empty()
+	if had_attackers:
+		phase_label.text = "Resolvendo dano..."
+
 	for attacker in _current_enemy_attackers:
 		if is_instance_valid(attacker):
 			attacker.set_selected(false)
 	_current_enemy_attackers.clear()
 
-	combat_manager.resolve(false)
-	await get_tree().create_timer(stub_phase_delay).timeout
+	await combat_manager.resolve(false)
+
+	if had_attackers:
+		await get_tree().create_timer(stub_phase_delay).timeout
 	duel_state_chart.send_event("damage_resolved")
 #endregion

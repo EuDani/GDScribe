@@ -12,6 +12,6 @@ card_name = "Andarilho"
 description = "Percorreu estradas que ninguém mais ousa pisar, sempre um passo à frente de qualquer perigo — ou de qualquer exército."
 artwork = ExtResource("2_pnu1q")
 defense = 3
-can_attack_on_turn_created = true
 abilities = Array[ExtResource("1_veh4o")]([ExtResource("3_passo_rapido")])
+can_attack_on_turn_created = true
 metadata/_custom_type_script = "uid://blq621386htl8"

@@ -31,11 +31,17 @@ var is_selected: bool = false
 var _base_scale: Vector3 = Vector3.ONE
 var _select_tween: Tween
 
+## Selo grande sobre a carta indicando que ela não pode ser escolhida na
+## fase de combate atual (nem como atacante, nem como bloqueadora).
+@onready var timeout_indicator: Label = $CardViewport/CardUI/TimeoutIndicador
+
 
 func _ready() -> void:
 	super._ready()
 	card_area.input_event.connect(_on_input_event)
 	_base_scale = scale
+	if timeout_indicator:
+		timeout_indicator.visible = false
 
 
 ## Além do preenchimento visual herdado, aplica a regra especial de cartas
@@ -60,6 +66,14 @@ func can_attack() -> bool:
 ## impede bloquear, só atacar).
 func can_block() -> bool:
 	return not has_attacked_this_turn
+
+
+## Mostra/esconde o TimeoutIndicador. Chamado pelo TurnManager ao entrar
+## numa fase de seleção (atacantes ou bloqueadores), uma vez por carta do
+## campo, com o resultado de can_attack()/can_block() conforme a fase.
+func set_selectable(selectable: bool) -> void:
+	if timeout_indicator:
+		timeout_indicator.visible = not selectable
 
 
 ## Destaque visual usado tanto para "selecionada como atacante" quanto para

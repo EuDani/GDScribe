@@ -20,6 +20,10 @@ extends Node3D
 @export var queue_anim_time: float = 0.25
 @export var queue_scale: float = 0.8
 
+## Máximo de cartas invocadas simultaneamente em cada campo (jogador e
+## oponente). Também consultado por EnemyAiController.
+@export var max_field_size: int = 5
+
 ## Duração e curva do tween que reposiciona as cartas no campo — inclui a
 ## "queda" da carta recém-invocada da altura da Card3D até o tabuleiro (y = 0).
 @export var field_drop_anim_time: float = 0.3
@@ -129,8 +133,9 @@ func _update_dragged_card_position() -> void:
 
 
 ## Ao soltar o botão do mouse com uma carta em arraste: decide entre jogar
-## no campo (se houver Sangue), enfileirar (se não houver) ou devolver pra
-## mão (se foi solta fora da área de invocação).
+## no campo (se houver Sangue e espaço), enfileirar (se faltar só Sangue)
+## ou devolver pra mão (se foi solta fora da área de invocação, ou se o
+## campo já está cheio).
 func _drop_card(card: Card3D) -> void:
 	var current_card := card
 	dragged_card = null
@@ -139,6 +144,10 @@ func _drop_card(card: Card3D) -> void:
 	create_tween().tween_property(current_card, "scale", Vector3.ONE, 0.1)
 
 	if _is_mouse_over_summon_area(current_card):
+		if player_field.get_child_count() >= max_field_size:
+			_return_card_to_hand(current_card)
+			return
+
 		var cost := current_card.card_data.blood_cost
 		if blood_manager.can_afford(cost):
 			blood_manager.spend_blood(cost)
@@ -287,9 +296,12 @@ func _clear_queue_to_hand() -> void:
 
 
 ## Chamado sempre que o Sangue muda: joga automaticamente a primeira carta
-## da fila assim que houver Sangue suficiente para ela.
+## da fila assim que houver Sangue suficiente para ela e o campo não
+## estiver cheio (senão ela continua esperando na fila).
 func _check_queued_cards() -> void:
 	if player_hand.queued_cards.is_empty():
+		return
+	if player_field.get_child_count() >= max_field_size:
 		return
 
 	var first_queued: Card3D = player_hand.queued_cards[0]

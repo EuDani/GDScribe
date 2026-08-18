@@ -14,6 +14,6 @@ artwork = ExtResource("2_7nnkm")
 category = 1
 blood_cost = 2
 attack = 3
-horde = 3
 abilities = Array[ExtResource("1_degte")]([ExtResource("3_emboscada")])
+horde = 3
 metadata/_custom_type_script = "uid://blq621386htl8"

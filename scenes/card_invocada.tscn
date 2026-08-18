@@ -7,7 +7,7 @@
 [ext_resource type="Texture2D" uid="uid://cgs0bhq8s4eoj" path="res://sprites/card_mod.png" id="4_m4qql"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_677gi"]
-size = Vector3(1.2451172, 1.68, 0.405)
+size = Vector3(1.2451172, 1.1103516, 1.7900391)
 
 [sub_resource type="BoxMesh" id="BoxMesh_eg0p3"]
 size = Vector3(1, 1.5834961, 1)
@@ -136,6 +136,16 @@ text = "1"
 horizontal_alignment = 1
 vertical_alignment = 1
 
+[node name="TimeoutIndicador" type="Label" parent="CardViewport/CardUI" unique_id=1471492254]
+custom_minimum_size = Vector2(300, 420)
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 23.0
+theme_override_font_sizes/font_size = 200
+text = "@"
+horizontal_alignment = 1
+vertical_alignment = 1
+
 [node name="CardArea" type="Area3D" parent="." unique_id=1817082093]
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="CardArea" unique_id=2136984341]
@@ -145,115 +155,3 @@ shape = SubResource("BoxShape3D_677gi")
 transform = Transform3D(1.2, 0, 0, 0, 0.4, 0, 0, 0, 1.68, 0, 0.11669922, 0)
 mesh = SubResource("BoxMesh_eg0p3")
 surface_material_override/0 = SubResource("ShaderMaterial_irt5y")
-
-[node name="CardUI" type="Control" parent="." unique_id=858969204]
-custom_minimum_size = Vector2(300, 420)
-layout_mode = 3
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-
-[node name="bg" type="Sprite2D" parent="CardUI" unique_id=2067001462]
-texture = ExtResource("2_shs76")
-offset = Vector2(150, 210)
-
-[node name="Artwork" type="TextureRect" parent="CardUI" unique_id=1688742096]
-clip_contents = true
-layout_mode = 1
-anchors_preset = 5
-anchor_left = 0.5
-anchor_right = 0.5
-offset_left = -127.0
-offset_top = 23.0
-offset_right = 143.0
-offset_bottom = 423.0
-grow_horizontal = 2
-texture = ExtResource("3_0wtyl")
-expand_mode = 1
-stretch_mode = 6
-
-[node name="ColorRect" type="ColorRect" parent="CardUI" unique_id=1637876804]
-custom_minimum_size = Vector2(300, 35)
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_top = 247.5
-offset_bottom = -137.5
-grow_horizontal = 2
-grow_vertical = 2
-color = Color(0, 0, 0, 0.7647059)
-
-[node name="NameLabel" type="Label" parent="CardUI" unique_id=1135865408]
-modulate = Color(1, 1, 0, 1)
-layout_mode = 0
-offset_right = 300.0
-offset_bottom = 31.0
-offset_transform_enabled = true
-offset_transform_position = Vector2(0, 250)
-offset_transform_pivot_ratio = Vector2(0, 0)
-theme_override_font_sizes/font_size = 22
-text = "dasidj asidjsia jdisa"
-horizontal_alignment = 1
-vertical_alignment = 1
-
-[node name="mod" type="Sprite2D" parent="CardUI" unique_id=426816429]
-texture = ExtResource("4_m4qql")
-offset = Vector2(150, 210)
-
-[node name="HeaderPanel" type="Control" parent="CardUI" unique_id=355838519]
-anchors_preset = 0
-offset_right = 40.0
-offset_bottom = 40.0
-
-[node name="SacrificeProgress" type="ProgressBar" parent="CardUI/HeaderPanel" unique_id=867644342]
-layout_mode = 0
-offset_top = 200.0
-offset_right = 300.0
-offset_bottom = 240.0
-min_value = 50.0
-value = 50.0
-
-[node name="BloodCostLabel" type="Label" parent="CardUI/HeaderPanel" unique_id=668838232]
-layout_mode = 0
-offset_right = 40.0
-offset_bottom = 23.0
-offset_transform_enabled = true
-offset_transform_position = Vector2(130, 6)
-text = "01"
-horizontal_alignment = 1
-
-[node name="FooterPanel" type="Control" parent="CardUI" unique_id=1264406392]
-anchors_preset = 0
-offset_right = 40.0
-offset_bottom = 40.0
-
-[node name="AttackLabel" type="Label" parent="CardUI/FooterPanel" unique_id=1134228565]
-layout_mode = 0
-offset_right = 40.0
-offset_bottom = 23.0
-offset_transform_enabled = true
-offset_transform_position = Vector2(100, 380)
-theme_override_colors/font_color = Color(1, 1, 0, 1)
-theme_override_colors/font_shadow_color = Color(0, 0, 0, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_font_sizes/font_size = 27
-text = "1"
-horizontal_alignment = 1
-vertical_alignment = 1
-
-[node name="DefenseLabel" type="Label" parent="CardUI/FooterPanel" unique_id=1857062593]
-layout_mode = 0
-offset_right = 40.0
-offset_bottom = 23.0
-offset_transform_enabled = true
-offset_transform_position = Vector2(153, 380)
-theme_override_colors/font_color = Color(1, 1, 0, 1)
-theme_override_colors/font_shadow_color = Color(0, 0, 0, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_font_sizes/font_size = 27
-text = "1"
-horizontal_alignment = 1
-vertical_alignment = 1

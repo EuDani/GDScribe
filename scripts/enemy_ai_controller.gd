@@ -29,7 +29,7 @@ func draw_initial_hand(deck_data: DeckResource, amount: int) -> void:
 ## ações dessa mesma fila.
 func run_invocation_phase() -> void:
 	var summons := 0
-	while summons < max_summons_per_turn:
+	while summons < max_summons_per_turn and enemy_field.get_child_count() < duel_scene.max_field_size:
 		var card_data := _pick_affordable_card()
 		if not card_data:
 			break
@@ -54,7 +54,9 @@ func decide_attackers() -> Array[CardInvocada]:
 
 ## Decide quais cartas do oponente bloqueiam quais atacantes do jogador. Só
 ## bloqueia quando sobrevive ao bloqueio (DEF >= ATK do atacante); senão
-## prefere levar o dano a perder uma carta à toa.
+## prefere levar o dano a perder uma carta à toa. Cada atacante recebe no
+## máximo 1 bloqueadora aqui — a IA não monta bloqueio em grupo por
+## enquanto, mesmo que o motor de combate já suporte isso para o jogador.
 func decide_blocks(attackers: Array[CardInvocada]) -> Dictionary:
 	var blocks: Dictionary = {}
 	var available: Array[CardInvocada] = []
@@ -70,10 +72,10 @@ func decide_blocks(attackers: Array[CardInvocada]) -> Dictionary:
 					safe_blocker = candidate
 
 		if safe_blocker:
-			blocks[attacker] = safe_blocker
+			blocks[attacker] = [safe_blocker]
 			available.erase(safe_blocker)
 		else:
-			blocks[attacker] = null
+			blocks[attacker] = []
 
 	return blocks
 
