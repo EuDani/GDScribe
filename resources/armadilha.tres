@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="CardResource" format=3 uid="uid://cx2ple8k710pp"]
+
+[ext_resource type="Script" uid="uid://crmjns4d70w7d" path="res://scripts/resources/ability_resource.gd" id="1_gvbw4"]
+[ext_resource type="Texture2D" uid="uid://iitbi8xeudnm" path="res://artwork/armadilha.jpg" id="2_pxvnx"]
+[ext_resource type="Script" uid="uid://blq621386htl8" path="res://scripts/resources/card_resource.gd" id="2_wjvqt"]
+
+[resource]
+script = ExtResource("2_wjvqt")
+id = "armadilha"
+card_name = "Armadilha"
+description = "	"
+artwork = ExtResource("2_pxvnx")
+category = 1
+blood_cost = 2
+attack = 0
+defense = 3
+metadata/_custom_type_script = "uid://blq621386htl8"

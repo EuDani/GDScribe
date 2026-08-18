@@ -1,0 +1,259 @@
+[gd_scene format=3 uid="uid://bi4envmagabp0"]
+
+[ext_resource type="Script" uid="uid://cp3v5xuk7oe3y" path="res://scripts/card_invocada.gd" id="1_ljx8c"]
+[ext_resource type="Shader" uid="uid://bxu75d3tsjpjs" path="res://scenes/card_invocada.gdshader" id="2_677gi"]
+[ext_resource type="Texture2D" uid="uid://bc2w8re3b2fhh" path="res://sprites/card_bg.png" id="2_shs76"]
+[ext_resource type="Texture2D" uid="uid://b2r1liclew5gv" path="res://artwork/alquimista.jpg" id="3_0wtyl"]
+[ext_resource type="Texture2D" uid="uid://cgs0bhq8s4eoj" path="res://sprites/card_mod.png" id="4_m4qql"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_677gi"]
+size = Vector3(1.2451172, 1.68, 0.405)
+
+[sub_resource type="BoxMesh" id="BoxMesh_eg0p3"]
+size = Vector3(1, 1.5834961, 1)
+
+[sub_resource type="ViewportTexture" id="ViewportTexture_nm4qu"]
+viewport_path = NodePath("CardViewport")
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_irt5y"]
+resource_local_to_scene = true
+render_priority = 0
+shader = ExtResource("2_677gi")
+shader_parameter/viewport_texture = SubResource("ViewportTexture_nm4qu")
+shader_parameter/body_color = Color(0.15, 0.15, 0.15, 1)
+shader_parameter/target_face = 2
+shader_parameter/box_size = Vector3(1, 1, 1)
+
+[node name="CardInvocada" type="Node3D" unique_id=2141805097]
+script = ExtResource("1_ljx8c")
+
+[node name="CardViewport" type="SubViewport" parent="." unique_id=1046840700]
+transparent_bg = true
+size = Vector2i(300, 420)
+render_target_update_mode = 4
+
+[node name="CardUI" type="Control" parent="CardViewport" unique_id=600220398]
+custom_minimum_size = Vector2(300, 420)
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="bg" type="Sprite2D" parent="CardViewport/CardUI" unique_id=2062528340]
+texture = ExtResource("2_shs76")
+offset = Vector2(150, 210)
+
+[node name="Artwork" type="TextureRect" parent="CardViewport/CardUI" unique_id=1075610551]
+clip_contents = true
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -127.0
+offset_top = 23.0
+offset_right = 143.0
+offset_bottom = 423.0
+grow_horizontal = 2
+texture = ExtResource("3_0wtyl")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="ColorRect" type="ColorRect" parent="CardViewport/CardUI" unique_id=574165351]
+custom_minimum_size = Vector2(300, 35)
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = 247.5
+offset_bottom = -137.5
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.7647059)
+
+[node name="NameLabel" type="Label" parent="CardViewport/CardUI" unique_id=2110452488]
+modulate = Color(1, 1, 0, 1)
+layout_mode = 0
+offset_right = 300.0
+offset_bottom = 31.0
+offset_transform_enabled = true
+offset_transform_position = Vector2(0, 250)
+offset_transform_pivot_ratio = Vector2(0, 0)
+theme_override_font_sizes/font_size = 22
+text = "dasidj asidjsia jdisa"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="mod" type="Sprite2D" parent="CardViewport/CardUI" unique_id=1039659295]
+texture = ExtResource("4_m4qql")
+offset = Vector2(150, 210)
+
+[node name="HeaderPanel" type="Control" parent="CardViewport/CardUI" unique_id=1318572366]
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="BloodCostLabel" type="Label" parent="CardViewport/CardUI/HeaderPanel" unique_id=1488431041]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 23.0
+offset_transform_enabled = true
+offset_transform_position = Vector2(130, 6)
+text = "01"
+horizontal_alignment = 1
+
+[node name="FooterPanel" type="Control" parent="CardViewport/CardUI" unique_id=1836191]
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="AttackLabel" type="Label" parent="CardViewport/CardUI/FooterPanel" unique_id=614357869]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 23.0
+offset_transform_enabled = true
+offset_transform_position = Vector2(100, 380)
+theme_override_colors/font_color = Color(1, 1, 0, 1)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_font_sizes/font_size = 27
+text = "1"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="DefenseLabel" type="Label" parent="CardViewport/CardUI/FooterPanel" unique_id=993918736]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 23.0
+offset_transform_enabled = true
+offset_transform_position = Vector2(153, 380)
+theme_override_colors/font_color = Color(1, 1, 0, 1)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_font_sizes/font_size = 27
+text = "1"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="CardArea" type="Area3D" parent="." unique_id=1817082093]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="CardArea" unique_id=2136984341]
+shape = SubResource("BoxShape3D_677gi")
+
+[node name="CardMesh" type="MeshInstance3D" parent="." unique_id=1810508999]
+transform = Transform3D(1.2, 0, 0, 0, 0.4, 0, 0, 0, 1.68, 0, 0.11669922, 0)
+mesh = SubResource("BoxMesh_eg0p3")
+surface_material_override/0 = SubResource("ShaderMaterial_irt5y")
+
+[node name="CardUI" type="Control" parent="." unique_id=858969204]
+custom_minimum_size = Vector2(300, 420)
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="bg" type="Sprite2D" parent="CardUI" unique_id=2067001462]
+texture = ExtResource("2_shs76")
+offset = Vector2(150, 210)
+
+[node name="Artwork" type="TextureRect" parent="CardUI" unique_id=1688742096]
+clip_contents = true
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -127.0
+offset_top = 23.0
+offset_right = 143.0
+offset_bottom = 423.0
+grow_horizontal = 2
+texture = ExtResource("3_0wtyl")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="ColorRect" type="ColorRect" parent="CardUI" unique_id=1637876804]
+custom_minimum_size = Vector2(300, 35)
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = 247.5
+offset_bottom = -137.5
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.7647059)
+
+[node name="NameLabel" type="Label" parent="CardUI" unique_id=1135865408]
+modulate = Color(1, 1, 0, 1)
+layout_mode = 0
+offset_right = 300.0
+offset_bottom = 31.0
+offset_transform_enabled = true
+offset_transform_position = Vector2(0, 250)
+offset_transform_pivot_ratio = Vector2(0, 0)
+theme_override_font_sizes/font_size = 22
+text = "dasidj asidjsia jdisa"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="mod" type="Sprite2D" parent="CardUI" unique_id=426816429]
+texture = ExtResource("4_m4qql")
+offset = Vector2(150, 210)
+
+[node name="HeaderPanel" type="Control" parent="CardUI" unique_id=355838519]
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="SacrificeProgress" type="ProgressBar" parent="CardUI/HeaderPanel" unique_id=867644342]
+layout_mode = 0
+offset_top = 200.0
+offset_right = 300.0
+offset_bottom = 240.0
+min_value = 50.0
+value = 50.0
+
+[node name="BloodCostLabel" type="Label" parent="CardUI/HeaderPanel" unique_id=668838232]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 23.0
+offset_transform_enabled = true
+offset_transform_position = Vector2(130, 6)
+text = "01"
+horizontal_alignment = 1
+
+[node name="FooterPanel" type="Control" parent="CardUI" unique_id=1264406392]
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="AttackLabel" type="Label" parent="CardUI/FooterPanel" unique_id=1134228565]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 23.0
+offset_transform_enabled = true
+offset_transform_position = Vector2(100, 380)
+theme_override_colors/font_color = Color(1, 1, 0, 1)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_font_sizes/font_size = 27
+text = "1"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="DefenseLabel" type="Label" parent="CardUI/FooterPanel" unique_id=1857062593]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 23.0
+offset_transform_enabled = true
+offset_transform_position = Vector2(153, 380)
+theme_override_colors/font_color = Color(1, 1, 0, 1)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_font_sizes/font_size = 27
+text = "1"
+horizontal_alignment = 1
+vertical_alignment = 1

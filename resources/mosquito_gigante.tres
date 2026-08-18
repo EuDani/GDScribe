@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="CardResource" format=3 uid="uid://bp0k8q06efuna"]
+
+[ext_resource type="Script" uid="uid://crmjns4d70w7d" path="res://scripts/resources/ability_resource.gd" id="1_syyeq"]
+[ext_resource type="Texture2D" uid="uid://c2bbavtpfv2br" path="res://artwork/mosquito_gigante.jpg" id="2_syyeq"]
+[ext_resource type="Script" uid="uid://blq621386htl8" path="res://scripts/resources/card_resource.gd" id="3_yg8r7"]
+
+[resource]
+script = ExtResource("3_yg8r7")
+id = "mosquito"
+card_name = "Mosquito Gigante"
+description = "Um estudioso obcecado por transformar matéria e vida, manipulando substâncias misteriosas em busca de algo maior."
+artwork = ExtResource("2_syyeq")
+category = 2
+blood_cost = 4
+metadata/_custom_type_script = "uid://blq621386htl8"

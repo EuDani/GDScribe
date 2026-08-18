@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="CardResource" format=3 uid="uid://bi52h56hx7iei"]
+
+[ext_resource type="Script" uid="uid://crmjns4d70w7d" path="res://scripts/resources/ability_resource.gd" id="1_vsotx"]
+[ext_resource type="Script" uid="uid://blq621386htl8" path="res://scripts/resources/card_resource.gd" id="2_gtgvm"]
+[ext_resource type="Texture2D" uid="uid://cvjsavybhnyky" path="res://artwork/esqueleto.jpg" id="2_nj3ir"]
+
+[resource]
+script = ExtResource("2_gtgvm")
+id = "esqueleto"
+card_name = "Esqueleto"
+artwork = ExtResource("2_nj3ir")
+category = 2
+attack = 2
+metadata/_custom_type_script = "uid://blq621386htl8"

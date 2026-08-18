@@ -1,0 +1,584 @@
+[gd_scene format=3 uid="uid://ngy83wv5aaao"]
+
+[ext_resource type="Script" uid="uid://cf1ncu65sm6cr" path="res://scripts/deck_modal.gd" id="1_t7nmh"]
+[ext_resource type="Texture2D" uid="uid://bc2w8re3b2fhh" path="res://sprites/card_bg.png" id="2_wcen2"]
+[ext_resource type="Texture2D" uid="uid://b2r1liclew5gv" path="res://artwork/alquimista.jpg" id="3_8kh1b"]
+[ext_resource type="Texture2D" uid="uid://cgs0bhq8s4eoj" path="res://sprites/card_mod.png" id="4_mctg2"]
+
+[node name="DeckModal" type="CanvasLayer" unique_id=1732282603]
+script = ExtResource("1_t7nmh")
+
+[node name="Overlay" type="ColorRect" parent="." unique_id=750513826]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+color = Color(0, 0, 0, 0.25882354)
+
+[node name="PanelContainer" type="PanelContainer" parent="Overlay" unique_id=1550273084]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Overlay/PanelContainer" unique_id=780539033]
+layout_mode = 2
+
+[node name="HeaderLabel" type="Label" parent="Overlay/PanelContainer/VBoxContainer" unique_id=212866741]
+layout_mode = 2
+text = "DECK INICIAL"
+horizontal_alignment = 1
+
+[node name="ScrollContainer" type="ScrollContainer" parent="Overlay/PanelContainer/VBoxContainer" unique_id=1671441150]
+custom_minimum_size = Vector2(600, 550)
+layout_mode = 2
+
+[node name="CardGrid" type="GridContainer" parent="Overlay/PanelContainer/VBoxContainer/ScrollContainer" unique_id=1685512641]
+layout_mode = 2
+offset_transform_enabled = true
+offset_transform_scale = Vector2(0.8, 0.8)
+columns = 4
+
+[node name="CardUI" type="Control" parent="Overlay/PanelContainer/VBoxContainer/ScrollContainer/CardGrid" unique_id=1619585831]
+custom_minimum_size = Vector2(300, 420)
+layout_mode = 2
+
+[node name="bg" type="Sprite2D" parent="Overlay/PanelContainer/VBoxContainer/ScrollContainer/CardGrid/CardUI" unique_id=1805706918]
+texture = ExtResource("2_wcen2")
+offset = Vector2(150, 210)
+
+[node name="Artwork" type="TextureRect" parent="Overlay/PanelContainer/VBoxContainer/ScrollContainer/CardGrid/CardUI" unique_id=1923848508]
+clip_contents = true
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -127.0
+offset_top = 23.0
+offset_right = 143.0
+offset_bottom = 423.0
+grow_horizontal = 2
+texture = ExtResource("3_8kh1b")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="ColorRect" type="ColorRect" parent="Overlay/PanelContainer/VBoxContainer/ScrollContainer/CardGrid/CardUI" unique_id=1888690609]
+custom_minimum_size = Vector2(300, 35)
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = 247.5
+offset_bottom = -137.5
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.7647059)
+
+[node name="NameLabel" type="Label" parent="Overlay/PanelContainer/VBoxContainer/ScrollContainer/CardGrid/CardUI" unique_id=1489609557]
+modulate = Color(1, 1, 0, 1)
+layout_mode = 0
+offset_right = 300.0
+offset_bottom = 31.0
+offset_transform_enabled = true
+offset_transform_position = Vector2(0, 250)
+offset_transform_pivot_ratio = Vector2(0, 0)
+theme_override_font_sizes/font_size = 22
+text = "dasidj asidjsia jdisa"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="mod" type="Sprite2D" parent="Overlay/PanelContainer/VBoxContainer/ScrollContainer/CardGrid/CardUI" unique_id=773542281]
+texture = ExtResource("4_mctg2")
+offset = Vector2(150, 210)
+
+[node name="HeaderPanel" type="Control" parent="Overlay/PanelContainer/VBoxContainer/ScrollContainer/CardGrid/CardUI" unique_id=1149799879]
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="SacrificeProgress" type="ProgressBar" parent="Overlay/PanelContainer/VBoxContainer/ScrollContainer/CardGrid/CardUI/HeaderPanel" unique_id=215381483]
+layout_mode = 0
+offset_top = 200.0
+offset_right = 300.0
+offset_bottom = 240.0
+min_value = 50.0
+value = 50.0
+
+[node name="BloodCostLabel" type="Label" parent="Overlay/PanelContainer/VBoxContainer/ScrollContainer/CardGrid/CardUI/HeaderPanel" unique_id=748790784]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 23.0
+offset_transform_enabled = true
+offset_transform_position = Vector2(130, 6)
+text = "01"
+horizontal_alignment = 1
+
+[node name="FooterPanel" type="Control" parent="Overlay/PanelContainer/VBoxContainer/ScrollContainer/CardGrid/CardUI" unique_id=1972516939]
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="AttackLabel" type="Label" parent="Overlay/PanelContainer/VBoxContainer/ScrollContainer/CardGrid/CardUI/FooterPanel" unique_id=243861042]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 23.0
+offset_transform_enabled = true
+offset_transform_position = Vector2(100, 380)
+theme_override_colors/font_color = Color(1, 1, 0, 1)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_font_sizes/font_size = 27
+text = "1"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="DefenseLabel" type="Label" parent="Overlay/PanelContainer/VBoxContainer/ScrollContainer/CardGrid/CardUI/FooterPanel" unique_id=1492558586]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 23.0
+offset_transform_enabled = true
+offset_transform_position = Vector2(153, 380)
+theme_override_colors/font_color = Color(1, 1, 0, 1)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_font_sizes/font_size = 27
+text = "1"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="CardUI2" type="Control" parent="Overlay/PanelContainer/VBoxContainer/ScrollContainer/CardGrid" unique_id=774497472]
+custom_minimum_size = Vector2(300, 420)
+layout_mode = 2
+
+[node name="bg" type="Sprite2D" parent="Overlay/PanelContainer/VBoxContainer/ScrollContainer/CardGrid/CardUI2" unique_id=2059957946]
+texture = ExtResource("2_wcen2")
+offset = Vector2(150, 210)
+
+[node name="Artwork" type="TextureRect" parent="Overlay/PanelContainer/VBoxContainer/ScrollContainer/CardGrid/CardUI2" unique_id=1115597932]
+clip_contents = true
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -127.0
+offset_top = 23.0
+offset_right = 143.0
+offset_bottom = 423.0
+grow_horizontal = 2
+texture = ExtResource("3_8kh1b")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="ColorRect" type="ColorRect" parent="Overlay/PanelContainer/VBoxContainer/ScrollContainer/CardGrid/CardUI2" unique_id=1131879040]
+custom_minimum_size = Vector2(300, 35)
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = 247.5
+offset_bottom = -137.5
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.7647059)
+
+[node name="NameLabel" type="Label" parent="Overlay/PanelContainer/VBoxContainer/ScrollContainer/CardGrid/CardUI2" unique_id=1650022138]
+modulate = Color(1, 1, 0, 1)
+layout_mode = 0
+offset_right = 300.0
+offset_bottom = 31.0
+offset_transform_enabled = true
+offset_transform_position = Vector2(0, 250)
+offset_transform_pivot_ratio = Vector2(0, 0)
+theme_override_font_sizes/font_size = 22
+text = "dasidj asidjsia jdisa"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="mod" type="Sprite2D" parent="Overlay/PanelContainer/VBoxContainer/ScrollContainer/CardGrid/CardUI2" unique_id=1427919346]
+texture = ExtResource("4_mctg2")
+offset = Vector2(150, 210)
+
+[node name="HeaderPanel" type="Control" parent="Overlay/PanelContainer/VBoxContainer/ScrollContainer/CardGrid/CardUI2" unique_id=239631570]
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="SacrificeProgress" type="ProgressBar" parent="Overlay/PanelContainer/VBoxContainer/ScrollContainer/CardGrid/CardUI2/HeaderPanel" unique_id=898098615]
+layout_mode = 0
+offset_top = 200.0
+offset_right = 300.0
+offset_bottom = 240.0
+min_value = 50.0
+value = 50.0
+
+[node name="BloodCostLabel" type="Label" parent="Overlay/PanelContainer/VBoxContainer/ScrollContainer/CardGrid/CardUI2/HeaderPanel" unique_id=1843681831]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 23.0
+offset_transform_enabled = true
+offset_transform_position = Vector2(130, 6)
+text = "01"
+horizontal_alignment = 1
+
+[node name="FooterPanel" type="Control" parent="Overlay/PanelContainer/VBoxContainer/ScrollContainer/CardGrid/CardUI2" unique_id=470475092]
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="AttackLabel" type="Label" parent="Overlay/PanelContainer/VBoxContainer/ScrollContainer/CardGrid/CardUI2/FooterPanel" unique_id=1709775457]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 23.0
+offset_transform_enabled = true
+offset_transform_position = Vector2(100, 380)
+theme_override_colors/font_color = Color(1, 1, 0, 1)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_font_sizes/font_size = 27
+text = "1"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="DefenseLabel" type="Label" parent="Overlay/PanelContainer/VBoxContainer/ScrollContainer/CardGrid/CardUI2/FooterPanel" unique_id=959722230]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 23.0
+offset_transform_enabled = true
+offset_transform_position = Vector2(153, 380)
+theme_override_colors/font_color = Color(1, 1, 0, 1)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_font_sizes/font_size = 27
+text = "1"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="CardUI3" type="Control" parent="Overlay/PanelContainer/VBoxContainer/ScrollContainer/CardGrid" unique_id=1650964370]
+custom_minimum_size = Vector2(300, 420)
+layout_mode = 2
+
+[node name="bg" type="Sprite2D" parent="Overlay/PanelContainer/VBoxContainer/ScrollContainer/CardGrid/CardUI3" unique_id=1102308864]
+texture = ExtResource("2_wcen2")
+offset = Vector2(150, 210)
+
+[node name="Artwork" type="TextureRect" parent="Overlay/PanelContainer/VBoxContainer/ScrollContainer/CardGrid/CardUI3" unique_id=2008654765]
+clip_contents = true
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -127.0
+offset_top = 23.0
+offset_right = 143.0
+offset_bottom = 423.0
+grow_horizontal = 2
+texture = ExtResource("3_8kh1b")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="ColorRect" type="ColorRect" parent="Overlay/PanelContainer/VBoxContainer/ScrollContainer/CardGrid/CardUI3" unique_id=1518423672]
+custom_minimum_size = Vector2(300, 35)
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = 247.5
+offset_bottom = -137.5
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.7647059)
+
+[node name="NameLabel" type="Label" parent="Overlay/PanelContainer/VBoxContainer/ScrollContainer/CardGrid/CardUI3" unique_id=1384627177]
+modulate = Color(1, 1, 0, 1)
+layout_mode = 0
+offset_right = 300.0
+offset_bottom = 31.0
+offset_transform_enabled = true
+offset_transform_position = Vector2(0, 250)
+offset_transform_pivot_ratio = Vector2(0, 0)
+theme_override_font_sizes/font_size = 22
+text = "dasidj asidjsia jdisa"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="mod" type="Sprite2D" parent="Overlay/PanelContainer/VBoxContainer/ScrollContainer/CardGrid/CardUI3" unique_id=2032555900]
+texture = ExtResource("4_mctg2")
+offset = Vector2(150, 210)
+
+[node name="HeaderPanel" type="Control" parent="Overlay/PanelContainer/VBoxContainer/ScrollContainer/CardGrid/CardUI3" unique_id=1211183787]
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="SacrificeProgress" type="ProgressBar" parent="Overlay/PanelContainer/VBoxContainer/ScrollContainer/CardGrid/CardUI3/HeaderPanel" unique_id=961696818]
+layout_mode = 0
+offset_top = 200.0
+offset_right = 300.0
+offset_bottom = 240.0
+min_value = 50.0
+value = 50.0
+
+[node name="BloodCostLabel" type="Label" parent="Overlay/PanelContainer/VBoxContainer/ScrollContainer/CardGrid/CardUI3/HeaderPanel" unique_id=1951561273]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 23.0
+offset_transform_enabled = true
+offset_transform_position = Vector2(130, 6)
+text = "01"
+horizontal_alignment = 1
+
+[node name="FooterPanel" type="Control" parent="Overlay/PanelContainer/VBoxContainer/ScrollContainer/CardGrid/CardUI3" unique_id=1958608117]
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="AttackLabel" type="Label" parent="Overlay/PanelContainer/VBoxContainer/ScrollContainer/CardGrid/CardUI3/FooterPanel" unique_id=419406544]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 23.0
+offset_transform_enabled = true
+offset_transform_position = Vector2(100, 380)
+theme_override_colors/font_color = Color(1, 1, 0, 1)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_font_sizes/font_size = 27
+text = "1"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="DefenseLabel" type="Label" parent="Overlay/PanelContainer/VBoxContainer/ScrollContainer/CardGrid/CardUI3/FooterPanel" unique_id=268700723]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 23.0
+offset_transform_enabled = true
+offset_transform_position = Vector2(153, 380)
+theme_override_colors/font_color = Color(1, 1, 0, 1)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_font_sizes/font_size = 27
+text = "1"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="CardUI4" type="Control" parent="Overlay/PanelContainer/VBoxContainer/ScrollContainer/CardGrid" unique_id=1627005149]
+custom_minimum_size = Vector2(300, 420)
+layout_mode = 2
+
+[node name="bg" type="Sprite2D" parent="Overlay/PanelContainer/VBoxContainer/ScrollContainer/CardGrid/CardUI4" unique_id=510119215]
+texture = ExtResource("2_wcen2")
+offset = Vector2(150, 210)
+
+[node name="Artwork" type="TextureRect" parent="Overlay/PanelContainer/VBoxContainer/ScrollContainer/CardGrid/CardUI4" unique_id=1726881233]
+clip_contents = true
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -127.0
+offset_top = 23.0
+offset_right = 143.0
+offset_bottom = 423.0
+grow_horizontal = 2
+texture = ExtResource("3_8kh1b")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="ColorRect" type="ColorRect" parent="Overlay/PanelContainer/VBoxContainer/ScrollContainer/CardGrid/CardUI4" unique_id=388154289]
+custom_minimum_size = Vector2(300, 35)
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = 247.5
+offset_bottom = -137.5
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.7647059)
+
+[node name="NameLabel" type="Label" parent="Overlay/PanelContainer/VBoxContainer/ScrollContainer/CardGrid/CardUI4" unique_id=611254635]
+modulate = Color(1, 1, 0, 1)
+layout_mode = 0
+offset_right = 300.0
+offset_bottom = 31.0
+offset_transform_enabled = true
+offset_transform_position = Vector2(0, 250)
+offset_transform_pivot_ratio = Vector2(0, 0)
+theme_override_font_sizes/font_size = 22
+text = "dasidj asidjsia jdisa"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="mod" type="Sprite2D" parent="Overlay/PanelContainer/VBoxContainer/ScrollContainer/CardGrid/CardUI4" unique_id=1604088394]
+texture = ExtResource("4_mctg2")
+offset = Vector2(150, 210)
+
+[node name="HeaderPanel" type="Control" parent="Overlay/PanelContainer/VBoxContainer/ScrollContainer/CardGrid/CardUI4" unique_id=1480279657]
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="SacrificeProgress" type="ProgressBar" parent="Overlay/PanelContainer/VBoxContainer/ScrollContainer/CardGrid/CardUI4/HeaderPanel" unique_id=1904392748]
+layout_mode = 0
+offset_top = 200.0
+offset_right = 300.0
+offset_bottom = 240.0
+min_value = 50.0
+value = 50.0
+
+[node name="BloodCostLabel" type="Label" parent="Overlay/PanelContainer/VBoxContainer/ScrollContainer/CardGrid/CardUI4/HeaderPanel" unique_id=925831230]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 23.0
+offset_transform_enabled = true
+offset_transform_position = Vector2(130, 6)
+text = "01"
+horizontal_alignment = 1
+
+[node name="FooterPanel" type="Control" parent="Overlay/PanelContainer/VBoxContainer/ScrollContainer/CardGrid/CardUI4" unique_id=1081780550]
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="AttackLabel" type="Label" parent="Overlay/PanelContainer/VBoxContainer/ScrollContainer/CardGrid/CardUI4/FooterPanel" unique_id=210035011]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 23.0
+offset_transform_enabled = true
+offset_transform_position = Vector2(100, 380)
+theme_override_colors/font_color = Color(1, 1, 0, 1)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_font_sizes/font_size = 27
+text = "1"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="DefenseLabel" type="Label" parent="Overlay/PanelContainer/VBoxContainer/ScrollContainer/CardGrid/CardUI4/FooterPanel" unique_id=1099838921]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 23.0
+offset_transform_enabled = true
+offset_transform_position = Vector2(153, 380)
+theme_override_colors/font_color = Color(1, 1, 0, 1)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_font_sizes/font_size = 27
+text = "1"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="CardUI5" type="Control" parent="Overlay/PanelContainer/VBoxContainer/ScrollContainer/CardGrid" unique_id=2143174705]
+custom_minimum_size = Vector2(300, 420)
+layout_mode = 2
+
+[node name="bg" type="Sprite2D" parent="Overlay/PanelContainer/VBoxContainer/ScrollContainer/CardGrid/CardUI5" unique_id=880709476]
+texture = ExtResource("2_wcen2")
+offset = Vector2(150, 210)
+
+[node name="Artwork" type="TextureRect" parent="Overlay/PanelContainer/VBoxContainer/ScrollContainer/CardGrid/CardUI5" unique_id=161377445]
+clip_contents = true
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -127.0
+offset_top = 23.0
+offset_right = 143.0
+offset_bottom = 423.0
+grow_horizontal = 2
+texture = ExtResource("3_8kh1b")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="ColorRect" type="ColorRect" parent="Overlay/PanelContainer/VBoxContainer/ScrollContainer/CardGrid/CardUI5" unique_id=1768500759]
+custom_minimum_size = Vector2(300, 35)
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = 247.5
+offset_bottom = -137.5
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.7647059)
+
+[node name="NameLabel" type="Label" parent="Overlay/PanelContainer/VBoxContainer/ScrollContainer/CardGrid/CardUI5" unique_id=981773567]
+modulate = Color(1, 1, 0, 1)
+layout_mode = 0
+offset_right = 300.0
+offset_bottom = 31.0
+offset_transform_enabled = true
+offset_transform_position = Vector2(0, 250)
+offset_transform_pivot_ratio = Vector2(0, 0)
+theme_override_font_sizes/font_size = 22
+text = "dasidj asidjsia jdisa"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="mod" type="Sprite2D" parent="Overlay/PanelContainer/VBoxContainer/ScrollContainer/CardGrid/CardUI5" unique_id=155362993]
+texture = ExtResource("4_mctg2")
+offset = Vector2(150, 210)
+
+[node name="HeaderPanel" type="Control" parent="Overlay/PanelContainer/VBoxContainer/ScrollContainer/CardGrid/CardUI5" unique_id=795305158]
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="SacrificeProgress" type="ProgressBar" parent="Overlay/PanelContainer/VBoxContainer/ScrollContainer/CardGrid/CardUI5/HeaderPanel" unique_id=1297856422]
+layout_mode = 0
+offset_top = 200.0
+offset_right = 300.0
+offset_bottom = 240.0
+min_value = 50.0
+value = 50.0
+
+[node name="BloodCostLabel" type="Label" parent="Overlay/PanelContainer/VBoxContainer/ScrollContainer/CardGrid/CardUI5/HeaderPanel" unique_id=1290508694]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 23.0
+offset_transform_enabled = true
+offset_transform_position = Vector2(130, 6)
+text = "01"
+horizontal_alignment = 1
+
+[node name="FooterPanel" type="Control" parent="Overlay/PanelContainer/VBoxContainer/ScrollContainer/CardGrid/CardUI5" unique_id=353906833]
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="AttackLabel" type="Label" parent="Overlay/PanelContainer/VBoxContainer/ScrollContainer/CardGrid/CardUI5/FooterPanel" unique_id=1066481484]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 23.0
+offset_transform_enabled = true
+offset_transform_position = Vector2(100, 380)
+theme_override_colors/font_color = Color(1, 1, 0, 1)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_font_sizes/font_size = 27
+text = "1"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="DefenseLabel" type="Label" parent="Overlay/PanelContainer/VBoxContainer/ScrollContainer/CardGrid/CardUI5/FooterPanel" unique_id=73426892]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 23.0
+offset_transform_enabled = true
+offset_transform_position = Vector2(153, 380)
+theme_override_colors/font_color = Color(1, 1, 0, 1)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_font_sizes/font_size = 27
+text = "1"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="CloseButton" type="Button" parent="Overlay/PanelContainer/VBoxContainer" unique_id=1387513167]
+layout_mode = 2
+text = "FECHAR"

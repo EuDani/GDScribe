@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="CardResource" format=3 uid="uid://c3h7re2ulyjsy"]
+
+[ext_resource type="Script" uid="uid://crmjns4d70w7d" path="res://scripts/resources/ability_resource.gd" id="1_5os2d"]
+[ext_resource type="Script" uid="uid://blq621386htl8" path="res://scripts/resources/card_resource.gd" id="2_o4a37"]
+[ext_resource type="Texture2D" uid="uid://b7wlhlx1njyjs" path="res://artwork/arqueiro.jpg" id="2_tbh3s"]
+
+[resource]
+script = ExtResource("2_o4a37")
+id = "005"
+card_name = "Arqueiro"
+artwork = ExtResource("2_tbh3s")
+blood_cost = 2
+attack = 2
+metadata/_custom_type_script = "uid://blq621386htl8"

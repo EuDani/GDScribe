@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="CardResource" format=3 uid="uid://cnywdjlguwkik"]
+
+[ext_resource type="Script" uid="uid://crmjns4d70w7d" path="res://scripts/resources/ability_resource.gd" id="1_gn275"]
+[ext_resource type="Texture2D" uid="uid://k0jla0ww7w0e" path="res://artwork/gigante_ferro.jpg" id="2_t7fg0"]
+[ext_resource type="Script" uid="uid://blq621386htl8" path="res://scripts/resources/card_resource.gd" id="2_uk2ic"]
+
+[resource]
+script = ExtResource("2_uk2ic")
+id = "gigante"
+card_name = "Gigante de Ferro"
+artwork = ExtResource("2_t7fg0")
+category = 3
+blood_cost = 5
+attack = 4
+defense = 6
+metadata/_custom_type_script = "uid://blq621386htl8"

@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="CardResource" format=3 uid="uid://blbehovxq2fm6"]
+
+[ext_resource type="Script" uid="uid://crmjns4d70w7d" path="res://scripts/resources/ability_resource.gd" id="1_t6ebg"]
+[ext_resource type="Texture2D" uid="uid://cojfbkeh34mok" path="res://artwork/pacifista.jpg" id="2_t6ebg"]
+[ext_resource type="Script" uid="uid://blq621386htl8" path="res://scripts/resources/card_resource.gd" id="3_ayqnv"]
+
+[resource]
+script = ExtResource("3_ayqnv")
+id = "pacifista"
+card_name = "Robo Pacifista"
+artwork = ExtResource("2_t6ebg")
+category = 3
+defense = 2
+metadata/_custom_type_script = "uid://blq621386htl8"

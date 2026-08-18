@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="CardResource" format=3 uid="uid://djsxyl6wrlymx"]
+
+[ext_resource type="Script" uid="uid://crmjns4d70w7d" path="res://scripts/resources/ability_resource.gd" id="1_xoytj"]
+[ext_resource type="Texture2D" uid="uid://ctrwdvhnxfjdd" path="res://artwork/engenheiro.jpg" id="2_qd8wt"]
+[ext_resource type="Script" uid="uid://blq621386htl8" path="res://scripts/resources/card_resource.gd" id="2_yecxa"]
+
+[resource]
+script = ExtResource("2_yecxa")
+id = "Engenheiro"
+card_name = "Engenheiro"
+description = "Construtor de Automato"
+artwork = ExtResource("2_qd8wt")
+defense = 2
+metadata/_custom_type_script = "uid://blq621386htl8"

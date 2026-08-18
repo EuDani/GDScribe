@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="CardResource" format=3 uid="uid://d2qwngu5ybq78"]
+
+[ext_resource type="Script" uid="uid://crmjns4d70w7d" path="res://scripts/resources/ability_resource.gd" id="1_0rhkc"]
+[ext_resource type="Texture2D" uid="uid://dschdt116pcxw" path="res://artwork/soldado_robo.jpg" id="2_0rhkc"]
+[ext_resource type="Script" uid="uid://blq621386htl8" path="res://scripts/resources/card_resource.gd" id="3_np4rb"]
+
+[resource]
+script = ExtResource("3_np4rb")
+id = "robo_soldado"
+card_name = "Robo Soldado"
+artwork = ExtResource("2_0rhkc")
+category = 3
+blood_cost = 3
+attack = 3
+defense = 3
+metadata/_custom_type_script = "uid://blq621386htl8"

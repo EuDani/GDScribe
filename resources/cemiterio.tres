@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="CardResource" format=3 uid="uid://crdylrx2xlksc"]
+
+[ext_resource type="Script" uid="uid://crmjns4d70w7d" path="res://scripts/resources/ability_resource.gd" id="1_5h4yw"]
+[ext_resource type="Script" uid="uid://blq621386htl8" path="res://scripts/resources/card_resource.gd" id="2_kp8x3"]
+[ext_resource type="Texture2D" uid="uid://b614sub8rn5yc" path="res://artwork/cemiterio.jpg" id="2_l8elp"]
+
+[resource]
+script = ExtResource("2_kp8x3")
+id = "cemiterio"
+card_name = "Cemiterio"
+artwork = ExtResource("2_l8elp")
+category = 1
+blood_cost = 2
+attack = 0
+defense = 6
+metadata/_custom_type_script = "uid://blq621386htl8"

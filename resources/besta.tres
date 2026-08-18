@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="CardResource" format=3 uid="uid://dv4qxg5nqjp6h"]
+
+[ext_resource type="Script" uid="uid://crmjns4d70w7d" path="res://scripts/resources/ability_resource.gd" id="1_esd3p"]
+[ext_resource type="Script" uid="uid://blq621386htl8" path="res://scripts/resources/card_resource.gd" id="2_5hjgv"]
+[ext_resource type="Texture2D" uid="uid://gu7unkujadh" path="res://artwork/besta.jpg" id="2_qynnk"]
+
+[resource]
+script = ExtResource("2_5hjgv")
+id = "008"
+card_name = "Besta"
+artwork = ExtResource("2_qynnk")
+category = 1
+attack = 2
+metadata/_custom_type_script = "uid://blq621386htl8"

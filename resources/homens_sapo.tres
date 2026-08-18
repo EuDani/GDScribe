@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="CardResource" format=3 uid="uid://b5elher1c11x1"]
+
+[ext_resource type="Script" uid="uid://crmjns4d70w7d" path="res://scripts/resources/ability_resource.gd" id="1_degte"]
+[ext_resource type="Texture2D" uid="uid://cfwkxxi7vr3qm" path="res://artwork/homens_sapo.jpg" id="2_7nnkm"]
+[ext_resource type="Script" uid="uid://blq621386htl8" path="res://scripts/resources/card_resource.gd" id="2_gxr6q"]
+
+[resource]
+script = ExtResource("2_gxr6q")
+id = "homens_sapo"
+card_name = "Homens-Sapo"
+artwork = ExtResource("2_7nnkm")
+category = 1
+blood_cost = 2
+attack = 3
+horde = 2
+metadata/_custom_type_script = "uid://blq621386htl8"

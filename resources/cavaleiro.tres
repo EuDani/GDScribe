@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="CardResource" format=3 uid="uid://dx3ntjx01eean"]
+
+[ext_resource type="Script" uid="uid://crmjns4d70w7d" path="res://scripts/resources/ability_resource.gd" id="1_mf8j8"]
+[ext_resource type="Script" uid="uid://blq621386htl8" path="res://scripts/resources/card_resource.gd" id="2_6prc4"]
+[ext_resource type="Texture2D" uid="uid://ss5y3pvo6kim" path="res://artwork/cavaleiro.jpg" id="2_v1hud"]
+
+[resource]
+script = ExtResource("2_6prc4")
+id = "cavaleiro"
+card_name = "Cavaleiro"
+artwork = ExtResource("2_v1hud")
+blood_cost = 2
+attack = 3
+defense = 2
+metadata/_custom_type_script = "uid://blq621386htl8"

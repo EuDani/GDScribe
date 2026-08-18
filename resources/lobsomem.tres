@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="CardResource" format=3 uid="uid://dd8tc1ws4v2nc"]
+
+[ext_resource type="Script" uid="uid://crmjns4d70w7d" path="res://scripts/resources/ability_resource.gd" id="1_ucc3c"]
+[ext_resource type="Texture2D" uid="uid://bx0hagxliueij" path="res://artwork/lobsomem.jpg" id="2_jpbfu"]
+[ext_resource type="Script" uid="uid://blq621386htl8" path="res://scripts/resources/card_resource.gd" id="2_ur46r"]
+
+[resource]
+script = ExtResource("2_ur46r")
+id = "lobsomem"
+card_name = "Lobsomem"
+artwork = ExtResource("2_jpbfu")
+category = 2
+blood_cost = 3
+attack = 3
+defense = 4
+metadata/_custom_type_script = "uid://blq621386htl8"

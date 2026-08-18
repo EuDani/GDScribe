@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="CardResource" format=3 uid="uid://b244cdxqly1jr"]
+
+[ext_resource type="Script" uid="uid://crmjns4d70w7d" path="res://scripts/resources/ability_resource.gd" id="1_j5xg0"]
+[ext_resource type="Texture2D" uid="uid://dd2n3f47wue1p" path="res://artwork/servo_vampiro.jpg" id="2_j5xg0"]
+[ext_resource type="Script" uid="uid://blq621386htl8" path="res://scripts/resources/card_resource.gd" id="3_qalpa"]
+
+[resource]
+script = ExtResource("3_qalpa")
+id = "Servo_Vampiro"
+card_name = "Servo Vampiro"
+artwork = ExtResource("2_j5xg0")
+category = 2
+blood_cost = 2
+attack = 2
+defense = 3
+metadata/_custom_type_script = "uid://blq621386htl8"

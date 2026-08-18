@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="CardResource" format=3 uid="uid://weaklxf15c1b"]
+
+[ext_resource type="Script" uid="uid://crmjns4d70w7d" path="res://scripts/resources/ability_resource.gd" id="1_1fexf"]
+[ext_resource type="Texture2D" uid="uid://cci0ta5babcg3" path="res://artwork/rato_alado.jpg" id="2_1fexf"]
+[ext_resource type="Script" uid="uid://blq621386htl8" path="res://scripts/resources/card_resource.gd" id="3_erep7"]
+
+[resource]
+script = ExtResource("3_erep7")
+id = "rato_alado"
+card_name = "Rato Alado"
+artwork = ExtResource("2_1fexf")
+category = 2
+metadata/_custom_type_script = "uid://blq621386htl8"

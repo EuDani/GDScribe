@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="CardResource" format=3 uid="uid://cmlg6ixbvit5y"]
+
+[ext_resource type="Script" uid="uid://crmjns4d70w7d" path="res://scripts/resources/ability_resource.gd" id="1_u0cm2"]
+[ext_resource type="Texture2D" uid="uid://cfivhcmld2go4" path="res://artwork/aranha_gigante.jpg" id="2_8vany"]
+[ext_resource type="Script" uid="uid://blq621386htl8" path="res://scripts/resources/card_resource.gd" id="2_w8gup"]
+
+[resource]
+script = ExtResource("2_w8gup")
+id = "aranha_gigante"
+card_name = "Aranha Gigante"
+artwork = ExtResource("2_8vany")
+category = 2
+blood_cost = 3
+attack = 3
+defense = 3
+metadata/_custom_type_script = "uid://blq621386htl8"

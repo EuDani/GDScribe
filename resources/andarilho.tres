@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="CardResource" format=3 uid="uid://c56w2gmmuagnl"]
+
+[ext_resource type="Script" uid="uid://crmjns4d70w7d" path="res://scripts/resources/ability_resource.gd" id="1_veh4o"]
+[ext_resource type="Script" uid="uid://blq621386htl8" path="res://scripts/resources/card_resource.gd" id="2_p0has"]
+[ext_resource type="Texture2D" uid="uid://bqryr2aefp6q3" path="res://artwork/andarilho.jpg" id="2_pnu1q"]
+
+[resource]
+script = ExtResource("2_p0has")
+id = "andarilho"
+card_name = "Andarilho"
+artwork = ExtResource("2_pnu1q")
+defense = 3
+metadata/_custom_type_script = "uid://blq621386htl8"

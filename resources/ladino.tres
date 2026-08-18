@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="CardResource" format=3 uid="uid://be7kxsr52gxrq"]
+
+[ext_resource type="Script" uid="uid://crmjns4d70w7d" path="res://scripts/resources/ability_resource.gd" id="1_iiwjo"]
+[ext_resource type="Script" uid="uid://blq621386htl8" path="res://scripts/resources/card_resource.gd" id="2_bs5p8"]
+[ext_resource type="Texture2D" uid="uid://cpfj25hq8r2bl" path="res://artwork/ladino.jpg" id="2_v4nd6"]
+
+[resource]
+script = ExtResource("2_bs5p8")
+id = "ladino"
+card_name = "Ladino"
+artwork = ExtResource("2_v4nd6")
+blood_cost = 2
+attack = 2
+defense = 2
+metadata/_custom_type_script = "uid://blq621386htl8"

@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="CardResource" format=3 uid="uid://cnpd5fbp3ycck"]
+
+[ext_resource type="Script" uid="uid://crmjns4d70w7d" path="res://scripts/resources/ability_resource.gd" id="1_7to3i"]
+[ext_resource type="Texture2D" uid="uid://dvxadrbma0dtd" path="res://artwork/feiticeiro.jpg" id="2_2exvg"]
+[ext_resource type="Script" uid="uid://blq621386htl8" path="res://scripts/resources/card_resource.gd" id="2_f36pr"]
+
+[resource]
+script = ExtResource("2_f36pr")
+id = "feiticeiro"
+card_name = "Feiticeiro"
+artwork = ExtResource("2_2exvg")
+blood_cost = 3
+attack = 4
+defense = 2
+metadata/_custom_type_script = "uid://blq621386htl8"

@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="CardResource" format=3 uid="uid://d2d2oiat8yhiw"]
+
+[ext_resource type="Script" uid="uid://crmjns4d70w7d" path="res://scripts/resources/ability_resource.gd" id="1_qesw2"]
+[ext_resource type="Texture2D" uid="uid://h884py0wtg3w" path="res://artwork/estandarte.jpg" id="2_f1vou"]
+[ext_resource type="Script" uid="uid://blq621386htl8" path="res://scripts/resources/card_resource.gd" id="2_jlnin"]
+
+[resource]
+script = ExtResource("2_jlnin")
+id = "estandarte"
+card_name = "Estandarte"
+artwork = ExtResource("2_f1vou")
+category = 1
+metadata/_custom_type_script = "uid://blq621386htl8"
