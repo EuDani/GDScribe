@@ -87,6 +87,15 @@ const LEVEL_LABELS: Dictionary = {
 @export var shild: int = false
 @export var horde: int = false
 
+## Quantas cartas do oponente podem se juntar pra bloquear esta carta
+## quando ela ataca. O padrão (1) é o normal: só 1 bloqueadora por vez.
+## Valores maiores representam cartas grandes/perigosas o suficiente pra
+## exigir que o oponente escale mais de uma carta pra segurá-las (ver
+## TurnManager._on_enemy_attacker_clicked, que aplica esse limite).
+@export var max_blockers: int = 1:
+	set(value):
+		max_blockers = maxi(value, 1)
+
 
 ## Função utilitária para pegar o texto do nível da carta em formato de String
 func get_level_label() -> String:

@@ -6,9 +6,6 @@
 [ext_resource type="Texture2D" uid="uid://b2r1liclew5gv" path="res://artwork/alquimista.jpg" id="3_0wtyl"]
 [ext_resource type="Texture2D" uid="uid://cgs0bhq8s4eoj" path="res://sprites/card_mod.png" id="4_m4qql"]
 
-[sub_resource type="BoxShape3D" id="BoxShape3D_677gi"]
-size = Vector3(1.2451172, 0.15, 1.7900391)
-
 [sub_resource type="BoxMesh" id="BoxMesh_eg0p3"]
 size = Vector3(1, 1.5834961, 1)
 
@@ -24,8 +21,22 @@ shader_parameter/body_color = Color(0.15, 0.15, 0.15, 1)
 shader_parameter/target_face = 2
 shader_parameter/box_size = Vector3(1, 1, 1)
 
+[sub_resource type="BoxShape3D" id="BoxShape3D_677gi"]
+size = Vector3(1.2451172, 0.18059082, 1.7900391)
+
 [node name="CardInvocada" type="Node3D" unique_id=2141805097]
 script = ExtResource("1_ljx8c")
+
+[node name="CardArea" type="Area3D" parent="." unique_id=1817082093]
+
+[node name="CardMesh" type="MeshInstance3D" parent="CardArea" unique_id=1810508999]
+transform = Transform3D(1.2, 0, 0, 0, 0.4, 0, 0, 0, 1.68, 0, 0.11669922, 0)
+mesh = SubResource("BoxMesh_eg0p3")
+surface_material_override/0 = SubResource("ShaderMaterial_irt5y")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="CardArea" unique_id=2136984341]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.3952954, 0)
+shape = SubResource("BoxShape3D_677gi")
 
 [node name="CardViewport" type="SubViewport" parent="." unique_id=1046840700]
 transparent_bg = true
@@ -57,6 +68,7 @@ offset_top = 23.0
 offset_right = 143.0
 offset_bottom = 423.0
 grow_horizontal = 2
+mouse_filter = 2
 texture = ExtResource("3_0wtyl")
 expand_mode = 1
 stretch_mode = 6
@@ -71,6 +83,7 @@ offset_top = 247.5
 offset_bottom = -137.5
 grow_horizontal = 2
 grow_vertical = 2
+mouse_filter = 2
 color = Color(0, 0, 0, 0.7647059)
 
 [node name="NameLabel" type="Label" parent="CardViewport/CardUI" unique_id=2110452488]
@@ -94,6 +107,7 @@ offset = Vector2(150, 210)
 anchors_preset = 0
 offset_right = 40.0
 offset_bottom = 40.0
+mouse_filter = 2
 
 [node name="BloodCostLabel" type="Label" parent="CardViewport/CardUI/HeaderPanel" unique_id=1488431041]
 layout_mode = 0
@@ -108,6 +122,7 @@ horizontal_alignment = 1
 anchors_preset = 0
 offset_right = 40.0
 offset_bottom = 40.0
+mouse_filter = 2
 
 [node name="AttackLabel" type="Label" parent="CardViewport/CardUI/FooterPanel" unique_id=614357869]
 layout_mode = 0
@@ -146,14 +161,3 @@ theme_override_font_sizes/font_size = 200
 text = "@"
 horizontal_alignment = 1
 vertical_alignment = 1
-
-[node name="CardArea" type="Area3D" parent="." unique_id=1817082093]
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="CardArea" unique_id=2136984341]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.38, 0)
-shape = SubResource("BoxShape3D_677gi")
-
-[node name="CardMesh" type="MeshInstance3D" parent="." unique_id=1810508999]
-transform = Transform3D(1.2, 0, 0, 0, 0.4, 0, 0, 0, 1.68, 0, 0.11669922, 0)
-mesh = SubResource("BoxMesh_eg0p3")
-surface_material_override/0 = SubResource("ShaderMaterial_irt5y")

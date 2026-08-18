@@ -367,14 +367,6 @@ offset_right = 1144.0
 offset_bottom = 406.0
 text = "Passa Turno"
 
-[node name="ConfirmAttackButton" type="Button" parent="Hud"]
-offset_left = 966.0
-offset_top = 410.0
-offset_right = 1144.0
-offset_bottom = 471.0
-visible = false
-text = "Confirmar Ataque"
-
 [node name="ConfirmDefenseButton" type="Button" parent="Hud"]
 offset_left = 966.0
 offset_top = 410.0
@@ -412,22 +404,13 @@ script = ExtResource("30_5pmm0")
 
 [node name="Transition" type="Node" parent="DuelStateChart/Root/PlayerTurn/PlayerSummon" unique_id=976534719]
 script = ExtResource("31_c2vfe")
-to = NodePath("../../PlayerCombat/SelectAttackers")
+to = NodePath("../../PlayerCombat/EnemyDefends")
 event = &"end_turn_pressed"
 delay_in_seconds = "0.0"
 
 [node name="PlayerCombat" type="Node" parent="DuelStateChart/Root/PlayerTurn" unique_id=1171732304]
 script = ExtResource("29_qj6dy")
-initial_state = NodePath("SelectAttackers")
-
-[node name="SelectAttackers" type="Node" parent="DuelStateChart/Root/PlayerTurn/PlayerCombat" unique_id=137197750]
-script = ExtResource("30_5pmm0")
-
-[node name="Transition" type="Node" parent="DuelStateChart/Root/PlayerTurn/PlayerCombat/SelectAttackers" unique_id=743784568]
-script = ExtResource("31_c2vfe")
-to = NodePath("../../EnemyDefends")
-event = &"attackers_confirmed"
-delay_in_seconds = "0.0"
+initial_state = NodePath("EnemyDefends")
 
 [node name="EnemyDefends" type="Node" parent="DuelStateChart/Root/PlayerTurn/PlayerCombat" unique_id=353036734]
 script = ExtResource("30_5pmm0")
