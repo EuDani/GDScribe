@@ -21,6 +21,8 @@ const SACRIFICE_HOLD_TIME: float = 1.0
 
 var is_hovered: bool = false
 var is_dragging: bool = false
+## Posição/profundidade de repouso na mão, calculadas por PlayerHand.reorganize_hand()
+## e usadas como referência pelos tweens de hover (voltar ao lugar ao tirar o mouse).
 var base_y_position: float = 0.0
 var base_z_position: float = 0.0
 var tween: Tween
@@ -55,15 +57,16 @@ func _process(delta: float) -> void:
 
 
 ## Preenche os textos básicos (via CardVisualBase) e aplica regras próprias
-## da mão: cartas de tática não exibem ATK/DEF.
+## da mão: cartas de Efeito não exibem ATK/DEF (não fazem sentido pra um
+## efeito instantâneo que não fica em campo).
 func update_visuals() -> void:
 	super.update_visuals()
 	if not card_data:
 		return
 
-	var is_tactic := card_data.is_tactic
-	attack_label.visible = not is_tactic
-	defense_label.visible = not is_tactic
+	var is_effect := card_data.is_effect
+	attack_label.visible = not is_effect
+	defense_label.visible = not is_effect
 
 
 ## Inicia o arraste: cancela hover/tweens ativos e aplica zoom de "pegar".
@@ -77,6 +80,8 @@ func start_drag() -> void:
 		.set_trans(Tween.TRANS_QUAD)
 
 
+## Começa a contagem de "segurar para sacrificar" (chamado pelo DuelScene
+## quando o jogador clica na carta com o modo sacrifício ativo).
 func start_hold_sacrifice() -> void:
 	is_holding = true
 	hold_timer = 0.0
@@ -85,6 +90,8 @@ func start_hold_sacrifice() -> void:
 		progress_bar.value = 0
 
 
+## Cancela a contagem de sacrifício em andamento (ex.: o mouse saiu da
+## carta, ou o jogador soltou o botão antes do tempo).
 func cancel_hold() -> void:
 	is_holding = false
 	hold_timer = 0.0

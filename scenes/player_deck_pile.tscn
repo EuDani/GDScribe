@@ -8,7 +8,7 @@ size = Vector3(1, 0.13305664, 1)
 [sub_resource type="BoxShape3D" id="BoxShape3D_v5elv"]
 size = Vector3(1.2067871, 0.16894531, 1.6936035)
 
-[node name="PlayerBaralho" type="Area3D" unique_id=105496325]
+[node name="PlayerDeckPile" type="Area3D" unique_id=105496325]
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="." unique_id=873935194]
 transform = Transform3D(1.2, 0, 0, 0, 1.2, 0, 0, 0, 1.68, 0, 0, 0)

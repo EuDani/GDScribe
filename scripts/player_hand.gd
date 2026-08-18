@@ -17,6 +17,9 @@ signal card_sacrificed(card_node: Card3D)
 @export var reorganize_anim_time: float = 0.25
 
 var hand_cards: Array[Card3D] = []
+## Cartas que o jogador tentou jogar mas não tinha Sangue suficiente; ficam
+## visualmente "de lado" até o Sangue disponível cobrir o custo (ver
+## DuelScene._check_queued_cards).
 var queued_cards: Array[Card3D] = []
 
 
@@ -73,13 +76,14 @@ func remove_from_hand(card: Card3D) -> void:
 		reorganize_hand()
 
 
-func _on_card_clicked(card: Card3D, button_index: int) -> void:
-	card_invoked_custom.emit(card, button_index)
-
-
 ## Ativa/desativa a interação de clique/drag das cartas na mão. Usado pelo
 ## TurnManager para só permitir jogar ou sacrificar cartas na fase de
-## Invocação do jogador.
+## Invocação do jogador — fora dela, a Area3D de cada carta simplesmente
+## para de receber eventos de mouse (nem hover, nem clique).
 func set_interactive(enabled: bool) -> void:
 	for card in hand_cards:
 		card.card_area.input_ray_pickable = enabled
+
+
+func _on_card_clicked(card: Card3D, button_index: int) -> void:
+	card_invoked_custom.emit(card, button_index)

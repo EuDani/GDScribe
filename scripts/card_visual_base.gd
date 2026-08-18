@@ -7,6 +7,10 @@
 class_name CardVisualBase
 extends Node3D
 
+## Ao ser atribuído depois que o nó já está pronto (ex.: trocar a carta de
+## uma instância reaproveitada), atualiza a UI imediatamente. Antes disso
+## (durante a construção da cena), o valor só é guardado — quem dispara o
+## preenchimento inicial é o próprio _ready().
 @export var card_data: CardResource:
 	set(value):
 		card_data = value
@@ -28,7 +32,7 @@ func _ready() -> void:
 
 ## Preenche os elementos visuais comuns a partir de card_data.
 ## Subclasses devem chamar `super.update_visuals()` antes de aplicar
-## particularidades próprias (ex.: esconder ATK/DEF em cartas de tática).
+## particularidades próprias (ex.: esconder ATK/DEF em cartas de Efeito).
 func update_visuals() -> void:
 	if not card_data:
 		return

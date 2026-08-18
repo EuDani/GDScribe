@@ -1,3 +1,7 @@
+## Dados de uma carta do jogo: tudo que a define fora da partida (nome,
+## arte, custo, atributos de combate, habilidades). Uma instância deste
+## recurso representa a "carta impressa"; DeckResource.initialize_deck()
+## duplica cada uma para gerar as cópias usadas durante a partida.
 class_name CardResource
 extends Resource
 
@@ -36,6 +40,8 @@ const LEVEL_LABELS: Dictionary = {
 }
 
 @export_group("Identificação Básica")
+## Identificador único e estável da carta, independente do nome exibido
+## (útil para referenciar a carta por código sem depender de texto).
 @export var id: String = ""
 @export var card_name: String = "Nova Carta"
 @export_multiline var description: String = ""
@@ -48,10 +54,13 @@ const LEVEL_LABELS: Dictionary = {
 ## Categoria da carta (Soldado, Estrutura, Criatura ou Autômato)
 @export var category: CardCategory = CardCategory.SOLDADO
 
-## Se verdadeiro, a carta é uma Tática (efeito instantâneo/feitiço que não entra como unidade permanente no campo)
-@export var is_tactic: bool = false
+## Se verdadeiro, a carta é um Efeito: uma ação instantânea/feitiço que se
+## resolve na hora e não permanece como unidade no campo (diferente de uma
+## carta normal, que fica invocada até morrer).
+@export var is_effect: bool = false
 
 @export_group("Atributos de Combate")
+## Custo em Sangue para invocar/ativar esta carta.
 @export var blood_cost: int = 1:
 	set(value):
 		blood_cost = clampi(value, 0, 10)
@@ -69,10 +78,11 @@ const LEVEL_LABELS: Dictionary = {
 @export var abilities: Array[AbilityResource] = []
 
 ## A carta pode possuir NO MÁXIMO 1 Selo ativo por vez
-@export var selo: SealResource = null
+@export var seal: SealResource = null
 
 @export_group("Regras Especiais")
 ## Se verdadeiro, a carta pode atacar no mesmo turno em que é baixada
+## (ignora a doença de invocação aplicada normalmente pelo TurnManager).
 @export var can_attack_on_turn_created: bool = false
 @export var shild: int = false
 @export var horde: int = false

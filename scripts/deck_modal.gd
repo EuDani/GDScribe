@@ -19,7 +19,8 @@ func _ready() -> void:
 		close_button.pressed.connect(hide_modal)
 
 
-## Exibe o modal preenchido com as cartas de deck_resource.
+## Exibe o modal preenchido com as cartas de deck_resource. Chamado ao
+## clicar no monte de compra do jogador (ver DuelScene._on_deck_input_event).
 func show_deck(deck_resource: DeckResource) -> void:
 	visible = true
 
@@ -46,11 +47,9 @@ func hide_modal() -> void:
 	visible = false
 
 
-#func _unhandled_input(event: InputEvent) -> void:
-	#if visible and event is InputEventMouseButton and event.pressed:
-		#hide_modal()
-
-
+## Remove todas as cartas desenhadas no grid antes de redesenhar (chamado
+## no início de cada show_deck(), para não acumular cartas de aberturas
+## anteriores do modal).
 func _clear_grid() -> void:
 	for child in card_grid.get_children():
 		child.queue_free()
@@ -79,6 +78,8 @@ func _add_card_visual(card_data: CardResource) -> void:
 	card_instance.queue_free()  # Libera o restante: CardMesh, CardArea, CardViewport vazio.
 
 
+## Mostra um aviso no lugar do grid quando o deck não tem nenhuma carta
+## cadastrada (evita mostrar um modal vazio sem explicação).
 func _add_empty_message() -> void:
 	var label := Label.new()
 	label.text = EMPTY_DECK_MESSAGE

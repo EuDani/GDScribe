@@ -31,7 +31,10 @@ enabled=PackedStringArray("res://addons/alignment-tool/plugin.cfg", "res://addon
 [file_customization]
 
 folder_colors={
-"res://scenes/": "red"
+"res://scenes/": "red",
+"res://scripts/resources/": "pink",
+"res://scripts/shaders/": "teal",
+"res://sprites/": "yellow"
 }
 
 [physics]

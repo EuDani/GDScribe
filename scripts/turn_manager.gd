@@ -22,10 +22,10 @@ extends Node
 @onready var enemy_field: Node3D = $"../FieldAnchors/EnemyField"
 @onready var blood_manager: BloodManager = $"../BloodManager"
 @onready var enemy_blood_manager: BloodManager = $"../EnemyBloodManager"
-@onready var combat_manager: CombatManager = $"../CombateManager"
+@onready var combat_manager: CombatManager = $"../CombatManager"
 @onready var enemy_ai_controller: EnemyAiController = $"../EnemyAiController"
 @onready var phase_label: Label = $"../Hud/PhaseLabel"
-@onready var turno_button: Button = $"../Hud/TurnoButton"
+@onready var end_turn_button: Button = $"../Hud/EndTurnButton"
 @onready var confirm_attack_button: Button = $"../Hud/ConfirmAttackButton"
 @onready var confirm_defense_button: Button = $"../Hud/ConfirmDefenseButton"
 
@@ -52,7 +52,7 @@ func _ready() -> void:
 	state_player_defends.state_entered.connect(_on_player_defends_entered)
 	state_resolve_damage_enemy.state_entered.connect(_on_resolve_damage_enemy_entered)
 
-	turno_button.pressed.connect(_on_turno_button_pressed)
+	end_turn_button.pressed.connect(_on_end_turn_button_pressed)
 	confirm_attack_button.pressed.connect(_on_confirm_attack_pressed)
 	confirm_defense_button.pressed.connect(_on_confirm_defense_pressed)
 
@@ -60,7 +60,7 @@ func _ready() -> void:
 	confirm_defense_button.visible = false
 
 
-func _on_turno_button_pressed() -> void:
+func _on_end_turn_button_pressed() -> void:
 	if not is_player_summon_phase:
 		return
 	duel_state_chart.send_event("end_turn_pressed")
@@ -79,14 +79,14 @@ func _on_player_summon_entered() -> void:
 	blood_manager.start_turn()
 	_reset_turn_flags(player_field)
 	player_hand.set_interactive(true)
-	turno_button.visible = true
+	end_turn_button.visible = true
 	phase_label.text = "Invocação:\nJogador"
 
 
 func _on_player_summon_exited() -> void:
 	is_player_summon_phase = false
 	player_hand.set_interactive(false)
-	turno_button.visible = false
+	end_turn_button.visible = false
 #endregion
 
 

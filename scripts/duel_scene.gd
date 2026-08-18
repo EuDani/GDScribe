@@ -1,5 +1,10 @@
 ## Controlador principal da cena de duelo: mão, campo, sangue, arraste de
 ## cartas, fila de espera, sacrifício e os modais de deck/preview.
+##
+## As fases de turno/combate propriamente ditas (quem pode agir agora, e
+## quando) são responsabilidade do TurnManager — este script cuida só da
+## "mecânica de mão" (mão do jogador, arraste, invocação, fila de Sangue,
+## sacrifício) e é consultado/gated por ele via `turn_manager.is_player_summon_phase`.
 class_name DuelScene
 extends Node3D
 
@@ -30,8 +35,10 @@ extends Node3D
 @onready var queue_anchor: Node3D = $QueueAnchor
 @onready var blood_barrel_player: Area3D = $BloodBarrelPlayer
 @onready var blood_label: Label3D = $BloodBarrelPlayer/Label3D
-@onready var area_invocacao: Area3D = $AreaInvocacao
-@onready var player_baralho: Area3D = $PlayerBaralho
+## Área de colisão sobre a mesa: soltar uma carta arrastada aqui é o gesto
+## de "jogar a carta" (ver _is_mouse_over_summon_area).
+@onready var summon_area: Area3D = $SummonArea
+@onready var player_deck_pile: Area3D = $PlayerDeckPile
 @onready var deck_modal: DeckModal = $DeckModal
 
 @onready var enemy_blood_manager: BloodManager = $EnemyBloodManager
@@ -48,7 +55,7 @@ extends Node3D
 @onready var preview_blood_cost_label: Label = $PreviewLayer/CardUI/HeaderPanel/BloodCostLabel
 @onready var preview_attack_label: Label = $PreviewLayer/CardUI/FooterPanel/AttackLabel
 @onready var preview_defense_label: Label = $PreviewLayer/CardUI/FooterPanel/DefenseLabel
-@onready var preview_close_button: Button = $PreviewLayer/CardUI/bt_fechar
+@onready var preview_close_button: Button = $PreviewLayer/CardUI/CloseButton
 #endregion
 
 #region Estado interno
@@ -64,8 +71,8 @@ func _ready() -> void:
 	player_hand.card_invoked_custom.connect(_on_card_clicked_hand)
 	blood_barrel_player.input_event.connect(_on_barrel_input_event)
 
-	if player_baralho:
-		player_baralho.input_event.connect(_on_deck_input_event)
+	if player_deck_pile:
+		player_deck_pile.input_event.connect(_on_deck_input_event)
 
 	if preview_close_button:
 		preview_close_button.pressed.connect(_hide_card_preview)
@@ -79,6 +86,7 @@ func _ready() -> void:
 		enemy_deck_data.initialize_deck()
 		enemy_ai_controller.draw_initial_hand(enemy_deck_data, inicial_hand_size)
 		enemy_hand.set_card_count(enemy_ai_controller.hand_data.size())
+
 
 func _process(_delta: float) -> void:
 	if not dragged_card:
@@ -120,6 +128,9 @@ func _update_dragged_card_position() -> void:
 	dragged_card.global_transform.basis = main_camera.global_transform.basis
 
 
+## Ao soltar o botão do mouse com uma carta em arraste: decide entre jogar
+## no campo (se houver Sangue), enfileirar (se não houver) ou devolver pra
+## mão (se foi solta fora da área de invocação).
 func _drop_card(card: Card3D) -> void:
 	var current_card := card
 	dragged_card = null
@@ -127,7 +138,7 @@ func _drop_card(card: Card3D) -> void:
 
 	create_tween().tween_property(current_card, "scale", Vector3.ONE, 0.1)
 
-	if _is_mouse_over_area_invocacao(current_card):
+	if _is_mouse_over_summon_area(current_card):
 		var cost := current_card.card_data.blood_cost
 		if blood_manager.can_afford(cost):
 			blood_manager.spend_blood(cost)
@@ -146,10 +157,10 @@ func _return_card_to_hand(card: Card3D) -> void:
 	player_hand.reorganize_hand()
 
 
-## Detecta com precisão se o mouse soltou em cima do collider da AreaInvocacao,
+## Detecta com precisão se o mouse soltou em cima do collider da SummonArea,
 ## excluindo a própria carta arrastada da checagem de colisão.
-func _is_mouse_over_area_invocacao(ignored_card: Card3D = null) -> bool:
-	if not area_invocacao:
+func _is_mouse_over_summon_area(ignored_card: Card3D = null) -> bool:
+	if not summon_area:
 		return false
 
 	var mouse_pos := get_viewport().get_mouse_position()
@@ -166,14 +177,16 @@ func _is_mouse_over_area_invocacao(ignored_card: Card3D = null) -> bool:
 		if card_area:
 			query.exclude = [card_area.get_rid()]
 
-	query.collision_mask = area_invocacao.collision_layer
+	query.collision_mask = summon_area.collision_layer
 
 	var result := space_state.intersect_ray(query)
-	return result.has("collider") and result.collider == area_invocacao
+	return result.has("collider") and result.collider == summon_area
 #endregion
 
 
 #region Mão e campo
+## Compra `amount` cartas do baralho do jogador direto pra mão — usado só
+## na montagem inicial da partida (ver _ready()).
 func _draw_initial_hand(amount: int) -> void:
 	for i in range(amount):
 		var card_data := player_deck_data.draw_card()
@@ -247,6 +260,9 @@ func reorganize_field(field_node: Node3D, spacing: float = 1.5) -> void:
 
 
 #region Fila de espera (cartas sem Sangue suficiente)
+## Envia a carta pra fila de espera (visível ao lado do campo) até haver
+## Sangue suficiente pra pagá-la. Só existe uma carta na fila por vez: uma
+## nova tentativa de enfileirar substitui a anterior (que volta pra mão).
 func _queue_card(card: Card3D) -> void:
 	if not player_hand.queued_cards.is_empty():
 		_clear_queue_to_hand()
@@ -259,6 +275,8 @@ func _queue_card(card: Card3D) -> void:
 	tween.tween_property(card, "scale", Vector3.ONE * queue_scale, queue_anim_time)
 
 
+## Devolve todas as cartas da fila de volta pra mão (ex.: clique direito
+## numa carta da mão enquanto há algo na fila).
 func _clear_queue_to_hand() -> void:
 	while not player_hand.queued_cards.is_empty():
 		var q_card: Card3D = player_hand.queued_cards.pop_front()
@@ -283,6 +301,10 @@ func _check_queued_cards() -> void:
 
 
 #region Sacrifício
+## Clique no barril de Sangue: alterna o modo sacrifício (só permitido na
+## fase de Invocação do jogador — ver TurnManager.is_player_summon_phase).
+## Com o modo ativo, segurar o clique numa carta da mão a sacrifica
+## (ver Card3D.start_hold_sacrifice / _execute_sacrifice).
 func _on_barrel_input_event(_camera: Node, event: InputEvent, _pos: Vector3, _normal: Vector3, _shape: int) -> void:
 	if not turn_manager.is_player_summon_phase:
 		return
@@ -290,6 +312,8 @@ func _on_barrel_input_event(_camera: Node, event: InputEvent, _pos: Vector3, _no
 		is_sacrifice_mode = not is_sacrifice_mode
 
 
+## Converte a carta em Sangue (ganho igual à Defesa dela) e a remove da
+## mão, com uma pequena animação de "queda no barril" antes de destruí-la.
 func _execute_sacrifice(card: Card3D) -> void:
 	if not is_sacrifice_mode:
 		return
@@ -325,9 +349,10 @@ func _show_card_preview(data: CardResource) -> void:
 	preview_name_label.text = data.card_name
 	preview_blood_cost_label.text = str(data.blood_cost)
 
-	var is_tactic := data.is_tactic
-	preview_attack_label.visible = not is_tactic
-	preview_defense_label.visible = not is_tactic
+	# Cartas de Efeito são resolvidas na hora e não têm ATK/DEF relevantes.
+	var is_effect := data.is_effect
+	preview_attack_label.visible = not is_effect
+	preview_defense_label.visible = not is_effect
 	preview_attack_label.text = str(data.attack)
 	preview_defense_label.text = str(data.defense)
 
@@ -335,7 +360,7 @@ func _show_card_preview(data: CardResource) -> void:
 		preview_artwork_rect.texture = data.artwork
 
 
-## Esconde o PreviewLayer. Chamada pelo botão bt_fechar e também ao clicar
+## Esconde o PreviewLayer. Chamada pelo CloseButton e também ao clicar
 ## fora do preview (em qualquer carta da mão ou em qualquer lugar da tela).
 func _hide_card_preview() -> void:
 	preview_layer.visible = false

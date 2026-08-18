@@ -28,7 +28,7 @@ size = Vector3(11.003662, 1, 1)
 [sub_resource type="BoxMesh" id="BoxMesh_hyap7"]
 size = Vector3(16.288818, 0.27929688, 0.0390625)
 
-[node name="Campo" type="StaticBody3D" unique_id=1947293014]
+[node name="Battlefield" type="StaticBody3D" unique_id=1947293014]
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=1545263061]
 shape = SubResource("BoxShape3D_ogq8d")

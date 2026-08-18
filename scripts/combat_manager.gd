@@ -14,8 +14,8 @@ var player_hp: int = 20
 var enemy_hp: int = 20
 
 @onready var duel_scene: DuelScene = $".."
-@onready var player_hp_label: Label3D = $"../PlayerCastel/HPLabel"
-@onready var enemy_hp_label: Label3D = $"../EnemyCastel/HPLabel"
+@onready var player_hp_label: Label3D = $"../PlayerCastle/HPLabel"
+@onready var enemy_hp_label: Label3D = $"../EnemyCastle/HPLabel"
 
 
 func _ready() -> void:
