@@ -7,7 +7,7 @@
 [ext_resource type="Texture2D" uid="uid://cgs0bhq8s4eoj" path="res://sprites/card_mod.png" id="4_m4qql"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_677gi"]
-size = Vector3(1.2451172, 1.1103516, 1.7900391)
+size = Vector3(1.2451172, 0.15, 1.7900391)
 
 [sub_resource type="BoxMesh" id="BoxMesh_eg0p3"]
 size = Vector3(1, 1.5834961, 1)
@@ -40,6 +40,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+mouse_filter = 2
 
 [node name="bg" type="Sprite2D" parent="CardViewport/CardUI" unique_id=2062528340]
 texture = ExtResource("2_shs76")
@@ -149,6 +150,7 @@ vertical_alignment = 1
 [node name="CardArea" type="Area3D" parent="." unique_id=1817082093]
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="CardArea" unique_id=2136984341]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.38, 0)
 shape = SubResource("BoxShape3D_677gi")
 
 [node name="CardMesh" type="MeshInstance3D" parent="." unique_id=1810508999]
