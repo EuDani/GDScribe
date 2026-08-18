@@ -31,10 +31,10 @@
 [ext_resource type="Script" uid="uid://jk2jm1g6q853" path="res://addons/godot_state_charts/compound_state.gd" id="29_qj6dy"]
 [ext_resource type="Script" uid="uid://cytafq8i1y8qm" path="res://addons/godot_state_charts/atomic_state.gd" id="30_5pmm0"]
 [ext_resource type="Script" uid="uid://cf1nsco3w0mf6" path="res://addons/godot_state_charts/transition.gd" id="31_c2vfe"]
-[ext_resource type="Script" path="res://scripts/turn_manager.gd" id="40_tmgr"]
-[ext_resource type="Script" path="res://scripts/enemy_hand.gd" id="41_ehand"]
-[ext_resource type="Script" path="res://scripts/enemy_ai_controller.gd" id="42_eai"]
-[ext_resource type="Script" path="res://scripts/combat_manager.gd" id="43_cmgr"]
+[ext_resource type="Script" uid="uid://fm3fkj6w4ujo" path="res://scripts/turn_manager.gd" id="40_tmgr"]
+[ext_resource type="Script" uid="uid://bc3h02dmu46em" path="res://scripts/enemy_hand.gd" id="41_ehand"]
+[ext_resource type="Script" uid="uid://bbknb0a8e80p5" path="res://scripts/enemy_ai_controller.gd" id="42_eai"]
+[ext_resource type="Script" uid="uid://bb1ue36nyb5er" path="res://scripts/combat_manager.gd" id="43_cmgr"]
 
 [sub_resource type="Resource" id="Resource_ogq8d"]
 script = ExtResource("18_xrdeg")
@@ -77,7 +77,7 @@ script = ExtResource("1_3xxeq")
 player_deck_data = SubResource("Resource_ogq8d")
 enemy_deck_data = SubResource("Resource_enemy")
 inicial_hand_size = 6
-drag_distance_from_camera = 7.0
+drag_distance_from_camera = 20.0
 field_card_spacing = 2.45
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=585697800]
@@ -367,12 +367,12 @@ offset_right = 1144.0
 offset_bottom = 406.0
 text = "Passa Turno"
 
-[node name="ConfirmDefenseButton" type="Button" parent="Hud"]
+[node name="ConfirmDefenseButton" type="Button" parent="Hud" unique_id=285739888]
+visible = false
 offset_left = 966.0
 offset_top = 410.0
 offset_right = 1144.0
 offset_bottom = 471.0
-visible = false
 text = "Confirmar Defesa"
 
 [node name="PhaseLabel" type="Label" parent="Hud" unique_id=484958352]
@@ -483,5 +483,5 @@ script = ExtResource("42_eai")
 [node name="CombatManager" type="Node" parent="." unique_id=2008051783]
 script = ExtResource("43_cmgr")
 
-[node name="TurnManager" type="Node" parent="."]
+[node name="TurnManager" type="Node" parent="." unique_id=334537075]
 script = ExtResource("40_tmgr")

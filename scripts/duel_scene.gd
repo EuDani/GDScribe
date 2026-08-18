@@ -64,7 +64,6 @@ extends Node3D
 
 #region Estado interno
 var dragged_card: Card3D = null
-var is_sacrifice_mode: bool = false
 #endregion
 
 
@@ -73,7 +72,6 @@ func _ready() -> void:
 	blood_manager.blood_changed.connect(_on_blood_changed)
 	enemy_blood_manager.blood_changed.connect(_on_enemy_blood_changed)
 	player_hand.card_invoked_custom.connect(_on_card_clicked_hand)
-	blood_barrel_player.input_event.connect(_on_barrel_input_event)
 
 	if player_deck_pile:
 		player_deck_pile.input_event.connect(_on_deck_input_event)
@@ -115,7 +113,9 @@ func _input(event: InputEvent) -> void:
 
 #region Arraste de carta
 ## Projeta a posição do mouse num plano paralelo à câmera para posicionar
-## a carta arrastada, e alinha sua orientação com a câmera.
+## a carta arrastada, alinha sua orientação com a câmera, e destaca a
+## carta em vermelho enquanto ela estiver sobre o barril de Sangue
+## (indicando que soltá-la ali agora a sacrifica).
 func _update_dragged_card_position() -> void:
 	var mouse_pos := get_viewport().get_mouse_position()
 	var ray_origin := main_camera.project_ray_origin(mouse_pos)
@@ -131,16 +131,24 @@ func _update_dragged_card_position() -> void:
 
 	dragged_card.global_transform.basis = main_camera.global_transform.basis
 
+	dragged_card.set_sacrifice_highlight(_is_mouse_over_barrel(dragged_card))
 
-## Ao soltar o botão do mouse com uma carta em arraste: decide entre jogar
-## no campo (se houver Sangue e espaço), enfileirar (se faltar só Sangue)
-## ou devolver pra mão (se foi solta fora da área de invocação, ou se o
+
+## Ao soltar o botão do mouse com uma carta em arraste: sacrifica se foi
+## solta em cima do barril de Sangue; senão decide entre jogar no campo
+## (se houver Sangue e espaço), enfileirar (se faltar só Sangue) ou
+## devolver pra mão (se foi solta fora da área de invocação, ou se o
 ## campo já está cheio).
 func _drop_card(card: Card3D) -> void:
 	var current_card := card
 	dragged_card = null
 	current_card.is_dragging = false
 
+	if _is_mouse_over_barrel(current_card):
+		_execute_sacrifice(current_card)
+		return
+
+	current_card.set_sacrifice_highlight(false)
 	create_tween().tween_property(current_card, "scale", Vector3.ONE, 0.1)
 
 	if _is_mouse_over_summon_area(current_card):
@@ -166,10 +174,12 @@ func _return_card_to_hand(card: Card3D) -> void:
 	player_hand.reorganize_hand()
 
 
-## Detecta com precisão se o mouse soltou em cima do collider da SummonArea,
-## excluindo a própria carta arrastada da checagem de colisão.
-func _is_mouse_over_summon_area(ignored_card: Card3D = null) -> bool:
-	if not summon_area:
+## Faz um raycast do mouse contra o mundo e retorna true só se o collider
+## mais próximo ao longo do raio for exatamente `target`, excluindo a
+## própria carta arrastada da checagem de colisão. Usado tanto pra soltar
+## no campo (SummonArea) quanto pra sacrificar (barril de Sangue).
+func _is_mouse_over_area(target: Area3D, ignored_card: Card3D = null) -> bool:
+	if not target:
 		return false
 
 	var mouse_pos := get_viewport().get_mouse_position()
@@ -186,10 +196,18 @@ func _is_mouse_over_summon_area(ignored_card: Card3D = null) -> bool:
 		if card_area:
 			query.exclude = [card_area.get_rid()]
 
-	query.collision_mask = summon_area.collision_layer
+	query.collision_mask = target.collision_layer
 
 	var result := space_state.intersect_ray(query)
-	return result.has("collider") and result.collider == summon_area
+	return result.has("collider") and result.collider == target
+
+
+func _is_mouse_over_summon_area(ignored_card: Card3D = null) -> bool:
+	return _is_mouse_over_area(summon_area, ignored_card)
+
+
+func _is_mouse_over_barrel(ignored_card: Card3D = null) -> bool:
+	return _is_mouse_over_area(blood_barrel_player, ignored_card)
 #endregion
 
 
@@ -210,12 +228,6 @@ func _on_card_clicked_hand(card: Card3D, button_index: int) -> void:
 
 	if button_index == MOUSE_BUTTON_RIGHT and not player_hand.queued_cards.is_empty():
 		_clear_queue_to_hand()
-		return
-
-	if is_sacrifice_mode:
-		if button_index == MOUSE_BUTTON_LEFT:
-			card.card_held_released.connect(_execute_sacrifice, CONNECT_ONE_SHOT)
-			card.start_hold_sacrifice()
 		return
 
 	if button_index == MOUSE_BUTTON_LEFT:
@@ -313,23 +325,10 @@ func _check_queued_cards() -> void:
 
 
 #region Sacrifício
-## Clique no barril de Sangue: alterna o modo sacrifício (só permitido na
-## fase de Invocação do jogador — ver TurnManager.is_player_summon_phase).
-## Com o modo ativo, segurar o clique numa carta da mão a sacrifica
-## (ver Card3D.start_hold_sacrifice / _execute_sacrifice).
-func _on_barrel_input_event(_camera: Node, event: InputEvent, _pos: Vector3, _normal: Vector3, _shape: int) -> void:
-	if not turn_manager.is_player_summon_phase:
-		return
-	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
-		is_sacrifice_mode = not is_sacrifice_mode
-
-
 ## Converte a carta em Sangue (ganho igual à Defesa dela) e a remove da
 ## mão, com uma pequena animação de "queda no barril" antes de destruí-la.
+## Chamado por _drop_card ao soltar a carta em cima do barril de Sangue.
 func _execute_sacrifice(card: Card3D) -> void:
-	if not is_sacrifice_mode:
-		return
-
 	var defense_gained := card.card_data.defense
 	blood_manager.add_blood(defense_gained)
 
@@ -338,8 +337,6 @@ func _execute_sacrifice(card: Card3D) -> void:
 	var tween := create_tween()
 	tween.tween_property(card, "global_position", blood_barrel_player.global_position, 0.25)
 	tween.tween_callback(card.queue_free)
-
-	is_sacrifice_mode = false
 #endregion
 
 

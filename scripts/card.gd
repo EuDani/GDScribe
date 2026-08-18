@@ -1,23 +1,23 @@
 ## Representa uma carta interativa na mão do jogador (arrastável, com hover
-## e suporte a sacrifício por "segurar clique").
+## e destaque visual de sacrifício).
 class_name Card3D
 extends CardVisualBase
 
 signal card_clicked(card_node: Card3D, button_index: int)
-signal card_held_started(card_node: Card3D)
-signal card_held_released(card_node: Card3D)
 
-@onready var progress_bar: ProgressBar = $CardViewport/CardUI/HeaderPanel/SacrificeProgress
+@onready var card_mesh: MeshInstance3D = $CardMesh
 
 # --- Parâmetros de animação ---
 const HOVER_ANIM_TIME: float = 0.15
-const HOVER_Z_OFFSET: float = 0.85
+const HOVER_Z_OFFSET: float = 1.36
 const HOVER_SCALE: float = 1.1
 const DRAG_SCALE: float = 1.3
 const DRAG_ANIM_TIME: float = 0.15
 
-# --- Sacrifício (segurar o clique) ---
-const SACRIFICE_HOLD_TIME: float = 1.0
+## Cor aplicada ao material da carta enquanto ela está sendo arrastada em
+## cima do barril de Sangue, avisando que soltá-la ali agora a sacrifica.
+const SACRIFICE_TINT_COLOR: Color = Color(1.0, 0.15, 0.15, 1.0)
+const NORMAL_TINT_COLOR: Color = Color(1.0, 1.0, 1.0, 1.0)
 
 var is_hovered: bool = false
 var is_dragging: bool = false
@@ -27,33 +27,12 @@ var base_y_position: float = 0.0
 var base_z_position: float = 0.0
 var tween: Tween
 
-var is_holding: bool = false
-var hold_timer: float = 0.0
-
 
 func _ready() -> void:
 	super._ready()
 	card_area.mouse_entered.connect(_on_mouse_entered)
 	card_area.mouse_exited.connect(_on_mouse_exited)
 	card_area.input_event.connect(_on_input_event)
-
-	if progress_bar:
-		progress_bar.visible = false
-		progress_bar.value = 0
-
-
-func _process(delta: float) -> void:
-	if not is_holding:
-		return
-
-	hold_timer += delta
-	if progress_bar:
-		progress_bar.value = (hold_timer / SACRIFICE_HOLD_TIME) * 100.0
-
-	if hold_timer >= SACRIFICE_HOLD_TIME:
-		is_holding = false
-		card_held_released.emit(self)
-		cancel_hold()
 
 
 ## Preenche os textos básicos (via CardVisualBase) e aplica regras próprias
@@ -80,24 +59,13 @@ func start_drag() -> void:
 		.set_trans(Tween.TRANS_QUAD)
 
 
-## Começa a contagem de "segurar para sacrificar" (chamado pelo DuelScene
-## quando o jogador clica na carta com o modo sacrifício ativo).
-func start_hold_sacrifice() -> void:
-	is_holding = true
-	hold_timer = 0.0
-	if progress_bar:
-		progress_bar.visible = true
-		progress_bar.value = 0
-
-
-## Cancela a contagem de sacrifício em andamento (ex.: o mouse saiu da
-## carta, ou o jogador soltou o botão antes do tempo).
-func cancel_hold() -> void:
-	is_holding = false
-	hold_timer = 0.0
-	if progress_bar:
-		progress_bar.visible = false
-		progress_bar.value = 0
+## Tinge a carta de vermelho (ou volta ao normal) — chamado pelo DuelScene
+## a cada frame de arraste conforme a carta está ou não em cima do barril
+## de Sangue, como aviso visual de que soltá-la ali a sacrifica.
+func set_sacrifice_highlight(active: bool) -> void:
+	var material := card_mesh.material_override as StandardMaterial3D
+	if material:
+		material.albedo_color = SACRIFICE_TINT_COLOR if active else NORMAL_TINT_COLOR
 
 
 ## Hover: aproxima a carta da câmera no eixo Z, sem alterar Y.
@@ -115,8 +83,6 @@ func _on_mouse_entered() -> void:
 
 ## Fim do hover: restaura a posição Z de repouso.
 func _on_mouse_exited() -> void:
-	if is_holding:
-		cancel_hold()
 	if is_dragging:
 		return
 
@@ -135,8 +101,6 @@ func _on_input_event(_camera: Node, event: InputEvent, _pos: Vector3, _normal: V
 
 	if event.pressed:
 		card_clicked.emit(self, event.button_index)
-	elif event.button_index == MOUSE_BUTTON_LEFT and is_holding:
-		cancel_hold()
 
 
 func _kill_active_tween() -> void:

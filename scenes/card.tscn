@@ -90,6 +90,7 @@ offset_right = 40.0
 offset_bottom = 40.0
 
 [node name="SacrificeProgress" type="ProgressBar" parent="CardViewport/CardUI/HeaderPanel" unique_id=787888860]
+visible = false
 layout_mode = 0
 offset_top = 200.0
 offset_right = 300.0
