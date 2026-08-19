@@ -12,6 +12,16 @@ extends Node3D
 @export var player_deck_data: DeckResource
 @export var enemy_deck_data: DeckResource
 @export var inicial_hand_size: int = 4
+## Tamanho-alvo da mão do jogador ao final da compra de início de turno
+## (ver TurnManager._draw_card_for_turn): em vez de comprar sempre 1 carta
+## fixa, compra o suficiente pra completar até este número — com 0 cartas
+## na mão compra 5, com 4 compra só 1, com 5+ não compra nada.
+@export var target_hand_size: int = 5
+## Se true, o oponente joga o primeiro turno da partida (invocação dele
+## antes da primeira vez que o jogador joga) em vez do jogador começar —
+## ver TurnManager._ready(), que força o DuelStateChart a entrar direto em
+## EnemyTurn quando isso está ligado.
+@export var enemy_starts_before: bool = true
 @export var invoked_card_scene: PackedScene = preload("res://scenes/card_invocada.tscn")
 
 ## Distância (em unidades 3D) à frente da câmera onde a carta flutua durante o drag.
@@ -46,12 +56,14 @@ extends Node3D
 ## Área de colisão sobre a mesa: soltar uma carta arrastada aqui é o gesto
 ## de "jogar a carta" (ver _is_mouse_over_summon_area).
 @onready var summon_area: Area3D = $SummonArea
-@onready var player_deck_pile: Area3D = $PlayerDeckPile
+@onready var player_deck_pile: DeckPile = $PlayerDeckPile
 @onready var deck_modal: DeckModal = $DeckModal
 
 @onready var enemy_blood_manager: BloodManager = $EnemyBloodManager
+@onready var blood_barrel_enemy: Area3D = $BloodBarrelEnemy
 @onready var blood_label_enemy: Label3D = $BloodBarrelEnemy/Label3D
 @onready var blood_cup_plane_enemy: MeshInstance3D = $BloodBarrelEnemy/blood_cup/Plane
+@onready var enemy_deck_pile: DeckPile = $EnemyDeckPile
 @onready var enemy_field: Node3D = $FieldAnchors/EnemyField
 @onready var enemy_hand: EnemyHand = $EnemyHandAnchor
 @onready var enemy_ai_controller: EnemyAiController = $EnemyAiController
@@ -88,8 +100,8 @@ extends Node3D
 @onready var game_over_label: Label = $Hud/GameOverModal/GameOverLabel
 @onready var restart_button: Button = $Hud/GameOverModal/RestartButton
 
-@onready var end_turn_button: Button = $Hud/EndTurnButton
-@onready var confirm_defense_button: Button = $Hud/ConfirmDefenseButton
+@onready var end_turn_button: Button = $Hud/VBoxContainer/EndTurnButton
+@onready var confirm_defense_button: Button = $Hud/VBoxContainer/ConfirmDefenseButton
 #endregion
 
 #region Estado interno
@@ -104,6 +116,12 @@ var _preview_card_data: CardResource = null
 func _ready() -> void:
 	blood_manager.blood_changed.connect(_on_blood_changed.bind(blood_label, blood_cup_plane_player))
 	enemy_blood_manager.blood_changed.connect(_on_blood_changed.bind(blood_label_enemy, blood_cup_plane_enemy))
+	# blood_manager/enemy_blood_manager já emitiram blood_changed no próprio
+	# _ready() deles (reset_blood(), chamado antes desta conexão existir) —
+	# sem isso os labels ficariam com o texto padrão da cena ("00") até a
+	# próxima mudança de Sangue, em vez de refletir o início da partida.
+	_on_blood_changed(blood_manager.current_blood, blood_manager.current_max_blood, blood_label, blood_cup_plane_player)
+	_on_blood_changed(enemy_blood_manager.current_blood, enemy_blood_manager.current_max_blood, blood_label_enemy, blood_cup_plane_enemy)
 	player_hand.card_invoked_custom.connect(_on_card_clicked_hand)
 	combat_manager.game_over.connect(_on_game_over)
 
@@ -115,6 +133,9 @@ func _ready() -> void:
 
 	if player_deck_pile:
 		player_deck_pile.input_event.connect(_on_deck_input_event)
+
+	if enemy_deck_pile:
+		enemy_deck_pile.input_event.connect(_on_enemy_deck_input_event)
 
 	if preview_close_button:
 		preview_close_button.pressed.connect(_hide_card_preview)
@@ -134,7 +155,17 @@ func _ready() -> void:
 		_draw_initial_hand(inicial_hand_size)
 
 	if enemy_deck_data:
-		enemy_deck_data.initialize_deck()
+		enemy_ai_controller.personality = EnemyPersonality.roll_random()
+		print("Personalidade do oponente: ", enemy_ai_controller.personality.display_name())
+
+		# Baralho construído com viés da personalidade (aleatório dentro do
+		# viés, não uma lista fixa) a partir do pool de cartas cadastrado —
+		# não sobrescreve enemy_deck_data.cards pra não mutar um Resource
+		# que pode ser compartilhado entre partidas (ver initialize_deck_from).
+		var pool := _unique_cards(enemy_deck_data.cards)
+		var personality_deck := enemy_ai_controller.personality.build_deck(pool, enemy_deck_data.cards.size())
+		enemy_deck_data.initialize_deck_from(personality_deck)
+
 		enemy_ai_controller.draw_initial_hand(enemy_deck_data, inicial_hand_size)
 		enemy_hand.set_card_count(enemy_ai_controller.hand_data.size())
 
@@ -280,6 +311,18 @@ func _is_mouse_over_barrel(ignored_card: Card3D = null) -> bool:
 
 
 #region Mão e campo
+## Cartas distintas de `card_list` (por identidade do Resource) — usado
+## como pool-base pra EnemyPersonality.build_deck(), evitando que as
+## repetições já presentes na lista autoral do deck inflem ainda mais o
+## peso de certas cartas antes mesmo da personalidade entrar em jogo.
+func _unique_cards(card_list: Array[CardResource]) -> Array[CardResource]:
+	var unique: Array[CardResource] = []
+	for card in card_list:
+		if card and card not in unique:
+			unique.append(card)
+	return unique
+
+
 ## Compra `amount` cartas do baralho do jogador direto pra mão — usado só
 ## na montagem inicial da partida (ver _ready()).
 func _draw_initial_hand(amount: int) -> void:
@@ -289,14 +332,23 @@ func _draw_initial_hand(amount: int) -> void:
 			player_hand.add_card_to_hand(card_data)
 
 
-## Atualiza os labels de HUD com a quantidade de cartas restantes na pilha
-## de compra de cada baralho. Deve ser chamado sempre que uma carta for
-## comprada (ou o baralho for inicializado).
+## Atualiza os labels de HUD e a pilha visual (PlayerDeckPile/EnemyDeckPile)
+## com a quantidade de cartas restantes em cada baralho. Deve ser chamado
+## sempre que uma carta for comprada (ou o baralho for inicializado).
 func update_deck_counts() -> void:
-	if player_count_deck_cards_label and player_deck_data:
-		player_count_deck_cards_label.text = str(player_deck_data.get_remaining_cards_count())
-	if enemy_count_deck_cards_label and enemy_deck_data:
-		enemy_count_deck_cards_label.text = str(enemy_deck_data.get_remaining_cards_count())
+	if player_deck_data:
+		var player_remaining := player_deck_data.get_remaining_cards_count()
+		if player_count_deck_cards_label:
+			player_count_deck_cards_label.text = str(player_remaining)
+		if player_deck_pile:
+			player_deck_pile.set_card_count(player_remaining)
+
+	if enemy_deck_data:
+		var enemy_remaining := enemy_deck_data.get_remaining_cards_count()
+		if enemy_count_deck_cards_label:
+			enemy_count_deck_cards_label.text = str(enemy_remaining)
+		if enemy_deck_pile:
+			enemy_deck_pile.set_card_count(enemy_remaining)
 
 
 func _on_card_clicked_hand(card: Card3D, button_index: int) -> void:
@@ -406,6 +458,12 @@ func _on_deck_input_event(_camera: Node, event: InputEvent, _pos: Vector3, _norm
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
 		if deck_modal:
 			deck_modal.show_deck(player_deck_data)
+
+
+func _on_enemy_deck_input_event(_camera: Node, event: InputEvent, _pos: Vector3, _normal: Vector3, _shape: int) -> void:
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+		if deck_modal:
+			deck_modal.show_deck(enemy_deck_data)
 
 
 ## Mostra o PreviewLayer preenchido com os dados da carta clicada com o
@@ -522,8 +580,9 @@ func hide_message() -> void:
 	message_modal.visible = false
 
 
-## Fim de jogo: mostra o resultado, esconde os controles de turno e trava a
-## mão do jogador — só resta reiniciar.
+## Fim de jogo: mostra o resultado e pausa a árvore inteira (input, física,
+## timers e tweens de jogo param) — só o GameOverModal continua ativo
+## (process_mode = ALWAYS no .tscn), então nada mais é jogável até reiniciar.
 func _on_game_over(player_won: bool) -> void:
 	game_over_label.text = "Vitória!" if player_won else "Derrota!"
 	game_over_modal.visible = true
@@ -532,7 +591,10 @@ func _on_game_over(player_won: bool) -> void:
 	confirm_defense_button.visible = false
 	player_hand.set_interactive(false)
 
+	get_tree().paused = true
+
 
 func _on_restart_button_pressed() -> void:
+	get_tree().paused = false
 	get_tree().reload_current_scene()
 #endregion

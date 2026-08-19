@@ -46,11 +46,16 @@ var current_horde: int = 0
 ## Moldura dourada exibida ao redor da carta enquanto ela está selecionada
 ## (estilo "carta escolhida" de MTG), além do destaque de elevar/escalar.
 @onready var selection_outline: Panel = $CardViewport/CardUI/SelectionOutline
+## Destaque leve (branco, 30% de opacidade) enquanto o mouse está sobre a
+## carta — puramente informativo, não indica seleção nem elegibilidade.
+@onready var hover_highlight: Panel = $CardViewport/CardUI/HoverHighlight
 
 
 func _ready() -> void:
 	super._ready()
 	card_area.input_event.connect(_on_input_event)
+	card_area.mouse_entered.connect(_on_mouse_entered)
+	card_area.mouse_exited.connect(_on_mouse_exited)
 	# Capturada depois de super._ready() (que já rodou update_visuals(), se
 	# card_data já estava atribuído) e depois de quem instanciou a carta
 	# aplicar o multiplicador de escala de campo (ver
@@ -145,3 +150,13 @@ func set_selected(selected: bool) -> void:
 func _on_input_event(_camera: Node, event: InputEvent, _pos: Vector3, _normal: Vector3, _shape: int) -> void:
 	if event is InputEventMouseButton and event.pressed:
 		card_invocada_clicked.emit(self, event.button_index)
+
+
+func _on_mouse_entered() -> void:
+	if hover_highlight:
+		hover_highlight.visible = true
+
+
+func _on_mouse_exited() -> void:
+	if hover_highlight:
+		hover_highlight.visible = false

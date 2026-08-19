@@ -48,19 +48,31 @@ cards = Array[ExtResource("2_vhs7o")]([ExtResource("3_v5elv"), ExtResource("4_h8
 metadata/_custom_type_script = "uid://derr4p8e1lv6"
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_pbba0"]
-size = Vector3(1.7617188, 1, 1.9296875)
+size = Vector3(2.6901245, 2.1905518, 3.3808594)
 
 [sub_resource type="CylinderShape3D" id="CylinderShape3D_ogq8d"]
 height = 1.1835938
 radius = 0.6035156
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_ogq8d"]
-size = Vector3(15.578125, 11.859375, 2.571228)
+size = Vector3(11.563232, 4.0230713, 2.571228)
 
 [sub_resource type="CylinderMesh" id="CylinderMesh_eg0p3"]
 top_radius = 0.33642578
 bottom_radius = 0.33642578
 height = 0.22167969
+
+[sub_resource type="Gradient" id="Gradient_hplabel_bg"]
+offsets = PackedFloat32Array(0, 0.36279547, 0.47893113)
+colors = PackedColorArray(0, 0, 0, 1, 0, 0, 0, 0.8, 0, 0, 0, 0)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_hplabel_bg"]
+gradient = SubResource("Gradient_hplabel_bg")
+width = 128
+height = 128
+fill = 1
+fill_from = Vector2(0.5, 0.5)
+fill_to = Vector2(1, 0.5)
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_5pmm0"]
 border_width_left = 32
@@ -87,8 +99,10 @@ light_energy = 1.675
 
 [node name="MainCamera" type="Camera3D" parent="." unique_id=1567711766]
 transform = Transform3D(1, 0, 0, 0, 0.25881904, 0.96592575, 0, -0.96592575, 0.25881904, 0, 44.95, 12.01)
-script = ExtResource("44_camsh")
 fov = 13.0
+script = ExtResource("44_camsh")
+shake_decay = 3.0
+max_offset = 10.0
 
 [node name="Battlefield" parent="." unique_id=1947293014 instance=ExtResource("1_c1nue")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.014136314, 0, 0)
@@ -114,6 +128,7 @@ metadata/_edit_group_ = true
 transform = Transform3D(0.54, 0, 0, 0, 0.54, 0, 0, 0, 0.54, 0, -0.135, 0)
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="BloodBarrelPlayer" unique_id=315661214]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.34249878, 0.59527594, -0.72558594)
 shape = SubResource("BoxShape3D_pbba0")
 
 [node name="Label3D" type="Label3D" parent="BloodBarrelPlayer" unique_id=1122443325]
@@ -159,7 +174,6 @@ script = ExtResource("21_7gdid")
 
 [node name="EnemyBloodManager" type="Node3D" parent="." unique_id=927636054]
 script = ExtResource("21_7gdid")
-inicial_blood = 6
 
 [node name="PlayerDeckPile" parent="." unique_id=105496325 instance=ExtResource("23_sjiiy")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6.952734, 0.105, 3.38)
@@ -174,7 +188,7 @@ visible = false
 input_ray_pickable = false
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="SummonArea" unique_id=191400828]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.785614)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5780029, 1.3132935, 0.785614)
 shape = SubResource("BoxShape3D_ogq8d")
 
 [node name="EffectZone" type="Node3D" parent="." unique_id=2504862]
@@ -214,46 +228,84 @@ mesh = SubResource("CylinderMesh_eg0p3")
 
 [node name="Hud" type="CanvasLayer" parent="." unique_id=1983574989]
 
+[node name="EnemyHpLabelBg" type="TextureRect" parent="Hud" unique_id=900000009]
+offset_left = 513.015
+offset_top = 0.07
+offset_right = 641.015
+offset_bottom = 128.07037
+mouse_filter = 2
+texture = SubResource("GradientTexture2D_hplabel_bg")
+
 [node name="EnemyHpLabel" type="Label" parent="Hud" unique_id=1513047831]
-offset_left = 585.0
-offset_top = 34.0
-offset_right = 674.0
-offset_bottom = 89.0
+offset_left = 551.0
+offset_top = 36.54
+offset_right = 601.0
+offset_bottom = 86.53998
+pivot_offset = Vector2(25, 25)
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_font_sizes/font_size = 31
 text = "00"
+horizontal_alignment = 1
+vertical_alignment = 1
 
-[node name="PlayerHpLabel" type="Label" parent="Hud" unique_id=535439853]
-offset_left = 543.0
-offset_top = 575.0
-offset_right = 583.0
-offset_bottom = 598.0
-text = "00"
+[node name="PlayerHpLabelBg" type="TextureRect" parent="Hud" unique_id=900000010]
+offset_left = 512.845
+offset_top = 480.265
+offset_right = 640.845
+offset_bottom = 608.2658
+mouse_filter = 2
+texture = SubResource("GradientTexture2D_hplabel_bg")
 
-[node name="EndTurnButton" type="Button" parent="Hud" unique_id=1646399513]
-offset_left = 966.0
-offset_top = 345.0
-offset_right = 1144.0
-offset_bottom = 406.0
-text = "Passa Turno"
+[node name="VBoxContainer" type="VBoxContainer" parent="Hud" unique_id=1881310628]
+offset_left = 950.0
+offset_top = 310.0
+offset_right = 1094.0
+offset_bottom = 503.0
+theme_override_constants/separation = 8
 
-[node name="ConfirmDefenseButton" type="Button" parent="Hud" unique_id=285739888]
-visible = false
-offset_left = 966.0
-offset_top = 410.0
-offset_right = 1144.0
-offset_bottom = 471.0
-text = "Confirmar Defesa"
-
-[node name="PhaseLabel" type="Label" parent="Hud" unique_id=484958352]
-offset_left = 965.0
-offset_top = 286.0
-offset_right = 1139.0
-offset_bottom = 335.0
+[node name="PhaseLabel" type="Label" parent="Hud/VBoxContainer" unique_id=484958352]
+layout_mode = 2
+theme_override_colors/font_color = Color(0, 1, 1, 1)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 text = "Atacante:
 Jogador"
 horizontal_alignment = 1
 vertical_alignment = 1
 
+[node name="SelectAllButton" type="Button" parent="Hud/VBoxContainer" unique_id=900000008]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+text = "Todos Atacam"
+
+[node name="EndTurnButton" type="Button" parent="Hud/VBoxContainer" unique_id=1646399513]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+text = "Passa Turno"
+
+[node name="ConfirmDefenseButton" type="Button" parent="Hud/VBoxContainer" unique_id=285739888]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+text = "Confirmar Defesa"
+
+[node name="PlayerHpLabel" type="Label" parent="Hud" unique_id=535439853]
+offset_left = 551.0
+offset_top = 516.12
+offset_right = 601.0
+offset_bottom = 566.12
+pivot_offset = Vector2(25, 25)
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_font_sizes/font_size = 31
+text = "00"
+horizontal_alignment = 1
+vertical_alignment = 1
+
 [node name="label_skill_details" type="Label" parent="Hud" unique_id=1427187213]
+visible = false
 custom_minimum_size = Vector2(0, 50)
 offset_left = 133.0
 offset_top = 13.0
@@ -305,10 +357,9 @@ offset_left = 20.0
 offset_top = 15.0
 offset_right = 420.0
 offset_bottom = 90.0
-autowrap_mode = 3
 horizontal_alignment = 1
 vertical_alignment = 1
-text = ""
+autowrap_mode = 3
 
 [node name="MessageOkButton" type="Button" parent="Hud/MessageModal" unique_id=900000004]
 layout_mode = 0
@@ -319,6 +370,7 @@ offset_bottom = 132.0
 text = "OK"
 
 [node name="GameOverModal" type="Panel" parent="Hud" unique_id=900000005]
+process_mode = 3
 visible = false
 offset_left = 380.0
 offset_top = 250.0
@@ -334,7 +386,6 @@ offset_bottom = 90.0
 theme_override_font_sizes/font_size = 28
 horizontal_alignment = 1
 vertical_alignment = 1
-text = ""
 
 [node name="RestartButton" type="Button" parent="Hud/GameOverModal" unique_id=900000007]
 layout_mode = 0

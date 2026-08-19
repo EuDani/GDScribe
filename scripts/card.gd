@@ -8,11 +8,11 @@ signal card_clicked(card_node: Card3D, button_index: int)
 @onready var card_mesh: MeshInstance3D = $CardMesh
 
 # --- Parâmetros de animação ---
-const HOVER_ANIM_TIME: float = 0.15
-const HOVER_Z_OFFSET: float = 1.36
-const HOVER_SCALE: float = 1.1
-const DRAG_SCALE: float = 1.3
-const DRAG_ANIM_TIME: float = 0.15
+@export var HOVER_ANIM_TIME: float = 0.15
+@export var HOVER_Z_OFFSET: float = 1.36
+@export var HOVER_SCALE: float = 1.1
+@export var DRAG_SCALE: float = 1.3
+@export var DRAG_ANIM_TIME: float = 0.15
 
 ## Cor aplicada ao material da carta enquanto ela está sendo arrastada em
 ## cima do barril de Sangue, avisando que soltá-la ali agora a sacrifica.
@@ -23,8 +23,8 @@ var is_hovered: bool = false
 var is_dragging: bool = false
 ## Posição/profundidade de repouso na mão, calculadas por PlayerHand.reorganize_hand()
 ## e usadas como referência pelos tweens de hover (voltar ao lugar ao tirar o mouse).
-var base_y_position: float = 0.0
-var base_z_position: float = 0.0
+@export var base_y_position: float = 0.0
+@export var base_z_position: float = 0.0
 var tween: Tween
 
 

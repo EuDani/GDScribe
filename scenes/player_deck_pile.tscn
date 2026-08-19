@@ -1,6 +1,7 @@
 [gd_scene format=3 uid="uid://bbbkqoulul2in"]
 
 [ext_resource type="Texture2D" uid="uid://13behf8k88dn" path="res://sprites/card_back.png" id="1_wb3tj"]
+[ext_resource type="Script" uid="uid://cbdi1e5xiw6rl" path="res://scripts/deck_pile.gd" id="2_deckpile"]
 
 [sub_resource type="BoxMesh" id="BoxMesh_ogq8d"]
 size = Vector3(1, 0.13305664, 1)
@@ -9,6 +10,8 @@ size = Vector3(1, 0.13305664, 1)
 size = Vector3(1.2067871, 0.16894531, 1.6936035)
 
 [node name="PlayerDeckPile" type="Area3D" unique_id=105496325]
+script = ExtResource("2_deckpile")
+card_back_texture = ExtResource("1_wb3tj")
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="." unique_id=873935194]
 transform = Transform3D(1.2, 0, 0, 0, 1.2, 0, 0, 0, 1.68, 0, 0, 0)
@@ -17,67 +20,3 @@ mesh = SubResource("BoxMesh_ogq8d")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=919111718]
 shape = SubResource("BoxShape3D_v5elv")
-
-[node name="Sprite3D" type="Sprite3D" parent="." unique_id=618009687]
-transform = Transform3D(0.4, 0, 0, 0, -1.7484556e-08, 0.4, 0, -0.4, -1.7484556e-08, 0, -0.080963135, 0)
-texture = ExtResource("1_wb3tj")
-
-[node name="Sprite3D2" type="Sprite3D" parent="." unique_id=2041148115]
-transform = Transform3D(0.4, 0, 0, 0, -1.7484556e-08, 0.4, 0, -0.4, -1.7484556e-08, 0, 0.021669533, 0)
-texture = ExtResource("1_wb3tj")
-
-[node name="Sprite3D3" type="Sprite3D" parent="." unique_id=1834816383]
-transform = Transform3D(0.4, 0, 0, 0, -1.7484556e-08, 0.4, 0, -0.4, -1.7484556e-08, 0, 0.1243022, 0)
-texture = ExtResource("1_wb3tj")
-
-[node name="Sprite3D4" type="Sprite3D" parent="." unique_id=1688198544]
-transform = Transform3D(0.4, 0, 0, 0, -1.7484556e-08, 0.4, 0, -0.4, -1.7484556e-08, 0, 0.22693487, 0)
-texture = ExtResource("1_wb3tj")
-
-[node name="Sprite3D5" type="Sprite3D" parent="." unique_id=692481326]
-transform = Transform3D(0.4, 0, 0, 0, -1.7484556e-08, 0.4, 0, -0.4, -1.7484556e-08, 0, 0.3295675, 0)
-texture = ExtResource("1_wb3tj")
-
-[node name="Sprite3D6" type="Sprite3D" parent="." unique_id=540562184]
-transform = Transform3D(0.4, 0, 0, 0, -1.7484556e-08, 0.4, 0, -0.4, -1.7484556e-08, 0, 0.43220013, 0)
-texture = ExtResource("1_wb3tj")
-
-[node name="Sprite3D7" type="Sprite3D" parent="." unique_id=352290219]
-transform = Transform3D(0.4, 0, 0, 0, -1.7484556e-08, 0.4, 0, -0.4, -1.7484556e-08, 0, 0.5348328, 0)
-texture = ExtResource("1_wb3tj")
-
-[node name="Sprite3D8" type="Sprite3D" parent="." unique_id=1038619497]
-transform = Transform3D(0.4, 0, 0, 0, -1.7484556e-08, 0.4, 0, -0.4, -1.7484556e-08, 0, 0.6374654, 0)
-texture = ExtResource("1_wb3tj")
-
-[node name="Sprite3D9" type="Sprite3D" parent="." unique_id=649352571]
-transform = Transform3D(0.4, 0, 0, 0, -1.7484556e-08, 0.4, 0, -0.4, -1.7484556e-08, 0, -0.0296468, 0)
-texture = ExtResource("1_wb3tj")
-
-[node name="Sprite3D10" type="Sprite3D" parent="." unique_id=1943212765]
-transform = Transform3D(0.4, 0, 0, 0, -1.7484556e-08, 0.4, 0, -0.4, -1.7484556e-08, 0, 0.072985865, 0)
-texture = ExtResource("1_wb3tj")
-
-[node name="Sprite3D11" type="Sprite3D" parent="." unique_id=1846750783]
-transform = Transform3D(0.4, 0, 0, 0, -1.7484556e-08, 0.4, 0, -0.4, -1.7484556e-08, 0, 0.17561853, 0)
-texture = ExtResource("1_wb3tj")
-
-[node name="Sprite3D12" type="Sprite3D" parent="." unique_id=145443093]
-transform = Transform3D(0.4, 0, 0, 0, -1.7484556e-08, 0.4, 0, -0.4, -1.7484556e-08, 0, 0.27825117, 0)
-texture = ExtResource("1_wb3tj")
-
-[node name="Sprite3D13" type="Sprite3D" parent="." unique_id=816482879]
-transform = Transform3D(0.4, 0, 0, 0, -1.7484556e-08, 0.4, 0, -0.4, -1.7484556e-08, 0, 0.3808838, 0)
-texture = ExtResource("1_wb3tj")
-
-[node name="Sprite3D14" type="Sprite3D" parent="." unique_id=1667937605]
-transform = Transform3D(0.4, 0, 0, 0, -1.7484556e-08, 0.4, 0, -0.4, -1.7484556e-08, 0, 0.48351645, 0)
-texture = ExtResource("1_wb3tj")
-
-[node name="Sprite3D15" type="Sprite3D" parent="." unique_id=308309041]
-transform = Transform3D(0.4, 0, 0, 0, -1.7484556e-08, 0.4, 0, -0.4, -1.7484556e-08, 0, 0.5861491, 0)
-texture = ExtResource("1_wb3tj")
-
-[node name="Sprite3D16" type="Sprite3D" parent="." unique_id=899360463]
-transform = Transform3D(0.4, 0, 0, 0, -1.7484556e-08, 0.4, 0, -0.4, -1.7484556e-08, 0, 0.68878174, 0)
-texture = ExtResource("1_wb3tj")

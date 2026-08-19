@@ -23,6 +23,17 @@ func set_card_count(count: int) -> void:
 	_reorganize()
 
 
+## Remove e retorna o último sprite da mão sem destruí-lo nem reorganizar
+## o resto — usado pra animar um sacrifício antes de liberar o sprite de
+## verdade (ver EnemyAiController._sacrifice_cheapest_card). Chamar
+## set_card_count() logo em seguida, com a contagem já reduzida, evita que
+## ele tente remover mais um sprite por conta própria.
+func pop_sprite() -> Sprite3D:
+	if _card_sprites.is_empty():
+		return null
+	return _card_sprites.pop_back()
+
+
 func _spawn_card_back() -> Sprite3D:
 	var sprite := Sprite3D.new()
 	sprite.texture = card_back_texture

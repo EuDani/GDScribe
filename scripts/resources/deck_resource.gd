@@ -24,11 +24,20 @@ var _discard_pile: Array[CardResource] = []
 ## acumulado numa carta) nunca modifiquem o CardResource original salvo em
 ## disco.
 func initialize_deck() -> void:
+	initialize_deck_from(cards)
+
+
+## Como initialize_deck(), mas usa `source_cards` como molde em vez do
+## `cards` autoral deste recurso — usado pela personalidade do oponente
+## pra montar um baralho com viés diferente (ver EnemyPersonality.build_deck)
+## sem sobrescrever `cards`, que poderia ser um Resource compartilhado
+## entre partidas (reload_current_scene) se não for local_to_scene.
+func initialize_deck_from(source_cards: Array[CardResource]) -> void:
 	_draw_pile.clear()
 	_discard_pile.clear()
 
 	# Cria cópias locais para que as alterações na partida não modifiquem o arquivo de dados original
-	for card in cards:
+	for card in source_cards:
 		if card != null:
 			_draw_pile.append(card.duplicate())
 	shuffle()

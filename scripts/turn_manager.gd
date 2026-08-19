@@ -8,6 +8,8 @@ extends Node
 
 @onready var duel_scene: DuelScene = $".."
 @onready var duel_state_chart: StateChart = $"../DuelStateChart"
+@onready var state_root: CompoundState = $"../DuelStateChart/Root"
+@onready var state_enemy_turn: CompoundState = $"../DuelStateChart/Root/EnemyTurn"
 
 ## PlayerSummon cobre as duas coisas ao mesmo tempo: invocar cartas da mão
 ## E marcar quais cartas do campo vão atacar. Não existe mais uma fase
@@ -28,13 +30,23 @@ extends Node
 @onready var enemy_blood_manager: BloodManager = $"../EnemyBloodManager"
 @onready var combat_manager: CombatManager = $"../CombatManager"
 @onready var enemy_ai_controller: EnemyAiController = $"../EnemyAiController"
-@onready var phase_label: Label = $"../Hud/PhaseLabel"
-@onready var end_turn_button: Button = $"../Hud/EndTurnButton"
-@onready var confirm_defense_button: Button = $"../Hud/ConfirmDefenseButton"
+@onready var phase_label: Label = $"../Hud/VBoxContainer/PhaseLabel"
+@onready var end_turn_button: Button = $"../Hud/VBoxContainer/EndTurnButton"
+@onready var confirm_defense_button: Button = $"../Hud/VBoxContainer/ConfirmDefenseButton"
+@onready var select_all_button: Button = $"../Hud/VBoxContainer/SelectAllButton"
 
 ## true apenas durante a fase de Invocação do jogador — usado por DuelScene
 ## para liberar/bloquear arraste de cartas e o modo sacrifício.
 var is_player_summon_phase: bool = false
+
+## true apenas durante a fase em que o jogador escolhe bloqueadores contra
+## o ataque do oponente — usado por SelectAllButton pra saber se o clique
+## significa "todos atacam" ou "todos bloqueiam".
+var is_player_defense_phase: bool = false
+
+## Estado do toggle do SelectAllButton — true = "tudo selecionado" (clicar
+## de novo desmarca tudo). Resetado sempre que a fase muda.
+var _select_all_toggled: bool = false
 
 ## A primeiríssima entrada em PlayerSummon (início da partida) não compra
 ## carta extra — a mão inicial já foi distribuída por DuelScene._ready().
@@ -54,6 +66,8 @@ var _inicial_combat: bool = true
 
 
 func _ready() -> void:
+	_apply_enemy_starts_before()
+
 	state_player_summon.state_entered.connect(_on_player_summon_entered)
 	state_player_summon.state_exited.connect(_on_player_summon_exited)
 
@@ -66,14 +80,135 @@ func _ready() -> void:
 
 	end_turn_button.pressed.connect(_on_end_turn_button_pressed)
 	confirm_defense_button.pressed.connect(_on_confirm_defense_pressed)
+	select_all_button.pressed.connect(_on_select_all_button_pressed)
 
 	confirm_defense_button.visible = false
+	select_all_button.visible = false
+
+
+## Redireciona a entrada inicial do DuelStateChart pra EnemyTurn em vez de
+## PlayerTurn quando duel_scene.enemy_starts_before está ligado. Precisa
+## sobrescrever o `_initial_state` interno do CompoundState (não só a
+## propriedade `initial_state` exportada) porque esse valor já foi
+## resolvido via @onready no _ready() do próprio nó Root — que roda antes
+## deste _ready() — e só é de fato usado quando o StateChart entra no
+## estado inicial via chamada adiada (call_deferred), no fim do frame
+## atual, depois de todo mundo já ter rodado seu _ready(). Como esta
+## atribuição acontece antes disso, ainda chega a tempo.
+func _apply_enemy_starts_before() -> void:
+	if not duel_scene.enemy_starts_before:
+		return
+
+	state_root.initial_state = NodePath("EnemyTurn")
+	state_root.set("_initial_state", state_enemy_turn)
 
 
 func _on_end_turn_button_pressed() -> void:
 	if not is_player_summon_phase:
 		return
 	duel_state_chart.send_event("end_turn_pressed")
+
+
+## Botão de atalho: na fase de Invocação vira "Todos Atacam" (marca/
+## desmarca todos os atacantes elegíveis), na fase de defesa vira "Todos
+## Bloqueiam" (associa/desfaz bloqueadoras pra todos os atacantes inimigos
+## possíveis). É um toggle — clicar de novo desfaz tudo que ele
+## selecionou. Só fica visível quando há de fato alguma carta que ele
+## poderia selecionar (ver _update_select_all_button_visibility).
+func _on_select_all_button_pressed() -> void:
+	if is_player_summon_phase:
+		_toggle_all_attackers()
+	elif is_player_defense_phase:
+		_toggle_all_blockers()
+
+
+func _toggle_all_attackers() -> void:
+	_select_all_toggled = not _select_all_toggled
+
+	if _select_all_toggled:
+		for card in player_field.get_children():
+			if card is CardInvocada and card.can_attack() and not card.is_selected:
+				card.set_selected(true)
+				_selected_attackers.append(card)
+	else:
+		for card in _selected_attackers.duplicate():
+			card.set_selected(false)
+		_selected_attackers.clear()
+
+	select_all_button.text = "Desmarcar Todos" if _select_all_toggled else "Todos Atacam"
+
+
+## Associa uma bloqueadora disponível a cada atacante inimigo ainda sem
+## bloqueio (1 por atacante — não monta bloqueio em grupo, igual à IA).
+## Desmarcar limpa todos os bloqueios feitos por este botão (e qualquer
+## bloqueadora pendente de um clique manual).
+func _toggle_all_blockers() -> void:
+	_select_all_toggled = not _select_all_toggled
+
+	if _select_all_toggled:
+		if _pending_blocker:
+			_pending_blocker.set_selected(false)
+			_pending_blocker = null
+
+		var available: Array[CardInvocada] = []
+		for card in player_field.get_children():
+			if card is CardInvocada and card.can_block() and not card.is_selected:
+				available.append(card)
+
+		for attacker in _current_enemy_attackers:
+			if not is_instance_valid(attacker):
+				continue
+			var current_blockers: Array = combat_manager.blocks.get(attacker, [])
+			if not current_blockers.is_empty():
+				continue  # já tem bloqueadora escolhida manualmente
+
+			var flying := attacker.has_ability("voar")
+			var chosen: CardInvocada = null
+			for candidate in available:
+				if flying and not (candidate.has_ability("voar") or candidate.has_ability("alcance")):
+					continue
+				chosen = candidate
+				break
+
+			if chosen:
+				available.erase(chosen)
+				combat_manager.blocks[attacker] = [chosen]
+				chosen.set_selected(true)
+
+		combat_manager.refresh_attack_lines()
+	else:
+		for blockers: Array in combat_manager.blocks.values():
+			for blocker: CardInvocada in blockers:
+				if is_instance_valid(blocker):
+					blocker.set_selected(false)
+		combat_manager.blocks.clear()
+
+		if _pending_blocker:
+			_pending_blocker.set_selected(false)
+			_pending_blocker = null
+
+		combat_manager.refresh_attack_lines()
+
+	select_all_button.text = "Desmarcar Todos" if _select_all_toggled else "Todos Bloqueiam"
+
+
+## Mostra o SelectAllButton só quando há pelo menos uma carta que ele
+## realmente poderia selecionar agora nesta fase — evita mostrar um botão
+## sem nenhum efeito possível.
+func _update_select_all_button_visibility() -> void:
+	if is_player_summon_phase:
+		select_all_button.visible = _any_card_matches(player_field, func(c: CardInvocada) -> bool: return c.can_attack())
+	elif is_player_defense_phase:
+		select_all_button.visible = _any_card_matches(player_field, func(c: CardInvocada) -> bool: return c.can_block())
+	else:
+		select_all_button.visible = false
+
+
+func _any_card_matches(field: Node3D, predicate: Callable) -> bool:
+	for card in field.get_children():
+		if card is CardInvocada and predicate.call(card):
+			return true
+	return false
 
 
 func _reset_turn_flags(field: Node3D) -> void:
@@ -97,6 +232,10 @@ func _on_player_summon_entered() -> void:
 	blood_manager.start_turn(_inicial_combat)
 	_reset_turn_flags(player_field)
 
+	# Zerado aqui e marcado por _on_player_field_child_entered — usado pela
+	# personalidade Oportunista do oponente (ver EnemyAiController).
+	enemy_ai_controller.player_summoned_last_turn = false
+
 	if _is_first_player_summon:
 		_is_first_player_summon = false
 	else:
@@ -106,10 +245,14 @@ func _on_player_summon_entered() -> void:
 	end_turn_button.visible = true
 	phase_label.text = "Invocação e Ataque:\nJogador"
 
+	select_all_button.text = "Todos Atacam"
+	_select_all_toggled = false
+
 	_selected_attackers.clear()
 	for card in player_field.get_children():
 		if card is CardInvocada:
 			_watch_field_card_for_attack(card)
+	_update_select_all_button_visibility()
 
 	# Cartas invocadas durante esta mesma fase (ex.: uma com "Passo
 	# Rápido", que nasce sem doença de invocação) também precisam poder
@@ -117,15 +260,22 @@ func _on_player_summon_entered() -> void:
 	player_field.child_entered_tree.connect(_on_player_field_child_entered)
 
 
-## Compra 1 carta do baralho do jogador pra mão. Se o baralho (e o
-## descarte) estiverem totalmente vazios, DeckResource.draw_card() retorna
-## null e simplesmente não compra nada.
+## Compra cartas do baralho do jogador até a mão atingir
+## duel_scene.target_hand_size (ex.: com 0 cartas na mão compra 5, com 4
+## compra só 1; com a mão já no alvo ou acima, não compra nada). Se o
+## baralho (e o descarte) estiverem totalmente vazios, DeckResource.draw_card()
+## retorna null e a compra para mais cedo, com o que der.
 func _draw_card_for_turn() -> void:
 	if not duel_scene.player_deck_data:
 		return
-	var card_data := duel_scene.player_deck_data.draw_card()
-	if card_data:
+
+	var missing := duel_scene.target_hand_size - player_hand.hand_cards.size()
+	for i in range(missing):
+		var card_data := duel_scene.player_deck_data.draw_card()
+		if not card_data:
+			break
 		player_hand.add_card_to_hand(card_data)
+
 	duel_scene.update_deck_counts()
 
 
@@ -135,6 +285,7 @@ func _draw_card_for_turn() -> void:
 ## do frame, quando a carta já está totalmente montada.
 func _on_player_field_child_entered(node: Node) -> void:
 	if node is CardInvocada:
+		enemy_ai_controller.player_summoned_last_turn = true
 		_watch_field_card_for_attack.call_deferred(node)
 
 
@@ -148,6 +299,8 @@ func _watch_field_card_for_attack(card: CardInvocada) -> void:
 	card.set_selectable(can_attack_now)
 	if can_attack_now and not card.card_invocada_clicked.is_connected(_on_player_field_card_clicked):
 		card.card_invocada_clicked.connect(_on_player_field_card_clicked)
+
+	_update_select_all_button_visibility()
 
 
 func _on_player_field_card_clicked(card: CardInvocada, button_index: int) -> void:
@@ -170,6 +323,7 @@ func _on_player_summon_exited() -> void:
 	is_player_summon_phase = false
 	player_hand.set_interactive(false)
 	end_turn_button.visible = false
+	select_all_button.visible = false
 
 	if player_field.child_entered_tree.is_connected(_on_player_field_child_entered):
 		player_field.child_entered_tree.disconnect(_on_player_field_child_entered)
@@ -185,6 +339,9 @@ func _on_player_summon_exited() -> void:
 	_hide_all_indicators(player_field)
 
 	combat_manager.declared_attackers = _selected_attackers.duplicate()
+	# Usado pela personalidade Espelho do oponente (ver
+	# EnemyAiController._compute_attack_share).
+	enemy_ai_controller.player_attacker_count_last_turn = combat_manager.declared_attackers.size()
 	_selected_attackers.clear()
 #endregion
 
@@ -224,8 +381,31 @@ func _on_enemy_invocation_entered() -> void:
 	phase_label.text = "Invocação:\nOponente"
 	enemy_blood_manager.start_turn()
 	_reset_turn_flags(enemy_field)
+
+	if _check_diplomata_surrender():
+		return
+
+	enemy_ai_controller.draw_up_to_hand_size(duel_scene.target_hand_size)
 	await enemy_ai_controller.run_invocation_phase()
 	duel_state_chart.send_event("enemy_invocation_done")
+
+
+## Diplomata desiste da luta se estiver perdendo por uma margem grande
+## demais (ver EnemyPersonality.DIPLOMATA_SURRENDER_MARGIN) — dispara o
+## fim de jogo como se o jogador tivesse vencido, e nem chega a jogar o
+## turno.
+func _check_diplomata_surrender() -> bool:
+	var personality := enemy_ai_controller.personality
+	if not personality or personality.type != EnemyPersonality.Type.DIPLOMATA:
+		return false
+
+	var losing_by := combat_manager.player_hp - combat_manager.enemy_hp
+	if losing_by <= EnemyPersonality.DIPLOMATA_SURRENDER_MARGIN:
+		return false
+
+	phase_label.text = "O oponente desistiu da luta!"
+	combat_manager.force_game_over(true)
+	return true
 #endregion
 
 
@@ -284,6 +464,13 @@ func _on_player_defends_entered() -> void:
 
 	phase_label.text = "Combate:\nEscolha seus bloqueadores"
 	confirm_defense_button.visible = true
+
+	is_player_defense_phase = true
+	select_all_button.text = "Todos Bloqueiam"
+	_select_all_toggled = false
+	# has_eligible_blocker já foi calculado no loop acima — reaproveita em
+	# vez de escanear o campo de novo.
+	select_all_button.visible = has_eligible_blocker
 
 
 ## Clique numa carta do jogador durante a fase de defesa: se ela já está
@@ -354,6 +541,8 @@ func _on_confirm_defense_pressed() -> void:
 		return
 
 	confirm_defense_button.visible = false
+	select_all_button.visible = false
+	is_player_defense_phase = false
 
 	for attacker in _current_enemy_attackers:
 		if is_instance_valid(attacker) and attacker.card_invocada_clicked.is_connected(_on_enemy_attacker_clicked):
