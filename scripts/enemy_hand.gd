@@ -45,4 +45,5 @@ func _reorganize() -> void:
 		var target_x: float = start_x + (i * card_spacing)
 		var target_y: float = -absf(target_x) * fan_curve_strength
 		var target_z: float = i * 0.02
-		create_tween().tween_property(sprite, "position", Vector3(target_x, target_y, target_z), reorganize_anim_time)
+		create_tween().tween_property(sprite, "position", Vector3(target_x, target_y, target_z), reorganize_anim_time) \
+			.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)

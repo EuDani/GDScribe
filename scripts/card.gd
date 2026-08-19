@@ -56,7 +56,7 @@ func start_drag() -> void:
 
 	tween = create_tween().set_parallel(true)
 	tween.tween_property(self, "scale", Vector3.ONE * DRAG_SCALE, DRAG_ANIM_TIME) \
-		.set_trans(Tween.TRANS_QUAD)
+		.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 
 ## Tinge a carta de vermelho (ou volta ao normal) — chamado pelo DuelScene
@@ -77,8 +77,9 @@ func _on_mouse_entered() -> void:
 
 	tween = create_tween().set_parallel(true)
 	tween.tween_property(self, "position:z", base_z_position - HOVER_Z_OFFSET, HOVER_ANIM_TIME) \
-		.set_trans(Tween.TRANS_QUAD)
-	tween.tween_property(self, "scale", Vector3.ONE * HOVER_SCALE, HOVER_ANIM_TIME)
+		.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tween.tween_property(self, "scale", Vector3.ONE * HOVER_SCALE, HOVER_ANIM_TIME) \
+		.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 
 ## Fim do hover: restaura a posição Z de repouso.
@@ -91,8 +92,9 @@ func _on_mouse_exited() -> void:
 
 	tween = create_tween().set_parallel(true)
 	tween.tween_property(self, "position:z", base_z_position, HOVER_ANIM_TIME) \
-		.set_trans(Tween.TRANS_QUAD)
-	tween.tween_property(self, "scale", Vector3.ONE, HOVER_ANIM_TIME)
+		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT)
+	tween.tween_property(self, "scale", Vector3.ONE, HOVER_ANIM_TIME) \
+		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT)
 
 
 func _on_input_event(_camera: Node, event: InputEvent, _pos: Vector3, _normal: Vector3, _shape: int) -> void:

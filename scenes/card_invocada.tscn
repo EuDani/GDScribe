@@ -24,6 +24,20 @@ shader_parameter/box_size = Vector3(1, 1, 1)
 [sub_resource type="BoxShape3D" id="BoxShape3D_677gi"]
 size = Vector3(1.2451172, 0.28951415, 1.7900391)
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_selection"]
+bg_color = Color(1, 1, 1, 0)
+border_width_left = 10
+border_width_top = 10
+border_width_right = 10
+border_width_bottom = 10
+border_color = Color(1, 0.85, 0.2, 1)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+shadow_color = Color(1, 0.85, 0.2, 0.6)
+shadow_size = 10
+
 [node name="CardInvocada" type="Node3D" unique_id=2141805097]
 script = ExtResource("1_ljx8c")
 
@@ -190,3 +204,14 @@ offset_left = 233.0
 offset_right = 275.0
 offset_bottom = 44.0
 text = "🎈"
+
+[node name="SelectionOutline" type="Panel" parent="CardViewport/CardUI" unique_id=900000001]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_selection")

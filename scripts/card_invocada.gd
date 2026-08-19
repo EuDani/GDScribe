@@ -43,6 +43,9 @@ var current_horde: int = 0
 ## Selo grande sobre a carta indicando que ela não pode ser escolhida na
 ## fase de combate atual (nem como atacante, nem como bloqueadora).
 @onready var timeout_indicator: Label = $CardViewport/CardUI/TimeoutIndicador
+## Moldura dourada exibida ao redor da carta enquanto ela está selecionada
+## (estilo "carta escolhida" de MTG), além do destaque de elevar/escalar.
+@onready var selection_outline: Panel = $CardViewport/CardUI/SelectionOutline
 
 
 func _ready() -> void:
@@ -111,15 +114,24 @@ func set_selected(selected: bool) -> void:
 		return
 	is_selected = selected
 
+	if selection_outline:
+		selection_outline.visible = selected
+
 	if _select_tween and _select_tween.is_running():
 		_select_tween.kill()
 
 	var target_y: float = SELECT_Y_OFFSET if selected else 0.0
 	var target_scale: Vector3 = _base_scale * SELECT_SCALE if selected else _base_scale
+	# Pop elástico ao selecionar (overshoot rápido), assentamento suave ao
+	# desmarcar — reforça a diferença entre "escolher" e "soltar".
+	var trans_type := Tween.TRANS_BACK if selected else Tween.TRANS_QUAD
+	var ease_type := Tween.EASE_OUT if selected else Tween.EASE_IN_OUT
 
 	_select_tween = create_tween().set_parallel(true)
-	_select_tween.tween_property(self, "position:y", target_y, SELECT_ANIM_TIME)
-	_select_tween.tween_property(self, "scale", target_scale, SELECT_ANIM_TIME)
+	_select_tween.tween_property(self, "position:y", target_y, SELECT_ANIM_TIME) \
+		.set_trans(trans_type).set_ease(ease_type)
+	_select_tween.tween_property(self, "scale", target_scale, SELECT_ANIM_TIME) \
+		.set_trans(trans_type).set_ease(ease_type)
 
 
 ## Repassa cliques na carta como o sinal card_invocada_clicked, que o

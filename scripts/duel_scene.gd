@@ -36,7 +36,7 @@ extends Node3D
 #endregion
 
 #region Referências de nós
-@onready var main_camera: Camera3D = $MainCamera
+@onready var main_camera: CameraShaker = $MainCamera
 @onready var blood_manager: BloodManager = $BloodManager
 @onready var player_hand: PlayerHand = $PlayerHandAnchor
 @onready var player_field: Node3D = $FieldAnchors/PlayerField
@@ -77,6 +77,19 @@ extends Node3D
 
 @onready var player_count_deck_cards_label: Label = $Hud/PlayerCountDeckCards
 @onready var enemy_count_deck_cards_label: Label = $Hud/EnemyCountDeckCards
+
+@onready var combat_manager: CombatManager = $CombatManager
+
+@onready var message_modal: Panel = $Hud/MessageModal
+@onready var message_label: Label = $Hud/MessageModal/MessageLabel
+@onready var message_ok_button: Button = $Hud/MessageModal/MessageOkButton
+
+@onready var game_over_modal: Panel = $Hud/GameOverModal
+@onready var game_over_label: Label = $Hud/GameOverModal/GameOverLabel
+@onready var restart_button: Button = $Hud/GameOverModal/RestartButton
+
+@onready var end_turn_button: Button = $Hud/EndTurnButton
+@onready var confirm_defense_button: Button = $Hud/ConfirmDefenseButton
 #endregion
 
 #region Estado interno
@@ -92,6 +105,13 @@ func _ready() -> void:
 	blood_manager.blood_changed.connect(_on_blood_changed)
 	enemy_blood_manager.blood_changed.connect(_on_enemy_blood_changed)
 	player_hand.card_invoked_custom.connect(_on_card_clicked_hand)
+	combat_manager.game_over.connect(_on_game_over)
+
+	message_ok_button.pressed.connect(hide_message)
+	message_modal.visible = false
+
+	restart_button.pressed.connect(_on_restart_button_pressed)
+	game_over_modal.visible = false
 
 	if player_deck_pile:
 		player_deck_pile.input_event.connect(_on_deck_input_event)
@@ -179,7 +199,8 @@ func _drop_card(card: Card3D) -> void:
 		return
 
 	current_card.set_sacrifice_highlight(false)
-	create_tween().tween_property(current_card, "scale", Vector3.ONE, 0.1)
+	create_tween().tween_property(current_card, "scale", Vector3.ONE, 0.1) \
+		.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 	if _is_mouse_over_summon_area(current_card):
 		if player_field.get_child_count() >= max_field_size:
@@ -198,10 +219,12 @@ func _drop_card(card: Card3D) -> void:
 
 func _return_card_to_hand(card: Card3D) -> void:
 	# Reparent primeiro, depois reseta a rotação local na mão.
+	var drop_position := card.global_position
 	card.reparent(player_hand)
 	card.rotation_degrees = Vector3.ZERO
-	player_hand.hand_cards.append(card)
-	player_hand.reorganize_hand()
+	# Insere na posição mais próxima de onde a carta foi solta, permitindo
+	# reordenar a mão soltando uma carta arrastada entre as outras.
+	player_hand.insert_card_at_position(card, drop_position)
 
 
 ## Layer física das CardArea de cartas já invocadas em campo (CardInvocada).
@@ -347,9 +370,13 @@ func _execute_sacrifice(card: Card3D) -> void:
 
 	player_hand.remove_from_hand(card)
 
-	var tween := create_tween()
-	tween.tween_property(card, "global_position", blood_barrel_player.global_position, 0.25)
-	tween.tween_callback(card.queue_free)
+	var tween := create_tween().set_parallel(true)
+	tween.tween_property(card, "global_position", blood_barrel_player.global_position, 0.25) \
+		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	# Encolhe enquanto cai, como se afundasse no líquido do barril.
+	tween.tween_property(card, "scale", Vector3.ZERO, 0.25) \
+		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tween.chain().tween_callback(card.queue_free)
 #endregion
 
 
@@ -461,3 +488,32 @@ func _update_blood_cup(plane: MeshInstance3D, current: int, max_b: int) -> void:
 	var local_pos := plane.position
 	local_pos.y = lerpf(blood_cup_empty_y, blood_cup_full_y, fraction)
 	plane.position = local_pos
+
+
+#region Modais de HUD (aviso e fim de jogo)
+## Mostra o MessageModal com `text` — usado pelo TurnManager para avisar o
+## jogador de ações inválidas (ex.: confirmar defesa com uma bloqueadora
+## selecionada mas ainda não associada a um atacante).
+func show_message(text: String) -> void:
+	message_label.text = text
+	message_modal.visible = true
+
+
+func hide_message() -> void:
+	message_modal.visible = false
+
+
+## Fim de jogo: mostra o resultado, esconde os controles de turno e trava a
+## mão do jogador — só resta reiniciar.
+func _on_game_over(player_won: bool) -> void:
+	game_over_label.text = "Vitória!" if player_won else "Derrota!"
+	game_over_modal.visible = true
+
+	end_turn_button.visible = false
+	confirm_defense_button.visible = false
+	player_hand.set_interactive(false)
+
+
+func _on_restart_button_pressed() -> void:
+	get_tree().reload_current_scene()
+#endregion

@@ -345,7 +345,16 @@ func _on_enemy_attacker_clicked(card: CardInvocada, button_index: int) -> void:
 	combat_manager.refresh_attack_lines()
 
 
+## Confirma os bloqueios escolhidos e avança pra resolução de dano. Recusa
+## se houver uma bloqueadora "pendente" (selecionada, mas ainda não
+## associada a nenhum atacante) — nesse estado o jogador provavelmente
+## esqueceu de clicar no atacante, e confirmar assim descartaria a escolha
+## em silêncio.
 func _on_confirm_defense_pressed() -> void:
+	if _pending_blocker:
+		duel_scene.show_message("Escolha em qual atacante a bloqueadora selecionada vai atuar antes de confirmar a defesa.")
+		return
+
 	confirm_defense_button.visible = false
 
 	for attacker in _current_enemy_attackers:

@@ -35,6 +35,7 @@
 [ext_resource type="Script" uid="uid://bc3h02dmu46em" path="res://scripts/enemy_hand.gd" id="41_ehand"]
 [ext_resource type="Script" uid="uid://bbknb0a8e80p5" path="res://scripts/enemy_ai_controller.gd" id="42_eai"]
 [ext_resource type="Script" uid="uid://bb1ue36nyb5er" path="res://scripts/combat_manager.gd" id="43_cmgr"]
+[ext_resource type="Script" uid="uid://cb1xsctv5y7js" path="res://scripts/camera_shaker.gd" id="44_camsh"]
 
 [sub_resource type="Resource" id="Resource_ogq8d"]
 script = ExtResource("18_xrdeg")
@@ -86,6 +87,7 @@ light_energy = 1.675
 
 [node name="MainCamera" type="Camera3D" parent="." unique_id=1567711766]
 transform = Transform3D(1, 0, 0, 0, 0.25881904, 0.96592575, 0, -0.96592575, 0.25881904, 0, 44.95, 12.01)
+script = ExtResource("44_camsh")
 fov = 13.0
 
 [node name="Battlefield" parent="." unique_id=1947293014 instance=ExtResource("1_c1nue")]
@@ -289,6 +291,58 @@ theme_override_font_sizes/font_size = 22
 text = "00"
 horizontal_alignment = 1
 vertical_alignment = 1
+
+[node name="MessageModal" type="Panel" parent="Hud" unique_id=900000002]
+visible = false
+offset_left = 420.0
+offset_top = 280.0
+offset_right = 860.0
+offset_bottom = 420.0
+
+[node name="MessageLabel" type="Label" parent="Hud/MessageModal" unique_id=900000003]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 15.0
+offset_right = 420.0
+offset_bottom = 90.0
+autowrap_mode = 3
+horizontal_alignment = 1
+vertical_alignment = 1
+text = ""
+
+[node name="MessageOkButton" type="Button" parent="Hud/MessageModal" unique_id=900000004]
+layout_mode = 0
+offset_left = 150.0
+offset_top = 100.0
+offset_right = 290.0
+offset_bottom = 132.0
+text = "OK"
+
+[node name="GameOverModal" type="Panel" parent="Hud" unique_id=900000005]
+visible = false
+offset_left = 380.0
+offset_top = 250.0
+offset_right = 900.0
+offset_bottom = 420.0
+
+[node name="GameOverLabel" type="Label" parent="Hud/GameOverModal" unique_id=900000006]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 15.0
+offset_right = 500.0
+offset_bottom = 90.0
+theme_override_font_sizes/font_size = 28
+horizontal_alignment = 1
+vertical_alignment = 1
+text = ""
+
+[node name="RestartButton" type="Button" parent="Hud/GameOverModal" unique_id=900000007]
+layout_mode = 0
+offset_left = 190.0
+offset_top = 110.0
+offset_right = 330.0
+offset_bottom = 142.0
+text = "Reiniciar"
 
 [node name="DuelStateChart" type="Node" parent="." unique_id=1893831762]
 script = ExtResource("28_g6765")

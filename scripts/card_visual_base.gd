@@ -23,6 +23,9 @@ extends Node3D
 @onready var defense_label: Label = $CardViewport/CardUI/FooterPanel/DefenseLabel
 @onready var artwork_rect: TextureRect = $CardViewport/CardUI/Artwork
 @onready var card_area: Area3D = $CardArea
+@onready var skill_button_1: Button = $CardViewport/CardUI/Skills/skill1
+@onready var skill_button_2: Button = $CardViewport/CardUI/Skills/skill2
+@onready var skill_button_3: Button = $CardViewport/CardUI/Skills/skill3
 
 
 func _ready() -> void:
@@ -44,3 +47,20 @@ func update_visuals() -> void:
 
 	if card_data.artwork:
 		artwork_rect.texture = card_data.artwork
+
+	_update_skill_icons()
+
+
+## Mostra/esconde os botões skill1/2/3 conforme as habilidades da carta e
+## preenche o ícone (icon_emoji) de cada uma. Cartas com menos de 3
+## habilidades escondem os botões sobrando.
+func _update_skill_icons() -> void:
+	var buttons := [skill_button_1, skill_button_2, skill_button_3]
+	for i in range(buttons.size()):
+		var button: Button = buttons[i]
+		if not button:
+			continue
+		var has_ability: bool = i < card_data.abilities.size() and card_data.abilities[i] != null
+		button.visible = has_ability
+		if has_ability:
+			button.text = card_data.abilities[i].icon_emoji

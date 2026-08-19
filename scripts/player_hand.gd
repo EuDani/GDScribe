@@ -40,12 +40,9 @@ func reorganize_hand() -> void:
 	if count == 0:
 		return
 
-	var total_width := (count - 1) * card_spacing
-	var start_x := -total_width / 2.0
-
 	for i in range(count):
 		var card := hand_cards[i]
-		var target_x: float = start_x + (i * card_spacing)
+		var target_x: float = _slot_x_for_index(i, count)
 		var target_y: float = -absf(target_x) * fan_curve_strength
 		var target_z: float = i * 0.02
 
@@ -55,11 +52,12 @@ func reorganize_hand() -> void:
 
 		var tween := create_tween().set_parallel(true)
 		tween.tween_property(card, "position", Vector3(target_x, target_y, target_z), reorganize_anim_time) \
-			.set_trans(Tween.TRANS_QUAD)
+			.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 
 		# Rotação do arco aplicada apenas no eixo Z, mantendo a carta "de pé" (X = -90).
 		var target_rotation := Vector3(-90.0, 0.0, -target_x * fan_rotation_strength)
-		tween.tween_property(card, "rotation_degrees", target_rotation, reorganize_anim_time)
+		tween.tween_property(card, "rotation_degrees", target_rotation, reorganize_anim_time) \
+			.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 
 
 ## Remove a carta da mão sem destruí-la (ex.: ao ser arrastada para o campo).
@@ -67,6 +65,32 @@ func remove_from_hand(card: Card3D) -> void:
 	if card in hand_cards:
 		hand_cards.erase(card)
 		reorganize_hand()
+
+
+## Insere `card` na mão na posição mais próxima de `world_position` (eixo X
+## local do leque), permitindo reordenar a mão soltando uma carta arrastada
+## entre as outras. Se a carta já estiver na mão, ela é realocada.
+func insert_card_at_position(card: Card3D, world_position: Vector3) -> void:
+	hand_cards.erase(card)
+
+	var local_x: float = to_local(world_position).x
+	var insert_index := hand_cards.size()
+
+	for i in range(hand_cards.size()):
+		if local_x < _slot_x_for_index(i, hand_cards.size() + 1):
+			insert_index = i
+			break
+
+	hand_cards.insert(insert_index, card)
+	reorganize_hand()
+
+
+## Posição X (local) do slot `index` de um leque com `count` cartas —
+## mesma fórmula usada em reorganize_hand(), fatorada pra reuso aqui.
+func _slot_x_for_index(index: int, count: int) -> float:
+	var total_width := (count - 1) * card_spacing
+	var start_x := -total_width / 2.0
+	return start_x + (index * card_spacing)
 
 
 ## Ativa/desativa a interação de clique/drag das cartas na mão. Usado pelo
