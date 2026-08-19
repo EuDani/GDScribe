@@ -16,6 +16,10 @@ signal blood_changed(current_blood: int, max_blood: int)
 ## Quanto o Sangue atual acumula a cada início de turno (soma, não
 ## reabastece: o que sobrou do turno anterior continua ali).
 @export var blood_gain_per_turn: int = 1
+## Só o BloodManager do jogador marca isso true (ver duel_scene.tscn) —
+## garante que o código secreto "blood" (Sangue infinito) nunca beneficie
+## o oponente por engano.
+@export var respects_infinite_blood_cheat: bool = false
 
 var current_max_blood: int = 1
 var current_blood: int = 1
@@ -45,6 +49,9 @@ func start_turn(start_combat: bool = false) -> void:
 ## true se havia Sangue suficiente e o gasto foi aplicado; false se não deu
 ## pra pagar (nesse caso nada é alterado).
 func spend_blood(amount: int) -> bool:
+	if respects_infinite_blood_cheat and CheatCodes.infinite_blood:
+		blood_changed.emit(current_blood, current_max_blood)
+		return true
 	if current_blood >= amount:
 		current_blood -= amount
 		blood_changed.emit(current_blood, current_max_blood)
@@ -61,4 +68,6 @@ func add_blood(amount: int) -> void:
 
 ## Consulta se há Sangue suficiente para pagar `amount`, sem gastar nada.
 func can_afford(amount: int) -> bool:
+	if respects_infinite_blood_cheat and CheatCodes.infinite_blood:
+		return true
 	return current_blood >= amount

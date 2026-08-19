@@ -1,0 +1,108 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" uid="uid://bc0h58qy56i30" path="res://scripts/map_select.gd" id="1_mapsel"]
+[ext_resource type="PackedScene" path="res://scenes/map_stage_card.tscn" id="2_stagecard"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hpbar"]
+bg_color = Color(0.05, 0.04, 0.03, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.3, 0.26, 0.2, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+content_margin_left = 10.0
+content_margin_top = 4.0
+content_margin_right = 10.0
+content_margin_bottom = 4.0
+
+[node name="MapSelect" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_mapsel")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.078, 0.066, 0.055, 1)
+
+[node name="Margin" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 48
+theme_override_constants/margin_top = 32
+theme_override_constants/margin_right = 48
+theme_override_constants/margin_bottom = 32
+
+[node name="VBox" type="VBoxContainer" parent="Margin"]
+layout_mode = 2
+theme_override_constants/separation = 28
+
+[node name="TopBar" type="HBoxContainer" parent="Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="TitleLabel" type="Label" parent="Margin/VBox/TopBar"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.93, 0.87, 0.74, 1)
+theme_override_font_sizes/font_size = 32
+text = "A Rota da Cruzada"
+
+[node name="RushLabel" type="Label" parent="Margin/VBox/TopBar"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.93, 0.87, 0.74, 1)
+theme_override_font_sizes/font_size = 22
+text = "Rush 1"
+
+[node name="HpLabel" type="Label" parent="Margin/VBox/TopBar"]
+layout_mode = 2
+theme_override_styles/normal = SubResource("StyleBoxFlat_hpbar")
+theme_override_colors/font_color = Color(0.8, 0.25, 0.25, 1)
+theme_override_font_sizes/font_size = 22
+text = "Vida: 20/20"
+
+[node name="GoldLabel" type="Label" parent="Margin/VBox/TopBar"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9, 0.72, 0.3, 1)
+theme_override_font_sizes/font_size = 22
+text = "Ouro: 0"
+
+[node name="CenterContainer" type="CenterContainer" parent="Margin/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="CardsRow" type="HBoxContainer" parent="Margin/VBox/CenterContainer"]
+layout_mode = 2
+theme_override_constants/separation = 18
+
+[node name="Card1" parent="Margin/VBox/CenterContainer/CardsRow" instance=ExtResource("2_stagecard")]
+layout_mode = 2
+
+[node name="Card2" parent="Margin/VBox/CenterContainer/CardsRow" instance=ExtResource("2_stagecard")]
+layout_mode = 2
+
+[node name="Card3" parent="Margin/VBox/CenterContainer/CardsRow" instance=ExtResource("2_stagecard")]
+layout_mode = 2
+
+[node name="Card4" parent="Margin/VBox/CenterContainer/CardsRow" instance=ExtResource("2_stagecard")]
+layout_mode = 2
+
+[node name="CardKing" parent="Margin/VBox/CenterContainer/CardsRow" instance=ExtResource("2_stagecard")]
+layout_mode = 2

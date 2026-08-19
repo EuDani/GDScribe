@@ -109,7 +109,8 @@ func resolve(attacker_is_player: bool) -> void:
 				last_enemy_hp_lost += damage
 				enemy_hit = true
 			else:
-				player_hp = maxi(player_hp - damage, 0)
+				if not CheatCodes.infinite_life:
+					player_hp = maxi(player_hp - damage, 0)
 				last_player_hp_lost_by_enemy += damage
 				player_hit = true
 			# Feedback de impacto sempre que a vida de alguém é atingida

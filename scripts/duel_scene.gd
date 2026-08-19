@@ -22,6 +22,12 @@ extends Node3D
 ## ver TurnManager._ready(), que força o DuelStateChart a entrar direto em
 ## EnemyTurn quando isso está ligado.
 @export var enemy_starts_before: bool = true
+## Tamanho do baralho de cada lado — ambos são remontados do zero a cada
+## duelo (ver _ready()), sorteando `deck_size` cartas (com reposição) do
+## pool de cartas cadastrado em cada DeckResource. O do jogador sorteia
+## uniforme; o do oponente usa o viés da personalidade dele (ver
+## EnemyPersonality.build_deck).
+@export var deck_size: int = 32
 @export var invoked_card_scene: PackedScene = preload("res://scenes/card_invocada.tscn")
 
 ## Distância (em unidades 3D) à frente da câmera onde a carta flutua durante o drag.
@@ -98,6 +104,8 @@ extends Node3D
 
 @onready var game_over_modal: Panel = $Hud/GameOverModal
 @onready var game_over_label: Label = $Hud/GameOverModal/GameOverLabel
+@onready var efficiency_label: Label = $Hud/GameOverModal/EfficiencyLabel
+@onready var heal_label: Label = $Hud/GameOverModal/HealLabel
 @onready var restart_button: Button = $Hud/GameOverModal/RestartButton
 
 @onready var end_turn_button: Button = $Hud/VBoxContainer/EndTurnButton
@@ -131,6 +139,8 @@ func _ready() -> void:
 	restart_button.pressed.connect(_on_restart_button_pressed)
 	game_over_modal.visible = false
 
+	_apply_run_state_difficulty()
+
 	if player_deck_pile:
 		player_deck_pile.input_event.connect(_on_deck_input_event)
 
@@ -151,25 +161,53 @@ func _ready() -> void:
 	preview_layer.visible = false
 
 	if player_deck_data:
-		player_deck_data.initialize_deck()
+		# Semeia o baralho mutável da run (uma vez só — fica vazio de novo
+		# só numa derrota, ver RunState.reset_run) e sorteia um baralho
+		# novo pra este duelo a partir dele: cartas compradas na loja e
+		# melhorias de Ataque/Defesa entram automaticamente, já que o
+		# sorteio usa as MESMAS instâncias mutáveis do pool.
+		RunState.ensure_player_pool(_unique_cards(player_deck_data.cards))
+		player_deck_data.initialize_deck_from(_random_deck(RunState.player_card_pool, deck_size))
 		_draw_initial_hand(inicial_hand_size)
 
 	if enemy_deck_data:
-		enemy_ai_controller.personality = EnemyPersonality.roll_random()
+		RunState.ensure_card_catalog(_unique_cards(enemy_deck_data.cards))
+
+		enemy_ai_controller.personality = RunState.personality_for(RunState.fighting_stage)
 		print("Personalidade do oponente: ", enemy_ai_controller.personality.display_name())
 
 		# Baralho construído com viés da personalidade (aleatório dentro do
-		# viés, não uma lista fixa) a partir do pool de cartas cadastrado —
-		# não sobrescreve enemy_deck_data.cards pra não mutar um Resource
-		# que pode ser compartilhado entre partidas (ver initialize_deck_from).
-		var pool := _unique_cards(enemy_deck_data.cards)
-		var personality_deck := enemy_ai_controller.personality.build_deck(pool, enemy_deck_data.cards.size())
+		# viés, não uma lista fixa) a partir do pool de cartas cadastrado.
+		var enemy_pool := _unique_cards(enemy_deck_data.cards)
+		var personality_deck := enemy_ai_controller.personality.build_deck(enemy_pool, deck_size)
 		enemy_deck_data.initialize_deck_from(personality_deck)
 
 		enemy_ai_controller.draw_initial_hand(enemy_deck_data, inicial_hand_size)
 		enemy_hand.set_card_count(enemy_ai_controller.hand_data.size())
 
 	update_deck_counts()
+
+
+## Aplica o estado da run atual ao duelo: a vida do oponente continua
+## sempre cheia (starting_hp — o jogo não fica mais difícil por fora), mas
+## a vida do JOGADOR persiste entre duelos (RunState.player_hp, só curada
+## ao vencer — ver RunState.apply_victory_heal) em vez de sempre começar
+## cheia. Também aplica a habilidade do Rei, que "sempre muda o combate":
+## por enquanto, invoca 1 carta a mais por turno. Chamado uma vez em
+## _ready(), depois que combat_manager e enemy_ai_controller já resolveram
+## seus próprios @onready (ambos são filhos, então já estão prontos aqui).
+func _apply_run_state_difficulty() -> void:
+	# starting_hp vira a "vida cheia" de referência pro label (cor/escala
+	# em combat_manager._style_hp_label) refletir melhorias de vida
+	# máxima compradas na loja — não afeta enemy_hp, que já foi fixado em
+	# starting_hp por CombatManager._ready() antes deste ponto.
+	combat_manager.starting_hp = RunState.max_hp()
+	combat_manager.player_hp = RunState.player_hp
+	combat_manager._update_labels()
+
+	if RunState.is_king_fight():
+		enemy_ai_controller.max_summons_per_turn += 1
+		show_message("Habilidade do Rei: Fúria Real — o Rei invoca 1 carta a mais por turno.")
 
 
 func _process(_delta: float) -> void:
@@ -321,6 +359,18 @@ func _unique_cards(card_list: Array[CardResource]) -> Array[CardResource]:
 		if card and card not in unique:
 			unique.append(card)
 	return unique
+
+
+## Monta um baralho de `size` cartas sorteando com reposição e peso
+## uniforme de `pool` — usado pro baralho do jogador, que (diferente do
+## oponente) não tem personalidade pra enviesar a escolha.
+func _random_deck(pool: Array[CardResource], size: int) -> Array[CardResource]:
+	var deck: Array[CardResource] = []
+	if pool.is_empty():
+		return deck
+	for i in range(size):
+		deck.append(pool[randi() % pool.size()])
+	return deck
 
 
 ## Compra `amount` cartas do baralho do jogador direto pra mão — usado só
@@ -580,11 +630,39 @@ func hide_message() -> void:
 	message_modal.visible = false
 
 
-## Fim de jogo: mostra o resultado e pausa a árvore inteira (input, física,
+## true na vitória, controla se o RestartButton chama
+## RunState.report_victory() (volta pro mapa, avança a sequência) ou
+## RunState.report_defeat() (perde a run inteira) — ver
+## _on_restart_button_pressed().
+var _game_over_player_won: bool = false
+
+## Fim de jogo: mostra o resultado (e, numa vitória, a eficiência do
+## combate e a vida recuperada) e pausa a árvore inteira (input, física,
 ## timers e tweens de jogo param) — só o GameOverModal continua ativo
-## (process_mode = ALWAYS no .tscn), então nada mais é jogável até reiniciar.
+## (process_mode = ALWAYS no .tscn), então nada mais é jogável até
+## continuar. Vencer volta pro mapa (RunState.report_victory); perder
+## reseta a run inteira (RunState.report_defeat) — igual perder uma run
+## no Balatro.
 func _on_game_over(player_won: bool) -> void:
-	game_over_label.text = "Vitória!" if player_won else "Derrota!"
+	_game_over_player_won = player_won
+
+	efficiency_label.visible = player_won
+	heal_label.visible = player_won
+
+	if player_won:
+		game_over_label.text = "Você Venceu!"
+		restart_button.text = "Continuar"
+
+		var efficiency := roundi(float(combat_manager.player_hp) / float(maxi(combat_manager.starting_hp, 1)) * 100.0)
+		efficiency_label.text = "Eficiência do combate: %d%%" % efficiency
+
+		var healed_hp := RunState.apply_victory_heal(combat_manager.player_hp)
+		heal_label.text = "+%d de Vida Recuperada (máx. %d) — %d/%d" % [
+			RunState.PLAYER_HEAL_PER_WIN, RunState.max_hp(), healed_hp, RunState.max_hp()
+		]
+	else:
+		game_over_label.text = "Derrota!"
+		restart_button.text = "Tentar Novamente"
 	game_over_modal.visible = true
 
 	end_turn_button.visible = false
@@ -596,5 +674,8 @@ func _on_game_over(player_won: bool) -> void:
 
 func _on_restart_button_pressed() -> void:
 	get_tree().paused = false
-	get_tree().reload_current_scene()
+	if _game_over_player_won:
+		RunState.report_victory()
+	else:
+		RunState.report_defeat()
 #endregion

@@ -86,11 +86,13 @@ func has_ability(ability_id: String) -> bool:
 	return card_data != null and card_data.has_ability(ability_id)
 
 
-## Atualiza o texto de Defesa na carta pra refletir current_defense (o
-## dano acumulado em combate) em vez do valor impresso original.
+## Atualiza os textos de Defesa/Escudo/Horda na carta pra refletir
+## current_defense/current_shield/current_horde (o estado real em
+## combate) em vez dos valores impressos originais.
 func refresh_stat_labels() -> void:
 	if defense_label:
 		defense_label.text = str(current_defense)
+	_update_shield_horde_labels(current_shield, current_horde)
 
 
 ## Regra de elegibilidade para ser escolhida como atacante nesta fase de

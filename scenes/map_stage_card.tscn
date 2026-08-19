@@ -1,0 +1,62 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" uid="uid://dihx530ejsj0" path="res://scripts/map_stage_card.gd" id="1_stagecard"]
+
+[node name="MapStageCard" type="Panel"]
+custom_minimum_size = Vector2(190, 360)
+layout_mode = 2
+script = ExtResource("1_stagecard")
+
+[node name="VBox" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 10
+
+[node name="TitleLabel" type="Label" parent="VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "Título"
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="PersonalityLabel" type="Label" parent="VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 13
+text = "Personalidade: ?"
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="DescLabel" type="Label" parent="VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_font_sizes/font_size = 13
+text = "Descrição"
+horizontal_alignment = 1
+autowrap_mode = 2
+vertical_alignment = 0
+
+[node name="RewardLabel" type="Label" parent="VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 15
+text = "+0 de Ouro"
+horizontal_alignment = 1
+
+[node name="StatusLabel" type="Label" parent="VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "Bloqueado"
+horizontal_alignment = 1
+
+[node name="FightButton" type="Button" parent="VBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 40)
+text = "Lutar"
+
+[node name="AvoidButton" type="Button" parent="VBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 40)
+text = "Evitar"

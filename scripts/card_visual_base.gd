@@ -21,6 +21,10 @@ extends Node3D
 @onready var blood_cost_label: Label = $CardViewport/CardUI/HeaderPanel/BloodCostLabel
 @onready var attack_label: Label = $CardViewport/CardUI/FooterPanel/AttackLabel
 @onready var defense_label: Label = $CardViewport/CardUI/FooterPanel/DefenseLabel
+## Só aparecem quando a carta tem Escudo/Horda (a maioria não tem) — ver
+## _update_shield_horde_labels().
+@onready var shield_label: Label = $CardViewport/CardUI/FooterPanel/ShieldLabel
+@onready var horde_label: Label = $CardViewport/CardUI/FooterPanel/HordeLabel
 @onready var artwork_rect: TextureRect = $CardViewport/CardUI/Artwork
 @onready var card_area: Area3D = $CardArea
 @onready var skill_button_1: Button = $CardViewport/CardUI/Skills/skill1
@@ -44,11 +48,27 @@ func update_visuals() -> void:
 	blood_cost_label.text = str(card_data.blood_cost)
 	attack_label.text = str(card_data.attack)
 	defense_label.text = str(card_data.defense)
+	_update_shield_horde_labels(card_data.shield, card_data.horde)
 
 	if card_data.artwork:
 		artwork_rect.texture = card_data.artwork
 
 	_update_skill_icons()
+
+
+## Mostra os valores impressos de Escudo/Horda (só quando > 0 — a maioria
+## das cartas não tem nenhum dos dois). CardInvocada chama de novo com os
+## valores ATUAIS (current_shield/current_horde) sempre que eles mudam em
+## combate, sobrescrevendo os impressos aqui (ver refresh_stat_labels()).
+func _update_shield_horde_labels(shield: int, horde: int) -> void:
+	if shield_label:
+		shield_label.visible = shield > 0
+		if shield > 0:
+			shield_label.text = "🛡%d" % shield
+	if horde_label:
+		horde_label.visible = horde > 0
+		if horde > 0:
+			horde_label.text = "♻%d" % horde
 
 
 ## Mostra/esconde os botões skill1/2/3 conforme as habilidades da carta e
