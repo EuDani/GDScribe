@@ -102,8 +102,8 @@ var _preview_card_data: CardResource = null
 
 #region Ciclo de vida
 func _ready() -> void:
-	blood_manager.blood_changed.connect(_on_blood_changed)
-	enemy_blood_manager.blood_changed.connect(_on_enemy_blood_changed)
+	blood_manager.blood_changed.connect(_on_blood_changed.bind(blood_label, blood_cup_plane_player))
+	enemy_blood_manager.blood_changed.connect(_on_blood_changed.bind(blood_label_enemy, blood_cup_plane_enemy))
 	player_hand.card_invoked_custom.connect(_on_card_clicked_hand)
 	combat_manager.game_over.connect(_on_game_over)
 
@@ -163,14 +163,22 @@ func _input(event: InputEvent) -> void:
 
 
 #region Arraste de carta
+## Origem e direção do raio da câmera até o mouse — usado tanto pra
+## projetar a carta arrastada quanto pelos raycasts de soltura/sacrifício
+## abaixo, evitando recalcular a mesma projeção em cada um.
+func _mouse_ray() -> Array:
+	var mouse_pos := get_viewport().get_mouse_position()
+	return [main_camera.project_ray_origin(mouse_pos), main_camera.project_ray_normal(mouse_pos)]
+
+
 ## Projeta a posição do mouse num plano paralelo à câmera para posicionar
 ## a carta arrastada, alinha sua orientação com a câmera, e destaca a
 ## carta em vermelho enquanto ela estiver sobre o barril de Sangue
 ## (indicando que soltá-la ali agora a sacrifica).
 func _update_dragged_card_position() -> void:
-	var mouse_pos := get_viewport().get_mouse_position()
-	var ray_origin := main_camera.project_ray_origin(mouse_pos)
-	var ray_dir := main_camera.project_ray_normal(mouse_pos)
+	var mouse_ray := _mouse_ray()
+	var ray_origin: Vector3 = mouse_ray[0]
+	var ray_dir: Vector3 = mouse_ray[1]
 
 	var cam_forward := -main_camera.global_transform.basis.z.normalized()
 	var plane_point := main_camera.global_position + (cam_forward * drag_distance_from_camera)
@@ -242,9 +250,9 @@ func _is_mouse_over_area(target: Area3D, ignored_card: Card3D = null) -> bool:
 	if not target:
 		return false
 
-	var mouse_pos := get_viewport().get_mouse_position()
-	var ray_origin := main_camera.project_ray_origin(mouse_pos)
-	var ray_dir := main_camera.project_ray_normal(mouse_pos)
+	var mouse_ray := _mouse_ray()
+	var ray_origin: Vector3 = mouse_ray[0]
+	var ray_dir: Vector3 = mouse_ray[1]
 
 	var space_state := get_world_3d().direct_space_state
 	var query := PhysicsRayQueryParameters3D.create(ray_origin, ray_origin + (ray_dir * 1000.0))
@@ -309,26 +317,39 @@ func _on_card_clicked_hand(card: Card3D, button_index: int) -> void:
 ## estava ao ser solta, e deixa reorganize_field animar a "queda" até o
 ## tabuleiro (y = 0) junto com o reposicionamento em X.
 func _play_card_to_field(card: Card3D) -> void:
-	var card_data := card.card_data
 	var drop_start_y := card.global_position.y
-
-	var invoked_entity := invoked_card_scene.instantiate() as CardInvocada
-	invoked_entity.scale *= 1.2
-	player_field.add_child(invoked_entity)
-	invoked_entity.card_data = card_data
-	invoked_entity.rotation_degrees = Vector3.ZERO
-	invoked_entity.card_invocada_clicked.connect(on_field_card_clicked_for_preview)
-
 	# Posiciona a carta invocada na mesma altura da Card3D original antes de
 	# reorganizar o campo, para que o tween de reorganização também sirva
 	# como a animação de queda até o tabuleiro.
-	invoked_entity.global_position.y = drop_start_y
-
-	if card_data.has_ability("saqueador"):
-		blood_manager.add_blood(1)
+	spawn_field_card(card.card_data, player_field, blood_manager, drop_start_y)
 
 	card.queue_free()
 	reorganize_field(player_field, field_card_spacing)
+
+
+## Escala aplicada a toda CardInvocada ao entrar em campo (maior que a
+## Card3D de origem, pra destacar as cartas em jogo).
+const FIELD_CARD_SCALE_MULTIPLIER: float = 1.2
+
+## Instancia e configura uma CardInvocada em `field`: escala, dados, sinal
+## de preview (clique direito) e a habilidade "saqueador" (+1 Sangue pro
+## dono ao entrar em campo). Não reorganiza o campo nem anima — quem chama
+## decide quando fazer isso (ver _play_card_to_field e
+## EnemyAiController._summon). Compartilhado entre a invocação do jogador
+## e a da IA pra não duplicar essa configuração em dois lugares.
+func spawn_field_card(card_data: CardResource, field: Node3D, owner_blood_manager: BloodManager, spawn_y: float = 0.0) -> CardInvocada:
+	var invoked_entity := invoked_card_scene.instantiate() as CardInvocada
+	invoked_entity.scale *= FIELD_CARD_SCALE_MULTIPLIER
+	field.add_child(invoked_entity)
+	invoked_entity.card_data = card_data
+	invoked_entity.rotation_degrees = Vector3.ZERO
+	invoked_entity.global_position.y = spawn_y
+	invoked_entity.card_invocada_clicked.connect(on_field_card_clicked_for_preview)
+
+	if card_data.has_ability("saqueador"):
+		owner_blood_manager.add_blood(1)
+
+	return invoked_entity
 
 
 ## Pública: também usada por CombatManager (após morte em combate) e por
@@ -463,14 +484,12 @@ func _hide_card_preview() -> void:
 #endregion
 
 
-func _on_blood_changed(current: int, max_b: int) -> void:
-	blood_label.text = "%d / %d" % [current, max_b]
-	_update_blood_cup(blood_cup_plane_player, current, max_b)
-
-
-func _on_enemy_blood_changed(current: int, max_b: int) -> void:
-	blood_label_enemy.text = "%d / %d" % [current, max_b]
-	_update_blood_cup(blood_cup_plane_enemy, current, max_b)
+## Handler compartilhado por blood_manager e enemy_blood_manager (ver
+## _ready(), onde cada um é ligado aqui com .bind() já apontando pro seu
+## próprio label/copo) — evita duplicar a mesma lógica pros dois lados.
+func _on_blood_changed(current: int, max_b: int, label: Label3D, cup_plane: MeshInstance3D) -> void:
+	label.text = "%d / %d" % [current, max_b]
+	_update_blood_cup(cup_plane, current, max_b)
 
 
 ## Move o Plane do blood_cup no eixo Y proporcionalmente ao Sangue atual,

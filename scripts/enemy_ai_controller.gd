@@ -3,7 +3,6 @@
 class_name EnemyAiController
 extends Node
 
-@export var invoked_card_scene: PackedScene = preload("res://scenes/card_invocada.tscn")
 @export var action_delay: float = 0.5
 @export var max_summons_per_turn: int = 2
 
@@ -139,16 +138,7 @@ func _pick_affordable_card() -> CardResource:
 func _summon(card_data: CardResource) -> void:
 	enemy_blood_manager.spend_blood(card_data.blood_cost)
 
-	var invoked_entity := invoked_card_scene.instantiate() as CardInvocada
-	invoked_entity.scale *= 1.2
-	enemy_field.add_child(invoked_entity)
-	invoked_entity.card_data = card_data
-	invoked_entity.rotation_degrees = Vector3.ZERO
-	invoked_entity.global_position.y = 3.0
-	invoked_entity.card_invocada_clicked.connect(duel_scene.on_field_card_clicked_for_preview)
-
-	if card_data.has_ability("saqueador"):
-		enemy_blood_manager.add_blood(1)
+	duel_scene.spawn_field_card(card_data, enemy_field, enemy_blood_manager, 3.0)
 
 	duel_scene.reorganize_field(enemy_field, duel_scene.field_card_spacing)
 	await get_tree().create_timer(duel_scene.field_drop_anim_time).timeout

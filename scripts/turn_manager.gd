@@ -50,7 +50,7 @@ var _current_enemy_attackers: Array[CardInvocada] = []
 ## atacante inimigo a associa a ele (ver _on_player_blocker_clicked).
 var _pending_blocker: CardInvocada = null
 
-var _inicial_combat : bool = true
+var _inicial_combat: bool = true
 
 
 func _ready() -> void:
@@ -68,8 +68,6 @@ func _ready() -> void:
 	confirm_defense_button.pressed.connect(_on_confirm_defense_pressed)
 
 	confirm_defense_button.visible = false
-	
-	
 
 
 func _on_end_turn_button_pressed() -> void:

@@ -14,6 +14,6 @@ artwork = ExtResource("2_jtlww")
 category = 1
 blood_cost = 2
 attack = 0
-shild = 5
+shield = 5
 abilities = Array[ExtResource("1_jerxo")]([ExtResource("3_sentinela")])
 metadata/_custom_type_script = "uid://blq621386htl8"

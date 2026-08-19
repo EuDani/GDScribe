@@ -92,8 +92,12 @@ const LEVEL_LABELS: Dictionary = {
 ## Se verdadeiro, a carta pode atacar no mesmo turno em que é baixada
 ## (ignora a doença de invocação aplicada normalmente pelo TurnManager).
 @export var can_attack_on_turn_created: bool = false
-@export var shild: int = false
-@export var horde: int = false
+## Escudo inicial: absorve dano por completo antes de tocar a Defesa (ver
+## CombatManager._apply_damage).
+@export var shield: int = 0
+## Hordas iniciais: quando a Defesa zera, cada Horda disponível a
+## restaura em vez de a carta morrer (ver CombatManager._apply_damage).
+@export var horde: int = 0
 
 ## Quantas cartas do oponente podem se juntar pra bloquear esta carta
 ## quando ela ataca. O padrão (1) é o normal: só 1 bloqueadora por vez.

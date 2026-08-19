@@ -35,7 +35,7 @@ func reset_blood() -> void:
 
 ## Início de turno deste lado: soma blood_gain_per_turn ao Sangue atual
 ## (sem zerar o que sobrou), até o teto fixo current_max_blood.
-func start_turn(start_combat:bool = false) -> void:
+func start_turn(start_combat: bool = false) -> void:
 	if not start_combat:
 		current_blood = mini(current_blood + blood_gain_per_turn, current_max_blood)
 	blood_changed.emit(current_blood, current_max_blood)

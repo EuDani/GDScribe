@@ -51,6 +51,11 @@ var current_horde: int = 0
 func _ready() -> void:
 	super._ready()
 	card_area.input_event.connect(_on_input_event)
+	# Capturada depois de super._ready() (que já rodou update_visuals(), se
+	# card_data já estava atribuído) e depois de quem instanciou a carta
+	# aplicar o multiplicador de escala de campo (ver
+	# DuelScene.spawn_field_card) — é a escala "de repouso" real da carta
+	# em campo, não a escala padrão de 1.0 da cena.
 	_base_scale = scale
 	if timeout_indicator:
 		timeout_indicator.visible = false
@@ -66,7 +71,7 @@ func update_visuals() -> void:
 	if card_data:
 		is_summoning_sick = not card_data.can_attack_on_turn_created
 		current_defense = card_data.defense
-		current_shield = card_data.shild
+		current_shield = card_data.shield
 		current_horde = card_data.horde
 		refresh_stat_labels()
 
