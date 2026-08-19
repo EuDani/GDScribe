@@ -50,6 +50,8 @@ var _current_enemy_attackers: Array[CardInvocada] = []
 ## atacante inimigo a associa a ele (ver _on_player_blocker_clicked).
 var _pending_blocker: CardInvocada = null
 
+var _inicial_combat : bool = true
+
 
 func _ready() -> void:
 	state_player_summon.state_entered.connect(_on_player_summon_entered)
@@ -66,6 +68,8 @@ func _ready() -> void:
 	confirm_defense_button.pressed.connect(_on_confirm_defense_pressed)
 
 	confirm_defense_button.visible = false
+	
+	
 
 
 func _on_end_turn_button_pressed() -> void:
@@ -92,7 +96,7 @@ func _hide_all_indicators(field: Node3D) -> void:
 #region Invocação + seleção de atacantes do jogador (fase única)
 func _on_player_summon_entered() -> void:
 	is_player_summon_phase = true
-	blood_manager.start_turn()
+	blood_manager.start_turn(_inicial_combat)
 	_reset_turn_flags(player_field)
 
 	if _is_first_player_summon:
@@ -124,6 +128,7 @@ func _draw_card_for_turn() -> void:
 	var card_data := duel_scene.player_deck_data.draw_card()
 	if card_data:
 		player_hand.add_card_to_hand(card_data)
+	duel_scene.update_deck_counts()
 
 
 ## child_entered_tree dispara durante o próprio add_child(), antes de
@@ -163,6 +168,7 @@ func _on_player_field_card_clicked(card: CardInvocada, button_index: int) -> voi
 ## ataque declarado do turno, e o campo volta ao estado neutro antes de
 ## entrar em combate.
 func _on_player_summon_exited() -> void:
+	_inicial_combat = false
 	is_player_summon_phase = false
 	player_hand.set_interactive(false)
 	end_turn_button.visible = false
@@ -228,6 +234,10 @@ func _on_enemy_invocation_entered() -> void:
 #region Combate do oponente: IA escolhe atacantes
 func _on_enemy_choose_attacker_entered() -> void:
 	_current_enemy_attackers = enemy_ai_controller.decide_attackers()
+
+	for card in enemy_field.get_children():
+		if card is CardInvocada:
+			card.set_selectable(card.can_attack())
 
 	for card in _current_enemy_attackers:
 		card.has_attacked_this_turn = true
@@ -363,6 +373,7 @@ func _on_resolve_damage_enemy_entered() -> void:
 		if is_instance_valid(attacker):
 			attacker.set_selected(false)
 	_current_enemy_attackers.clear()
+	_hide_all_indicators(enemy_field)
 
 	await combat_manager.resolve(false)
 

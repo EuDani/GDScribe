@@ -22,12 +22,14 @@ shader_parameter/target_face = 2
 shader_parameter/box_size = Vector3(1, 1, 1)
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_677gi"]
-size = Vector3(1.2451172, 0.18059082, 1.7900391)
+size = Vector3(1.2451172, 0.28951415, 1.7900391)
 
 [node name="CardInvocada" type="Node3D" unique_id=2141805097]
 script = ExtResource("1_ljx8c")
 
 [node name="CardArea" type="Area3D" parent="." unique_id=1817082093]
+collision_layer = 2
+collision_mask = 2
 
 [node name="CardMesh" type="MeshInstance3D" parent="CardArea" unique_id=1810508999]
 transform = Transform3D(1.2, 0, 0, 0, 0.4, 0, 0, 0, 1.68, 0, 0.11669922, 0)
@@ -35,7 +37,7 @@ mesh = SubResource("BoxMesh_eg0p3")
 surface_material_override/0 = SubResource("ShaderMaterial_irt5y")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="CardArea" unique_id=2136984341]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.3952954, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.44975707, 0)
 shape = SubResource("BoxShape3D_677gi")
 
 [node name="CardViewport" type="SubViewport" parent="." unique_id=1046840700]

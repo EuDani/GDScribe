@@ -82,9 +82,11 @@ func refresh_stat_labels() -> void:
 
 ## Regra de elegibilidade para ser escolhida como atacante nesta fase de
 ## combate: precisa ter passado por pelo menos um início de turno do dono
-## desde que foi invocada, e ainda não ter atacado neste turno.
+## desde que foi invocada, ainda não ter atacado neste turno, e ter Ataque
+## maior que 0 (cartas com 0 de Ataque não têm o que causar de dano).
 func can_attack() -> bool:
-	return not is_summoning_sick and not has_attacked_this_turn
+	var has_attack: bool = card_data != null and card_data.attack > 0
+	return not is_summoning_sick and not has_attacked_this_turn and has_attack
 
 
 ## Regra de elegibilidade para ser escolhida como bloqueadora: qualquer

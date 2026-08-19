@@ -120,6 +120,7 @@ func _draw_card() -> void:
 	var card_data := deck.draw_card()
 	if card_data:
 		hand_data.append(card_data)
+	duel_scene.update_deck_counts()
 
 
 func _refresh_hand_visual() -> void:

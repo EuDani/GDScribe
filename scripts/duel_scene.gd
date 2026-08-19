@@ -74,6 +74,9 @@ extends Node3D
 @onready var preview_skill_button_3: Button = $PreviewLayer/Skills/skill3
 @onready var skill_details_label: Label = $Hud/label_skill_details
 @onready var skill_details_close_button: Button = $Hud/label_skill_details/fechar_label
+
+@onready var player_count_deck_cards_label: Label = $Hud/PlayerCountDeckCards
+@onready var enemy_count_deck_cards_label: Label = $Hud/EnemyCountDeckCards
 #endregion
 
 #region Estado interno
@@ -114,6 +117,8 @@ func _ready() -> void:
 		enemy_deck_data.initialize_deck()
 		enemy_ai_controller.draw_initial_hand(enemy_deck_data, inicial_hand_size)
 		enemy_hand.set_card_count(enemy_ai_controller.hand_data.size())
+
+	update_deck_counts()
 
 
 func _process(_delta: float) -> void:
@@ -199,6 +204,13 @@ func _return_card_to_hand(card: Card3D) -> void:
 	player_hand.reorganize_hand()
 
 
+## Layer física das CardArea de cartas já invocadas em campo (CardInvocada).
+## Excluída explicitamente do raycast de soltura abaixo para que cartas
+## paradas no campo, entre a câmera e a mesa, nunca atrapalhem a detecção
+## de SummonArea/barril de Sangue durante o arraste de uma carta da mão.
+const FIELD_CARD_COLLISION_LAYER: int = 1 << 1  # layer 2
+
+
 ## Faz um raycast do mouse contra o mundo e retorna true só se o collider
 ## mais próximo ao longo do raio for exatamente `target`, excluindo a
 ## própria carta arrastada da checagem de colisão. Usado tanto pra soltar
@@ -221,7 +233,7 @@ func _is_mouse_over_area(target: Area3D, ignored_card: Card3D = null) -> bool:
 		if card_area:
 			query.exclude = [card_area.get_rid()]
 
-	query.collision_mask = target.collision_layer
+	query.collision_mask = target.collision_layer & ~FIELD_CARD_COLLISION_LAYER
 
 	var result := space_state.intersect_ray(query)
 	return result.has("collider") and result.collider == target
@@ -244,6 +256,16 @@ func _draw_initial_hand(amount: int) -> void:
 		var card_data := player_deck_data.draw_card()
 		if card_data:
 			player_hand.add_card_to_hand(card_data)
+
+
+## Atualiza os labels de HUD com a quantidade de cartas restantes na pilha
+## de compra de cada baralho. Deve ser chamado sempre que uma carta for
+## comprada (ou o baralho for inicializado).
+func update_deck_counts() -> void:
+	if player_count_deck_cards_label and player_deck_data:
+		player_count_deck_cards_label.text = str(player_deck_data.get_remaining_cards_count())
+	if enemy_count_deck_cards_label and enemy_deck_data:
+		enemy_count_deck_cards_label.text = str(enemy_deck_data.get_remaining_cards_count())
 
 
 func _on_card_clicked_hand(card: Card3D, button_index: int) -> void:

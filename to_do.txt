@@ -1,0 +1,4 @@
+- outline de seleção deixando mais visual igual mtg
+- poder ajustar a ordem das cartas na mao
+- adicionar um modo de fim de jogo (se perder ou ganhar zerando a vida)
+- se o player tiver com uma carta de bloqueador selecionada e esta carta nao tiver selecionada qual atacante ela esta bloqueando, o botao de passar o turno, nao vai. E aparece uma mensagem em um modal (crie o modal no node hud)
