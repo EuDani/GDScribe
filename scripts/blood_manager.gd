@@ -5,15 +5,16 @@ class_name BloodManager
 extends Node
 
 ## Emitido sempre que o Sangue atual ou o limite máximo mudam, para que a UI
-## (Label3D do barril) e o TurnManager (fila de espera) se atualizem.
+## (Label3D do barril, o Plane do blood_cup) se atualize.
 signal blood_changed(current_blood: int, max_blood: int)
 
-## Teto absoluto que current_max_blood nunca ultrapassa, mesmo crescendo a
-## cada turno.
+## Teto de Sangue do combate inteiro — fixo desde o primeiro turno até o
+## fim da partida (current_max_blood não cresce mais com o tempo).
 @export var max_blood_limit: int = 10
-## Quantidade de Sangue (e limite máximo) no primeiro turno da partida.
+## Quantidade de Sangue no primeiro turno da partida.
 @export var inicial_blood: int = 1
-## Quanto o limite máximo cresce a cada início de turno (ver start_turn()).
+## Quanto o Sangue atual acumula a cada início de turno (soma, não
+## reabastece: o que sobrou do turno anterior continua ali).
 @export var blood_gain_per_turn: int = 1
 
 var current_max_blood: int = 1
@@ -25,18 +26,17 @@ func _ready() -> void:
 
 
 ## Reseta o sangue para o estado inicial da partida (chamado uma vez, no
-## começo do duelo).
+## começo do duelo). O teto máximo já começa fixo em max_blood_limit.
 func reset_blood() -> void:
-	current_max_blood = inicial_blood
+	current_max_blood = max_blood_limit
 	current_blood = inicial_blood
 	blood_changed.emit(current_blood, current_max_blood)
 
 
-## Início de turno deste lado: aumenta o limite máximo em blood_gain_per_turn
-## (até max_blood_limit) e enche o tonel até esse novo máximo.
+## Início de turno deste lado: soma blood_gain_per_turn ao Sangue atual
+## (sem zerar o que sobrou), até o teto fixo current_max_blood.
 func start_turn() -> void:
-	current_max_blood = mini(current_max_blood + blood_gain_per_turn, max_blood_limit)
-	current_blood = current_max_blood
+	current_blood = mini(current_blood + blood_gain_per_turn, current_max_blood)
 	blood_changed.emit(current_blood, current_max_blood)
 
 

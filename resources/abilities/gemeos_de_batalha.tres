@@ -6,6 +6,7 @@
 script = ExtResource("1_ability")
 id = "gemeos_de_batalha"
 ability_name = "Gêmeos de Batalha"
+icon_emoji = "👯"
 description = "Ao ser invocada, uma cópia idêntica dela entra na sua mão."
 trigger_type = "ON_PLAY"
 metadata/_custom_type_script = "uid://crmjns4d70w7d"

@@ -6,6 +6,7 @@
 script = ExtResource("1_ability")
 id = "investida_brutal"
 ability_name = "Investida Brutal"
+icon_emoji = "💥"
 description = "Ao atacar, o excesso de força também acerta uma carta vizinha ao alvo, causando 1 de dano extra."
 trigger_type = "ON_ATTACK"
 metadata/_custom_type_script = "uid://crmjns4d70w7d"

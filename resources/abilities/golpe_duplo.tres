@@ -6,6 +6,7 @@
 script = ExtResource("1_ability")
 id = "golpe_duplo"
 ability_name = "Golpe Duplo"
+icon_emoji = "⚔️"
 description = "Esta carta pode ser escolhida como atacante duas vezes na mesma fase de combate."
 trigger_type = "PASSIVE_STATIC"
 metadata/_custom_type_script = "uid://crmjns4d70w7d"

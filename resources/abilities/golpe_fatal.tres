@@ -6,6 +6,7 @@
 script = ExtResource("1_ability")
 id = "golpe_fatal"
 ability_name = "Golpe Fatal"
+icon_emoji = "💀"
 description = "Qualquer carta que esta unidade acerte em combate morre instantaneamente, não importa a Defesa."
 trigger_type = "PASSIVE_STATIC"
 metadata/_custom_type_script = "uid://crmjns4d70w7d"

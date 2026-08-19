@@ -6,6 +6,7 @@
 script = ExtResource("1_ability")
 id = "batedor"
 ability_name = "Batedor"
+icon_emoji = "🔍"
 description = "Ao ser invocada, escolha uma carta do seu baralho para ser comprada imediatamente."
 trigger_type = "ON_PLAY"
 metadata/_custom_type_script = "uid://crmjns4d70w7d"

@@ -6,6 +6,7 @@
 script = ExtResource("1_ability")
 id = "grito_de_socorro"
 ability_name = "Grito de Socorro"
+icon_emoji = "🆘"
 description = "Sempre que esta carta é atingida em combate (bloqueada ou não), um Recruta entra na sua mão."
 trigger_type = "ON_HIT"
 metadata/_custom_type_script = "uid://crmjns4d70w7d"

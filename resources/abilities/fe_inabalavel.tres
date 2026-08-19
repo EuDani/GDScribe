@@ -6,6 +6,7 @@
 script = ExtResource("1_ability")
 id = "fe_inabalavel"
 ability_name = "Fé Inabalável"
+icon_emoji = "🙏"
 description = "Pode ser sacrificada para gerar Sangue sem morrer: continua em campo normalmente depois."
 trigger_type = "ON_SACRIFICE"
 metadata/_custom_type_script = "uid://crmjns4d70w7d"

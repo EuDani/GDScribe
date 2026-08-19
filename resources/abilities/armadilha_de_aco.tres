@@ -6,6 +6,7 @@
 script = ExtResource("1_ability")
 id = "armadilha_de_aco"
 ability_name = "Armadilha de Aço"
+icon_emoji = "🪤"
 description = "Se esta carta morrer bloqueando um ataque, a atacante também morre junto com ela."
 trigger_type = "ON_DEATH"
 metadata/_custom_type_script = "uid://crmjns4d70w7d"

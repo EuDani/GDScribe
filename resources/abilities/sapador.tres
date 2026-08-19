@@ -6,6 +6,7 @@
 script = ExtResource("1_ability")
 id = "sapador"
 ability_name = "Sapador"
+icon_emoji = "🧱"
 description = "Ao ser invocada, uma Barricada (0 de Ataque, 3 de Defesa, carta de Efeito) surge para proteger o campo."
 trigger_type = "ON_PLAY"
 metadata/_custom_type_script = "uid://crmjns4d70w7d"

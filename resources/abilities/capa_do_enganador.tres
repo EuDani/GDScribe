@@ -6,6 +6,7 @@
 script = ExtResource("1_ability")
 id = "capa_do_enganador"
 ability_name = "Capa do Enganador"
+icon_emoji = "🎭"
 description = "Ao ser atingida em combate, um manequim de palha toma seu lugar: esta carta escapa ilesa e volta pra mão."
 trigger_type = "ON_HIT"
 metadata/_custom_type_script = "uid://crmjns4d70w7d"

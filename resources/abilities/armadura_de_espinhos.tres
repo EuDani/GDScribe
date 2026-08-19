@@ -6,6 +6,7 @@
 script = ExtResource("1_ability")
 id = "armadura_de_espinhos"
 ability_name = "Armadura de Espinhos"
+icon_emoji = "🌵"
 description = "Quem atacar esta carta sofre 1 de dano de retorno, bloqueado ou não."
 trigger_type = "ON_HIT"
 metadata/_custom_type_script = "uid://crmjns4d70w7d"

@@ -77,6 +77,8 @@ enemy_deck_data = SubResource("Resource_enemy")
 inicial_hand_size = 6
 drag_distance_from_camera = 20.0
 field_card_spacing = 2.45
+blood_cup_empty_y = 0.0
+blood_cup_full_y = 2.5
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=585697800]
 transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 0, -2.8014338, 0)

@@ -6,6 +6,7 @@
 script = ExtResource("1_ability")
 id = "lideranca"
 ability_name = "Liderança"
+icon_emoji = "🚩"
 description = "Enquanto estiver viva, todas as outras cartas aliadas em campo ganham +1 de Ataque."
 trigger_type = "PASSIVE_STATIC"
 metadata/_custom_type_script = "uid://crmjns4d70w7d"

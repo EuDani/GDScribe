@@ -6,6 +6,7 @@
 script = ExtResource("1_ability")
 id = "rei_ossudo"
 ability_name = "Rei Ossudo"
+icon_emoji = "👑"
 description = "Ao morrer, concede 4 de Sangue ao seu dono em vez do 1 de Sangue usual."
 trigger_type = "ON_DEATH"
 metadata/_custom_type_script = "uid://crmjns4d70w7d"

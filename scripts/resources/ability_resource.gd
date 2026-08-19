@@ -10,6 +10,9 @@ extends Resource
 @export var ability_name: String = "Nova Habilidade"
 @export_multiline var description: String = ""
 @export var icon: Texture2D
+## Emoji que representa a habilidade nos botões skill1/2/3 do preview e no
+## texto montado em Hud/label_skill_details ("{icon_emoji} {ability_name}: {description}").
+@export var icon_emoji: String = "❓"
 
 @export_group("Execução")
 ## Determina quando/como a habilidade é disparada. String livre por

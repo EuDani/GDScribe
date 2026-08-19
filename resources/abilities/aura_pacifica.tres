@@ -6,6 +6,7 @@
 script = ExtResource("1_ability")
 id = "aura_pacifica"
 ability_name = "Aura Pacífica"
+icon_emoji = "☮️"
 description = "Nenhuma carta inimiga pode escolher esta carta como alvo de ataque."
 trigger_type = "PASSIVE_STATIC"
 metadata/_custom_type_script = "uid://crmjns4d70w7d"

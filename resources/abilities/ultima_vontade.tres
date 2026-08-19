@@ -6,6 +6,7 @@
 script = ExtResource("1_ability")
 id = "ultima_vontade"
 ability_name = "Última Vontade"
+icon_emoji = "🕯️"
 description = "Ao morrer, uma cópia desta carta entra na sua mão."
 trigger_type = "ON_DEATH"
 metadata/_custom_type_script = "uid://crmjns4d70w7d"

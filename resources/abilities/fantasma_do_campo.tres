@@ -6,6 +6,7 @@
 script = ExtResource("1_ability")
 id = "fantasma_do_campo"
 ability_name = "Fantasma do Campo"
+icon_emoji = "👻"
 description = "Ataques direcionados a esta carta a atravessam: o dano vai direto ao castelo do dono dela."
 trigger_type = "PASSIVE_STATIC"
 metadata/_custom_type_script = "uid://crmjns4d70w7d"

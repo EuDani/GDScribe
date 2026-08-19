@@ -95,9 +95,12 @@ func _ready() -> void:
 
 	if preview_close_button:
 		preview_close_button.pressed.connect(_hide_card_preview)
-	preview_skill_button_1.pressed.connect(_on_skill_button_pressed.bind(0))
-	preview_skill_button_2.pressed.connect(_on_skill_button_pressed.bind(1))
-	preview_skill_button_3.pressed.connect(_on_skill_button_pressed.bind(2))
+
+	var skill_buttons := [preview_skill_button_1, preview_skill_button_2, preview_skill_button_3]
+	for i in range(skill_buttons.size()):
+		skill_buttons[i].mouse_entered.connect(_on_skill_button_hovered.bind(i))
+		skill_buttons[i].mouse_exited.connect(_hide_skill_details)
+
 	if skill_details_close_button:
 		skill_details_close_button.pressed.connect(_hide_skill_details)
 	skill_details_label.visible = false
@@ -379,11 +382,14 @@ func _update_skill_slots(data: CardResource) -> void:
 				name_labels[i].text = data.abilities[i].ability_name
 		if buttons[i]:
 			buttons[i].visible = has_ability
+			if has_ability:
+				buttons[i].text = data.abilities[i].icon_emoji
 
 
-## Clique num dos botões skill1/2/3 do preview: mostra a descrição
-## completa daquela habilidade em Hud/label_skill_details.
-func _on_skill_button_pressed(index: int) -> void:
+## Mouse por cima de um dos botões skill1/2/3 do preview: mostra o ícone,
+## nome e descrição completa daquela habilidade em Hud/label_skill_details
+## (ver _hide_skill_details, ligado ao mouse_exited desses mesmos botões).
+func _on_skill_button_hovered(index: int) -> void:
 	if not _preview_card_data or index >= _preview_card_data.abilities.size():
 		return
 
@@ -391,7 +397,7 @@ func _on_skill_button_pressed(index: int) -> void:
 	if not ability or not skill_details_label:
 		return
 
-	skill_details_label.text = "%s\n\n%s" % [ability.ability_name, ability.description]
+	skill_details_label.text = "%s %s: %s" % [ability.icon_emoji, ability.ability_name, ability.description]
 	skill_details_label.visible = true
 
 
@@ -419,9 +425,14 @@ func _on_enemy_blood_changed(current: int, max_b: int) -> void:
 
 
 ## Move o Plane do blood_cup no eixo Y proporcionalmente ao Sangue atual,
-## simulando o nível do líquido subindo/descendo dentro do copo.
+## simulando o nível do líquido subindo/descendo dentro do copo. Com 0 de
+## Sangue o Plane some por completo (nada de líquido pra mostrar).
 func _update_blood_cup(plane: MeshInstance3D, current: int, max_b: int) -> void:
 	if not plane or max_b <= 0:
+		return
+
+	plane.visible = current > 0
+	if current <= 0:
 		return
 
 	var fraction := clampf(float(current) / float(max_b), 0.0, 1.0)

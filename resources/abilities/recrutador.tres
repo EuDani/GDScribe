@@ -6,6 +6,7 @@
 script = ExtResource("1_ability")
 id = "recrutador"
 ability_name = "Recrutador"
+icon_emoji = "🪖"
 description = "Ao ser invocada, um Recruta (carta 1/1 de custo 0) surge na sua mão."
 trigger_type = "ON_PLAY"
 metadata/_custom_type_script = "uid://crmjns4d70w7d"

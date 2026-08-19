@@ -6,6 +6,7 @@
 script = ExtResource("1_ability")
 id = "emboscada"
 ability_name = "Emboscada"
+icon_emoji = "🕳️"
 description = "Pode se realocar para qualquer espaço vazio do campo que esteja prestes a ser atacado, bloqueando o golpe."
 trigger_type = "PASSIVE_STATIC"
 metadata/_custom_type_script = "uid://crmjns4d70w7d"

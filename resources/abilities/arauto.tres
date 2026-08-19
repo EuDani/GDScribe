@@ -6,6 +6,7 @@
 script = ExtResource("1_ability")
 id = "arauto"
 ability_name = "Arauto"
+icon_emoji = "📯"
 description = "Ao ser invocada, um Escudeiro (0 de Ataque, 2 de Defesa, carta de Efeito) surge para proteger o campo."
 trigger_type = "ON_PLAY"
 metadata/_custom_type_script = "uid://crmjns4d70w7d"

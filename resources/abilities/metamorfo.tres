@@ -6,6 +6,7 @@
 script = ExtResource("1_ability")
 id = "metamorfo"
 ability_name = "Metamorfo"
+icon_emoji = "🔀"
 description = "Ao ser comprada, esta habilidade é substituída por outra habilidade aleatória desta lista."
 trigger_type = "ON_DRAW"
 metadata/_custom_type_script = "uid://crmjns4d70w7d"

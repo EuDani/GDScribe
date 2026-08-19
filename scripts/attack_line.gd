@@ -4,7 +4,7 @@
 class_name AttackLine
 extends MeshInstance3D
 
-@export var thickness: float = 0.03
+@export var thickness: float = 0.06
 @export var line_color: Color = Color(0.85, 0.1, 0.1, 0.85)
 
 var _box_mesh: BoxMesh

@@ -6,6 +6,7 @@
 script = ExtResource("1_ability")
 id = "furia_total"
 ability_name = "Fúria Total"
+icon_emoji = "🌪️"
 description = "Ataca todas as cartas inimigas em campo ao mesmo tempo; se o campo inimigo estiver vazio, ataca o castelo diretamente."
 trigger_type = "ON_ATTACK"
 metadata/_custom_type_script = "uid://crmjns4d70w7d"

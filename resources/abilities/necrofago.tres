@@ -6,6 +6,7 @@
 script = ExtResource("1_ability")
 id = "necrofago"
 ability_name = "Necrófago"
+icon_emoji = "🧟"
 description = "Se uma carta sua morrer em combate, esta carta é jogada automaticamente da mão para o espaço dela."
 trigger_type = "ON_ALLY_DEATH"
 metadata/_custom_type_script = "uid://crmjns4d70w7d"
