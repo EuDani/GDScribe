@@ -1,6 +1,6 @@
-## Resolve o combate: aplica o resultado dos pareamentos atacante/bloqueadoras
-## declarados na fase de combate atual (dano ao castelo quando não há
-## bloqueio, ou morte das bloqueadoras — o atacante nunca morre no bloqueio).
+## Resolve o combate: aplica dano do atacante às bloqueadoras designadas
+## (reduzindo Escudo e depois Defesa, respeitando Horda) ou ao castelo
+## quando não há bloqueio — o atacante nunca sofre dano no bloqueio.
 ## Também cuida da apresentação: linhas conectando atacante e bloqueadoras,
 ## e o tween de investida antes de aplicar o dano de verdade.
 class_name CombatManager
@@ -24,8 +24,8 @@ var enemy_hp: int = 20
 var _attack_lines: Dictionary = {}  # CardInvocada -> Array[AttackLine]
 
 @onready var duel_scene: DuelScene = $".."
-@onready var player_hp_label: Label3D = $"../PlayerCastle/HPLabel"
-@onready var enemy_hp_label: Label3D = $"../EnemyCastle/HPLabel"
+@onready var player_hp_label: Label = $"../Hud/PlayerHpLabel"
+@onready var enemy_hp_label: Label = $"../Hud/EnemyHpLabel"
 
 
 func _ready() -> void:
@@ -56,20 +56,11 @@ func resolve(attacker_is_player: bool) -> void:
 				player_hp = maxi(player_hp - damage, 0)
 			continue
 
-		# O ataque "atravessa" as bloqueadoras na ordem em que foram
-		# associadas: cada uma morre se o que sobrou de força do ataque
-		# for maior que a Defesa dela, consumindo essa força; o resto (se
-		# houver) segue pra próxima. O atacante nunca morre no bloqueio.
-		var remaining_attack: int = attacker.card_data.attack
-		for blocker: CardInvocada in blockers:
-			if remaining_attack <= 0:
-				break
-			if remaining_attack > blocker.card_data.defense:
-				remaining_attack -= blocker.card_data.defense
-				blocker_field.remove_child(blocker)
-				blocker.queue_free()
-			else:
-				remaining_attack = 0
+		# Cada bloqueadora escalada sofre o ataque cheio (não é dividido
+		# entre elas) — bloqueio em grupo serve pra atender max_blockers
+		# de cartas grandes, não pra "diluir" o dano.
+		for blocker in blockers:
+			_apply_damage(blocker, attacker.card_data.attack, blocker_field)
 
 	clear_attack_lines()
 	duel_scene.reorganize_field(blocker_field, duel_scene.field_card_spacing)
@@ -77,6 +68,33 @@ func resolve(attacker_is_player: bool) -> void:
 
 	declared_attackers.clear()
 	blocks.clear()
+
+
+## Aplica `amount` de dano a `target`: se ela tiver Escudo (current_shield
+## > 0), o Escudo absorve o golpe inteiro (perde valor, mas a Defesa não é
+## tocada) e o bloqueio conta como bem-sucedido de qualquer forma. Senão o
+## dano sai da Defesa; se ela zerar, uma Horda disponível (current_horde >
+## 0) consome 1 de horda e reinicia a Defesa em vez de morrer — só quando
+## a horda também acaba é que a carta é destruída de verdade.
+func _apply_damage(target: CardInvocada, amount: int, field: Node3D) -> void:
+	if target.current_shield > 0:
+		target.current_shield = maxi(target.current_shield - amount, 0)
+		target.refresh_stat_labels()
+		return
+
+	target.current_defense -= amount
+	if target.current_defense > 0:
+		target.refresh_stat_labels()
+		return
+
+	if target.current_horde > 0:
+		target.current_horde -= 1
+		target.current_defense = target.card_data.defense
+		target.refresh_stat_labels()
+		return
+
+	field.remove_child(target)
+	target.queue_free()
 
 
 ## Redesenha todas as linhas de ataque->bloqueadora a partir do estado

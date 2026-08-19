@@ -140,6 +140,33 @@ text = "1"
 horizontal_alignment = 1
 vertical_alignment = 1
 
+[node name="Skills" type="Control" parent="CardViewport/CardUI" unique_id=1346320206]
+anchors_preset = 0
+offset_top = 300.0
+offset_right = 40.0
+offset_bottom = 340.0
+
+[node name="skill1" type="Button" parent="CardViewport/CardUI/Skills" unique_id=1075062399]
+layout_mode = 0
+offset_left = 28.0
+offset_right = 70.0
+offset_bottom = 44.0
+text = "🎈"
+
+[node name="skill2" type="Button" parent="CardViewport/CardUI/Skills" unique_id=1961794221]
+layout_mode = 0
+offset_left = 130.5
+offset_right = 172.5
+offset_bottom = 44.0
+text = "🎈"
+
+[node name="skill3" type="Button" parent="CardViewport/CardUI/Skills" unique_id=602295200]
+layout_mode = 0
+offset_left = 233.0
+offset_right = 275.0
+offset_bottom = 44.0
+text = "🎈"
+
 [node name="CardMesh" type="MeshInstance3D" parent="." unique_id=1186297341]
 transform = Transform3D(1.2, 0, 0, 0, 1.68, 0, 0, 0, 1.1999999, 0, 0, 0)
 material_override = SubResource("StandardMaterial3D_eg0p3")

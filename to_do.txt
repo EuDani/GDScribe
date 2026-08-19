@@ -1,0 +1,9 @@
+- ajustar contagem de sangue: Começa o combate com 1 de sangue (export) e vai adquirindo +1 a cada turno (export). Limite que nao pode acumular acima de 10 de sangue (export). Ao jogador sacrificar uma carta, ele recebe o valor de blood_val da carta[crie nova variavel com valor inicial de 1, mas pode ser almentado com habilidades] 
+- ajustar vida em embates: quando cartas se batem, o attack do atacante reduzi a defesa do bloqueador. Se o bloqueador chegar a 0 de defesa é destruida. Exceto se tiver se tiver horder > 0. Se tiver shild > que 0 perde somente shild e nao defesa, mas bloqueia mesmo assim o dano.  
+- adicionei os labels de skill de descricao no preview_layer. faça os atualizar com as informações da card_data. Alem disso ao clicar nos botoes de skill1,2 e 3, mostrar a descrição da habilidade no label_skill_details dentro do hud. Pode ser tanto na carta invocada quanto na carta da mao. Ocultar botos não ocupados por habilidades. A mesma coisa pode ser feita com cartas de oponente.
+- dentro do blood_cup, tem o Plane, o y Atualiza de acordo com o valor de blood.
+- o hpLabel mudou de lugar, para dentro da hud
+- remover o queue de invocacao
+
+- A ia do oponente age de acordo com o valor de enemyblood. ou seja, so consegue invocar carta se tiver como invocar. E se não tiver pode pensar em sacrificar cartas para conseguir mais sangue.
+- habilidades valerem. 

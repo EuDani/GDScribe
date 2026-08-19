@@ -1,12 +1,9 @@
-## Gerencia o conjunto de cartas na mão do jogador: instanciação,
-## organização espacial em leque e fila de espera (quando não há Sangue
-## suficiente para jogar imediatamente).
+## Gerencia o conjunto de cartas na mão do jogador: instanciação e
+## organização espacial em leque.
 class_name PlayerHand
 extends Node3D
 
 signal card_invoked_custom(card_node: Card3D, button_index: int)
-signal card_queued(card_node: Card3D)
-signal card_sacrificed(card_node: Card3D)
 
 @export var card_scene: PackedScene
 @export var card_spacing: float = 0.95
@@ -17,10 +14,6 @@ signal card_sacrificed(card_node: Card3D)
 @export var reorganize_anim_time: float = 0.25
 
 var hand_cards: Array[Card3D] = []
-## Cartas que o jogador tentou jogar mas não tinha Sangue suficiente; ficam
-## visualmente "de lado" até o Sangue disponível cobrir o custo (ver
-## DuelScene._check_queued_cards).
-var queued_cards: Array[Card3D] = []
 
 
 ## Instancia uma nova carta e adiciona à mão.

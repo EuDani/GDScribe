@@ -73,6 +73,14 @@ const LEVEL_LABELS: Dictionary = {
 	set(value):
 		defense = maxi(value, 0)
 
+## Quanto de Sangue esta carta concede ao ser sacrificada (em vez da
+## Defesa, que agora só importa em combate). Começa em 1 pra todas as
+## cartas; habilidades específicas podem aumentar esse valor (ex.:
+## Sacrifício Nobre, que triplica na hora do sacrifício).
+@export var blood_val: int = 1:
+	set(value):
+		blood_val = maxi(value, 0)
+
 @export_group("Habilidades e Selos")
 ## Lista de habilidades ativas ou passivas que esta carta possui
 @export var abilities: Array[AbilityResource] = []
@@ -100,3 +108,13 @@ const LEVEL_LABELS: Dictionary = {
 ## Função utilitária para pegar o texto do nível da carta em formato de String
 func get_level_label() -> String:
 	return LEVEL_LABELS.get(level, "Desconhecido")
+
+
+## Consulta rápida se esta carta possui uma habilidade específica, pelo id
+## dela (ver resources/abilities/*.tres). Usado pelos poucos gatilhos de
+## habilidade já ligados no motor de combate (ex.: "voar", "alcance").
+func has_ability(ability_id: String) -> bool:
+	for ability in abilities:
+		if ability and ability.id == ability_id:
+			return true
+	return false

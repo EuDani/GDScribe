@@ -20,13 +20,13 @@
 [ext_resource type="Resource" uid="uid://b5elher1c11x1" path="res://resources/homens_sapo.tres" id="16_pbba0"]
 [ext_resource type="Resource" uid="uid://cnywdjlguwkik" path="res://resources/gigante_ferro.tres" id="17_q424n"]
 [ext_resource type="Script" uid="uid://derr4p8e1lv6" path="res://scripts/resources/deck_resource.gd" id="18_xrdeg"]
+[ext_resource type="PackedScene" uid="uid://b2i7bfweby56k" path="res://Assets/blood_cup.glb" id="20_c2vfe"]
+[ext_resource type="PackedScene" uid="uid://v1k1e7e7jp4s" path="res://Assets/castel.glb" id="20_pbba0"]
 [ext_resource type="Script" uid="uid://cpvbwembmnilg" path="res://scripts/blood_manager.gd" id="21_7gdid"]
 [ext_resource type="PackedScene" uid="uid://c8h8k2lmhi7cr" path="res://scenes/card.tscn" id="21_v5elv"]
 [ext_resource type="PackedScene" uid="uid://ngy83wv5aaao" path="res://scenes/deck_modal.tscn" id="23_h8wu8"]
 [ext_resource type="PackedScene" uid="uid://bbbkqoulul2in" path="res://scenes/player_deck_pile.tscn" id="23_sjiiy"]
-[ext_resource type="Texture2D" uid="uid://bc2w8re3b2fhh" path="res://sprites/card_bg.png" id="24_jmg8l"]
-[ext_resource type="Texture2D" uid="uid://b2r1liclew5gv" path="res://artwork/alquimista.jpg" id="25_q21jv"]
-[ext_resource type="Texture2D" uid="uid://cgs0bhq8s4eoj" path="res://sprites/card_mod.png" id="26_h1aux"]
+[ext_resource type="PackedScene" uid="uid://ivknrd5rsj71" path="res://scenes/preview_layer.tscn" id="24_5pmm0"]
 [ext_resource type="Script" uid="uid://couw105c3bde4" path="res://addons/godot_state_charts/state_chart.gd" id="28_g6765"]
 [ext_resource type="Script" uid="uid://jk2jm1g6q853" path="res://addons/godot_state_charts/compound_state.gd" id="29_qj6dy"]
 [ext_resource type="Script" uid="uid://cytafq8i1y8qm" path="res://addons/godot_state_charts/atomic_state.gd" id="30_5pmm0"]
@@ -46,23 +46,12 @@ script = ExtResource("18_xrdeg")
 cards = Array[ExtResource("2_vhs7o")]([ExtResource("3_v5elv"), ExtResource("4_h8wu8"), ExtResource("5_sjiiy"), ExtResource("6_flypn"), ExtResource("7_5q81d"), ExtResource("8_jmg8l"), ExtResource("9_q21jv"), ExtResource("5_sjiiy"), ExtResource("10_h1aux"), ExtResource("11_tcgqt"), ExtResource("8_jmg8l"), ExtResource("12_g6765"), ExtResource("13_qj6dy"), ExtResource("14_5pmm0"), ExtResource("15_c2vfe"), ExtResource("16_pbba0"), ExtResource("13_qj6dy"), ExtResource("17_q424n"), ExtResource("11_tcgqt"), ExtResource("15_c2vfe"), ExtResource("7_5q81d")])
 metadata/_custom_type_script = "uid://derr4p8e1lv6"
 
-[sub_resource type="BoxMesh" id="BoxMesh_eg0p3"]
-size = Vector3(2.2617188, 1.3393555, 1)
-
-[sub_resource type="CylinderMesh" id="CylinderMesh_ogq8d"]
-top_radius = 0.6152344
-bottom_radius = 0.6152344
-height = 1.1992188
+[sub_resource type="BoxShape3D" id="BoxShape3D_pbba0"]
+size = Vector3(1.7617188, 1, 1.9296875)
 
 [sub_resource type="CylinderShape3D" id="CylinderShape3D_ogq8d"]
 height = 1.1835938
 radius = 0.6035156
-
-[sub_resource type="BoxMesh" id="BoxMesh_ogq8d"]
-size = Vector3(1, 0.13305664, 1)
-
-[sub_resource type="BoxShape3D" id="BoxShape3D_v5elv"]
-size = Vector3(1.2067871, 0.16894531, 1.6936035)
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_ogq8d"]
 size = Vector3(15.578125, 11.859375, 2.571228)
@@ -71,6 +60,15 @@ size = Vector3(15.578125, 11.859375, 2.571228)
 top_radius = 0.33642578
 bottom_radius = 0.33642578
 height = 0.22167969
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_5pmm0"]
+border_width_left = 32
+border_width_top = 16
+border_width_right = 8
+border_width_bottom = 8
+border_color = Color(0.9780726, 0.76807886, 0.20029333, 1)
+border_blend = true
+shadow_size = 11
 
 [node name="DuelScene" type="Node3D" unique_id=1053051933]
 script = ExtResource("1_3xxeq")
@@ -82,6 +80,7 @@ field_card_spacing = 2.45
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=585697800]
 transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 0, -2.8014338, 0)
+light_energy = 1.675
 
 [node name="MainCamera" type="Camera3D" parent="." unique_id=1567711766]
 transform = Transform3D(1, 0, 0, 0, 0.25881904, 0.96592575, 0, -0.96592575, 0.25881904, 0, 44.95, 12.01)
@@ -93,57 +92,41 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.014136314, 0, 0)
 [node name="EnemyCastle" type="Node3D" parent="." unique_id=936672651]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5232892, -3.9056733)
 
-[node name="MeshInstance3D" type="MeshInstance3D" parent="EnemyCastle" unique_id=182118317]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.16967773, 0)
-mesh = SubResource("BoxMesh_eg0p3")
-
-[node name="HPLabel" type="Label3D" parent="EnemyCastle" unique_id=1209588071]
-transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 0, 0.88436794, -0.0015511513)
-text = "20"
-font_size = 52
-outline_size = 16
+[node name="castel" parent="EnemyCastle" unique_id=628445941 instance=ExtResource("20_pbba0")]
+transform = Transform3D(0.3, 0, 0, 0, 0.3, 0, 0, 0, 0.3, 0, 0, 0)
 
 [node name="PlayerCastle" type="Node3D" parent="." unique_id=1851330384]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.523, 3.906)
 
-[node name="MeshInstance3D" type="MeshInstance3D" parent="PlayerCastle" unique_id=1076416752]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.16967773, 0)
-mesh = SubResource("BoxMesh_eg0p3")
-
-[node name="HPLabel" type="Label3D" parent="PlayerCastle" unique_id=668543686]
-transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 0, 0.9410608, 0.038734674)
-text = "20"
-font_size = 52
-outline_size = 16
+[node name="castel" parent="PlayerCastle" unique_id=1838469341 instance=ExtResource("20_pbba0")]
+transform = Transform3D(0.3, 0, 0, 0, 0.3, 0, 0, 0, 0.3, 0, 0, 0)
 
 [node name="BloodBarrelPlayer" type="Area3D" parent="." unique_id=1545302837]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6.924, 0.608, 2.5)
 metadata/_edit_group_ = true
 
-[node name="MeshInstance3D" type="MeshInstance3D" parent="BloodBarrelPlayer" unique_id=1926053256]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.041609347, 0)
-mesh = SubResource("CylinderMesh_ogq8d")
+[node name="blood_cup" parent="BloodBarrelPlayer" unique_id=580457757 instance=ExtResource("20_c2vfe")]
+transform = Transform3D(0.54, 0, 0, 0, 0.54, 0, 0, 0, 0.54, 0, -0.135, 0)
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="BloodBarrelPlayer" unique_id=315661214]
-shape = SubResource("CylinderShape3D_ogq8d")
+shape = SubResource("BoxShape3D_pbba0")
 
 [node name="Label3D" type="Label3D" parent="BloodBarrelPlayer" unique_id=1122443325]
-transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 0, 0.85542136, 0)
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 0, 1.42, 0)
 text = "00"
 
 [node name="BloodBarrelEnemy" type="Area3D" parent="." unique_id=452536558]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6.924, 0.608, -2.5)
 metadata/_edit_group_ = true
 
-[node name="MeshInstance3D" type="MeshInstance3D" parent="BloodBarrelEnemy" unique_id=1564179910]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.041609347, 0)
-mesh = SubResource("CylinderMesh_ogq8d")
+[node name="blood_cup" parent="BloodBarrelEnemy" unique_id=242308445 instance=ExtResource("20_c2vfe")]
+transform = Transform3D(0.54, 0, 0, 0, 0.54, 0, 0, 0, 0.54, 0, -0.135, 0)
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="BloodBarrelEnemy" unique_id=1798728054]
 shape = SubResource("CylinderShape3D_ogq8d")
 
 [node name="Label3D" type="Label3D" parent="BloodBarrelEnemy" unique_id=467921002]
-transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 0, 0.85542136, 0)
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 0, 1.42, 0)
 text = "00"
 
 [node name="FieldAnchors" type="Node3D" parent="." unique_id=1084392846]
@@ -165,9 +148,6 @@ card_spacing = 1.0
 [node name="EnemyDeckAnchor" type="Node3D" parent="." unique_id=1204587162]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -4.9442)
 
-[node name="QueueAnchor" type="Node3D" parent="." unique_id=878433239]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.2, 2.8, 2)
-
 [node name="BloodManager" type="Node3D" parent="." unique_id=762517343]
 script = ExtResource("21_7gdid")
 inicial_blood = 6
@@ -179,140 +159,11 @@ inicial_blood = 6
 [node name="PlayerDeckPile" parent="." unique_id=105496325 instance=ExtResource("23_sjiiy")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6.952734, 0.105, 3.38)
 
-[node name="EnemyDeck" type="Area3D" parent="." unique_id=1308316622]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.816, 0.105, -3.38)
+[node name="EnemyDeckPile" parent="." unique_id=1573089015 instance=ExtResource("23_sjiiy")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6.953, 0.105, -3.38)
 
-[node name="MeshInstance3D" type="MeshInstance3D" parent="EnemyDeck" unique_id=561119701]
-transform = Transform3D(1.2, 0, 0, 0, 1.2, 0, 0, 0, 1.68, 0, 0, 0)
-mesh = SubResource("BoxMesh_ogq8d")
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="EnemyDeck" unique_id=1861553672]
-shape = SubResource("BoxShape3D_v5elv")
-
-[node name="PreviewLayer" type="CanvasLayer" parent="." unique_id=1021021813]
+[node name="PreviewLayer" parent="." unique_id=2128574386 instance=ExtResource("24_5pmm0")]
 visible = false
-
-[node name="CardUI" type="Control" parent="PreviewLayer" unique_id=25730995]
-custom_minimum_size = Vector2(300, 420)
-layout_mode = 3
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_top = 86.51
-offset_right = -852.0
-offset_bottom = -74.48993
-grow_horizontal = 2
-grow_vertical = 2
-
-[node name="bg" type="Sprite2D" parent="PreviewLayer/CardUI" unique_id=223288572]
-texture = ExtResource("24_jmg8l")
-offset = Vector2(150, 210)
-
-[node name="Artwork" type="TextureRect" parent="PreviewLayer/CardUI" unique_id=1374246648]
-clip_contents = true
-layout_mode = 1
-anchors_preset = 5
-anchor_left = 0.5
-anchor_right = 0.5
-offset_left = -127.0
-offset_top = 23.0
-offset_right = 143.0
-offset_bottom = 423.0
-grow_horizontal = 2
-texture = ExtResource("25_q21jv")
-expand_mode = 1
-stretch_mode = 6
-
-[node name="ColorRect" type="ColorRect" parent="PreviewLayer/CardUI" unique_id=2034146319]
-custom_minimum_size = Vector2(300, 35)
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_top = 246.0
-offset_bottom = -206.0
-grow_horizontal = 2
-grow_vertical = 2
-color = Color(0, 0, 0, 0.7647059)
-
-[node name="NameLabel" type="Label" parent="PreviewLayer/CardUI" unique_id=212874195]
-modulate = Color(1, 1, 0, 1)
-layout_mode = 0
-offset_right = 300.0
-offset_bottom = 31.0
-offset_transform_enabled = true
-offset_transform_position = Vector2(0, 250)
-offset_transform_pivot_ratio = Vector2(0, 0)
-theme_override_font_sizes/font_size = 22
-text = "dasidj asidjsia jdisa"
-horizontal_alignment = 1
-vertical_alignment = 1
-
-[node name="mod" type="Sprite2D" parent="PreviewLayer/CardUI" unique_id=1075452667]
-texture = ExtResource("26_h1aux")
-offset = Vector2(150, 210)
-
-[node name="HeaderPanel" type="Control" parent="PreviewLayer/CardUI" unique_id=1942294811]
-anchors_preset = 0
-offset_right = 40.0
-offset_bottom = 40.0
-
-[node name="SacrificeProgress" type="ProgressBar" parent="PreviewLayer/CardUI/HeaderPanel" unique_id=844809136]
-layout_mode = 0
-offset_top = 200.0
-offset_right = 300.0
-offset_bottom = 240.0
-min_value = 50.0
-value = 50.0
-
-[node name="BloodCostLabel" type="Label" parent="PreviewLayer/CardUI/HeaderPanel" unique_id=1393934349]
-layout_mode = 0
-offset_right = 40.0
-offset_bottom = 23.0
-offset_transform_enabled = true
-offset_transform_position = Vector2(130, 6)
-text = "01"
-horizontal_alignment = 1
-
-[node name="FooterPanel" type="Control" parent="PreviewLayer/CardUI" unique_id=829660299]
-anchors_preset = 0
-offset_right = 40.0
-offset_bottom = 40.0
-
-[node name="AttackLabel" type="Label" parent="PreviewLayer/CardUI/FooterPanel" unique_id=38101023]
-layout_mode = 0
-offset_right = 40.0
-offset_bottom = 23.0
-offset_transform_enabled = true
-offset_transform_position = Vector2(100, 380)
-theme_override_colors/font_color = Color(1, 1, 0, 1)
-theme_override_colors/font_shadow_color = Color(0, 0, 0, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_font_sizes/font_size = 27
-text = "1"
-horizontal_alignment = 1
-vertical_alignment = 1
-
-[node name="DefenseLabel" type="Label" parent="PreviewLayer/CardUI/FooterPanel" unique_id=1902702446]
-layout_mode = 0
-offset_right = 40.0
-offset_bottom = 23.0
-offset_transform_enabled = true
-offset_transform_position = Vector2(153, 380)
-theme_override_colors/font_color = Color(1, 1, 0, 1)
-theme_override_colors/font_shadow_color = Color(0, 0, 0, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_font_sizes/font_size = 27
-text = "1"
-horizontal_alignment = 1
-vertical_alignment = 1
-
-[node name="CloseButton" type="Button" parent="PreviewLayer/CardUI" unique_id=435844922]
-layout_mode = 0
-offset_top = 443.0
-offset_right = 299.0
-offset_bottom = 479.0
-text = "Fechar"
 
 [node name="DeckModal" parent="." unique_id=1732282603 instance=ExtResource("23_h8wu8")]
 visible = false
@@ -384,6 +235,59 @@ text = "Atacante:
 Jogador"
 horizontal_alignment = 1
 vertical_alignment = 1
+
+[node name="label_skill_details" type="Label" parent="Hud" unique_id=1427187213]
+custom_minimum_size = Vector2(0, 50)
+offset_left = 133.0
+offset_top = 13.0
+offset_right = 980.0
+offset_bottom = 121.70999
+theme_override_font_sizes/font_size = 10
+theme_override_styles/normal = SubResource("StyleBoxFlat_5pmm0")
+text = "teste steste stes"
+
+[node name="fechar_label" type="Button" parent="Hud/label_skill_details" unique_id=1208595940]
+layout_mode = 0
+offset_left = 763.0
+offset_top = 79.0
+offset_right = 846.0
+offset_bottom = 110.0
+text = "fechar
+"
+
+[node name="PlayerCountDeckCards" type="Label" parent="Hud" unique_id=888937057]
+offset_left = 979.0
+offset_top = 486.0
+offset_right = 1054.0
+offset_bottom = 556.0
+theme_override_font_sizes/font_size = 22
+text = "00"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="EnemyCountDeckCards" type="Label" parent="Hud" unique_id=975276119]
+offset_left = 960.0
+offset_top = 64.0
+offset_right = 1039.0
+offset_bottom = 161.0
+theme_override_font_sizes/font_size = 22
+text = "00"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="EnemyHpLabel" type="Label" parent="Hud" unique_id=1513047831]
+offset_left = 585.0
+offset_top = 34.0
+offset_right = 674.0
+offset_bottom = 89.0
+text = "00"
+
+[node name="PlayerHpLabel" type="Label" parent="Hud" unique_id=535439853]
+offset_left = 543.0
+offset_top = 575.0
+offset_right = 583.0
+offset_bottom = 598.0
+text = "00"
 
 [node name="DuelStateChart" type="Node" parent="." unique_id=1893831762]
 script = ExtResource("28_g6765")
@@ -475,6 +379,7 @@ event = &"damage_resolved"
 delay_in_seconds = "0.0"
 
 [node name="EnemyHandAnchor" type="Node3D" parent="." unique_id=38504554]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.485962, -4.4954224)
 script = ExtResource("41_ehand")
 
 [node name="EnemyAiController" type="Node" parent="." unique_id=920498886]

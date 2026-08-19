@@ -8,11 +8,13 @@ extends Node
 ## (Label3D do barril) e o TurnManager (fila de espera) se atualizem.
 signal blood_changed(current_blood: int, max_blood: int)
 
-## Teto absoluto que current_max_blood nunca ultrapassa, mesmo crescendo um
-## por turno.
+## Teto absoluto que current_max_blood nunca ultrapassa, mesmo crescendo a
+## cada turno.
 @export var max_blood_limit: int = 10
 ## Quantidade de Sangue (e limite máximo) no primeiro turno da partida.
 @export var inicial_blood: int = 1
+## Quanto o limite máximo cresce a cada início de turno (ver start_turn()).
+@export var blood_gain_per_turn: int = 1
 
 var current_max_blood: int = 1
 var current_blood: int = 1
@@ -30,10 +32,10 @@ func reset_blood() -> void:
 	blood_changed.emit(current_blood, current_max_blood)
 
 
-## Início de turno deste lado: aumenta o limite máximo em 1 (até
-## max_blood_limit) e enche o tonel até esse novo máximo.
+## Início de turno deste lado: aumenta o limite máximo em blood_gain_per_turn
+## (até max_blood_limit) e enche o tonel até esse novo máximo.
 func start_turn() -> void:
-	current_max_blood = mini(current_max_blood + 1, max_blood_limit)
+	current_max_blood = mini(current_max_blood + blood_gain_per_turn, max_blood_limit)
 	current_blood = current_max_blood
 	blood_changed.emit(current_blood, current_max_blood)
 

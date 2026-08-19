@@ -1,10 +1,10 @@
 ## Controlador principal da cena de duelo: mão, campo, sangue, arraste de
-## cartas, fila de espera, sacrifício e os modais de deck/preview.
+## cartas, sacrifício e os modais de deck/preview.
 ##
 ## As fases de turno/combate propriamente ditas (quem pode agir agora, e
 ## quando) são responsabilidade do TurnManager — este script cuida só da
-## "mecânica de mão" (mão do jogador, arraste, invocação, fila de Sangue,
-## sacrifício) e é consultado/gated por ele via `turn_manager.is_player_summon_phase`.
+## "mecânica de mão" (mão do jogador, arraste, invocação, sacrifício) e é
+## consultado/gated por ele via `turn_manager.is_player_summon_phase`.
 class_name DuelScene
 extends Node3D
 
@@ -17,8 +17,6 @@ extends Node3D
 ## Distância (em unidades 3D) à frente da câmera onde a carta flutua durante o drag.
 @export var drag_distance_from_camera: float = 3.0
 @export var field_card_spacing: float = 2.0
-@export var queue_anim_time: float = 0.25
-@export var queue_scale: float = 0.8
 
 ## Máximo de cartas invocadas simultaneamente em cada campo (jogador e
 ## oponente). Também consultado por EnemyAiController.
@@ -29,6 +27,12 @@ extends Node3D
 @export var field_drop_anim_time: float = 0.3
 @export var field_drop_trans: Tween.TransitionType = Tween.TRANS_BOUNCE
 @export var field_drop_ease: Tween.EaseType = Tween.EASE_OUT
+
+## Posição local Y do Plane dentro do blood_cup (o "nível do líquido")
+## quando o barril está vazio e quando está cheio — ajuste esses dois
+## valores no editor pra bater com a escala visual do modelo importado.
+@export var blood_cup_empty_y: float = -0.2
+@export var blood_cup_full_y: float = 0.2
 #endregion
 
 #region Referências de nós
@@ -36,9 +40,9 @@ extends Node3D
 @onready var blood_manager: BloodManager = $BloodManager
 @onready var player_hand: PlayerHand = $PlayerHandAnchor
 @onready var player_field: Node3D = $FieldAnchors/PlayerField
-@onready var queue_anchor: Node3D = $QueueAnchor
 @onready var blood_barrel_player: Area3D = $BloodBarrelPlayer
 @onready var blood_label: Label3D = $BloodBarrelPlayer/Label3D
+@onready var blood_cup_plane_player: MeshInstance3D = $BloodBarrelPlayer/blood_cup/Plane
 ## Área de colisão sobre a mesa: soltar uma carta arrastada aqui é o gesto
 ## de "jogar a carta" (ver _is_mouse_over_summon_area).
 @onready var summon_area: Area3D = $SummonArea
@@ -47,6 +51,7 @@ extends Node3D
 
 @onready var enemy_blood_manager: BloodManager = $EnemyBloodManager
 @onready var blood_label_enemy: Label3D = $BloodBarrelEnemy/Label3D
+@onready var blood_cup_plane_enemy: MeshInstance3D = $BloodBarrelEnemy/blood_cup/Plane
 @onready var enemy_field: Node3D = $FieldAnchors/EnemyField
 @onready var enemy_hand: EnemyHand = $EnemyHandAnchor
 @onready var enemy_ai_controller: EnemyAiController = $EnemyAiController
@@ -60,10 +65,22 @@ extends Node3D
 @onready var preview_attack_label: Label = $PreviewLayer/CardUI/FooterPanel/AttackLabel
 @onready var preview_defense_label: Label = $PreviewLayer/CardUI/FooterPanel/DefenseLabel
 @onready var preview_close_button: Button = $PreviewLayer/CardUI/CloseButton
+@onready var preview_description_label: Label = $PreviewLayer/CardUI/Descricao
+@onready var preview_skill_name_label_1: Label = $PreviewLayer/CardUI/label_skill1
+@onready var preview_skill_name_label_2: Label = $PreviewLayer/CardUI/label_skill2
+@onready var preview_skill_name_label_3: Label = $PreviewLayer/CardUI/label_skill3
+@onready var preview_skill_button_1: Button = $PreviewLayer/Skills/skill1
+@onready var preview_skill_button_2: Button = $PreviewLayer/Skills/skill2
+@onready var preview_skill_button_3: Button = $PreviewLayer/Skills/skill3
+@onready var skill_details_label: Label = $Hud/label_skill_details
+@onready var skill_details_close_button: Button = $Hud/label_skill_details/fechar_label
 #endregion
 
 #region Estado interno
 var dragged_card: Card3D = null
+## Carta cujo preview está aberto no momento — usada pra saber a quais
+## habilidades os botões skill1/2/3 do preview se referem.
+var _preview_card_data: CardResource = null
 #endregion
 
 
@@ -78,6 +95,12 @@ func _ready() -> void:
 
 	if preview_close_button:
 		preview_close_button.pressed.connect(_hide_card_preview)
+	preview_skill_button_1.pressed.connect(_on_skill_button_pressed.bind(0))
+	preview_skill_button_2.pressed.connect(_on_skill_button_pressed.bind(1))
+	preview_skill_button_3.pressed.connect(_on_skill_button_pressed.bind(2))
+	if skill_details_close_button:
+		skill_details_close_button.pressed.connect(_hide_skill_details)
+	skill_details_label.visible = false
 	preview_layer.visible = false
 
 	if player_deck_data:
@@ -136,9 +159,8 @@ func _update_dragged_card_position() -> void:
 
 ## Ao soltar o botão do mouse com uma carta em arraste: sacrifica se foi
 ## solta em cima do barril de Sangue; senão decide entre jogar no campo
-## (se houver Sangue e espaço), enfileirar (se faltar só Sangue) ou
-## devolver pra mão (se foi solta fora da área de invocação, ou se o
-## campo já está cheio).
+## (se houver Sangue e espaço) ou devolver pra mão (se foi solta fora da
+## área de invocação, se faltar Sangue, ou se o campo já está cheio).
 func _drop_card(card: Card3D) -> void:
 	var current_card := card
 	dragged_card = null
@@ -161,7 +183,7 @@ func _drop_card(card: Card3D) -> void:
 			blood_manager.spend_blood(cost)
 			_play_card_to_field(current_card)
 		else:
-			_queue_card(current_card)
+			_return_card_to_hand(current_card)
 	else:
 		_return_card_to_hand(current_card)
 
@@ -226,10 +248,6 @@ func _on_card_clicked_hand(card: Card3D, button_index: int) -> void:
 		_hide_card_preview()
 		return
 
-	if button_index == MOUSE_BUTTON_RIGHT and not player_hand.queued_cards.is_empty():
-		_clear_queue_to_hand()
-		return
-
 	if button_index == MOUSE_BUTTON_LEFT:
 		dragged_card = card
 		card.start_drag()
@@ -251,11 +269,15 @@ func _play_card_to_field(card: Card3D) -> void:
 	player_field.add_child(invoked_entity)
 	invoked_entity.card_data = card_data
 	invoked_entity.rotation_degrees = Vector3.ZERO
+	invoked_entity.card_invocada_clicked.connect(on_field_card_clicked_for_preview)
 
 	# Posiciona a carta invocada na mesma altura da Card3D original antes de
 	# reorganizar o campo, para que o tween de reorganização também sirva
 	# como a animação de queda até o tabuleiro.
 	invoked_entity.global_position.y = drop_start_y
+
+	if card_data.has_ability("saqueador"):
+		blood_manager.add_blood(1)
 
 	card.queue_free()
 	reorganize_field(player_field, field_card_spacing)
@@ -277,60 +299,26 @@ func reorganize_field(field_node: Node3D, spacing: float = 1.5) -> void:
 		var target_position := Vector3(target_x, 0.0, 0.0)
 		create_tween().tween_property(entities[i], "position", target_position, field_drop_anim_time) \
 			.set_trans(field_drop_trans).set_ease(field_drop_ease)
-#endregion
 
 
-#region Fila de espera (cartas sem Sangue suficiente)
-## Envia a carta pra fila de espera (visível ao lado do campo) até haver
-## Sangue suficiente pra pagá-la. Só existe uma carta na fila por vez: uma
-## nova tentativa de enfileirar substitui a anterior (que volta pra mão).
-func _queue_card(card: Card3D) -> void:
-	if not player_hand.queued_cards.is_empty():
-		_clear_queue_to_hand()
-
-	player_hand.queued_cards.append(card)
-	card.reparent(queue_anchor)
-
-	var tween := create_tween().set_parallel(true)
-	tween.tween_property(card, "position", Vector3.ZERO, queue_anim_time)
-	tween.tween_property(card, "scale", Vector3.ONE * queue_scale, queue_anim_time)
-
-
-## Devolve todas as cartas da fila de volta pra mão (ex.: clique direito
-## numa carta da mão enquanto há algo na fila).
-func _clear_queue_to_hand() -> void:
-	while not player_hand.queued_cards.is_empty():
-		var q_card: Card3D = player_hand.queued_cards.pop_front()
-		q_card.reparent(player_hand)
-		player_hand.hand_cards.append(q_card)
-		create_tween().tween_property(q_card, "scale", Vector3.ONE, 0.2)
-	player_hand.reorganize_hand()
-
-
-## Chamado sempre que o Sangue muda: joga automaticamente a primeira carta
-## da fila assim que houver Sangue suficiente para ela e o campo não
-## estiver cheio (senão ela continua esperando na fila).
-func _check_queued_cards() -> void:
-	if player_hand.queued_cards.is_empty():
-		return
-	if player_field.get_child_count() >= max_field_size:
-		return
-
-	var first_queued: Card3D = player_hand.queued_cards[0]
-	if blood_manager.can_afford(first_queued.card_data.blood_cost):
-		player_hand.queued_cards.remove_at(0)
-		blood_manager.spend_blood(first_queued.card_data.blood_cost)
-		_play_card_to_field(first_queued)
+## Clique numa carta já invocada (do jogador OU do oponente): botão
+## direito mostra o preview de detalhes, igual às cartas da mão. Conectado
+## em toda CardInvocada criada, tanto por _play_card_to_field quanto por
+## EnemyAiController._summon.
+func on_field_card_clicked_for_preview(card: CardInvocada, button_index: int) -> void:
+	if button_index == MOUSE_BUTTON_RIGHT:
+		_show_card_preview(card.card_data)
 #endregion
 
 
 #region Sacrifício
-## Converte a carta em Sangue (ganho igual à Defesa dela) e a remove da
-## mão, com uma pequena animação de "queda no barril" antes de destruí-la.
-## Chamado por _drop_card ao soltar a carta em cima do barril de Sangue.
+## Converte a carta em Sangue (ganho igual ao blood_val dela) e a remove
+## da mão, com uma pequena animação de "queda no barril" antes de
+## destruí-la. Chamado por _drop_card ao soltar a carta em cima do barril
+## de Sangue.
 func _execute_sacrifice(card: Card3D) -> void:
-	var defense_gained := card.card_data.defense
-	blood_manager.add_blood(defense_gained)
+	var blood_gained := card.card_data.blood_val
+	blood_manager.add_blood(blood_gained)
 
 	player_hand.remove_from_hand(card)
 
@@ -348,12 +336,14 @@ func _on_deck_input_event(_camera: Node, event: InputEvent, _pos: Vector3, _norm
 
 
 ## Mostra o PreviewLayer preenchido com os dados da carta clicada com o
-## botão direito, reaproveitando os mesmos campos do CardUI de card.tscn.
+## botão direito, reaproveitando os mesmos campos do CardUI de card.tscn,
+## e sincroniza a descrição e os slots de habilidade (label + botão).
 func _show_card_preview(data: CardResource) -> void:
 	if not data:
 		return
 
 	preview_layer.visible = true
+	_preview_card_data = data
 
 	preview_name_label.text = data.card_name
 	preview_blood_cost_label.text = str(data.blood_cost)
@@ -368,18 +358,73 @@ func _show_card_preview(data: CardResource) -> void:
 	if preview_artwork_rect and data.artwork:
 		preview_artwork_rect.texture = data.artwork
 
+	if preview_description_label:
+		preview_description_label.text = data.description
+
+	_update_skill_slots(data)
+
+
+## Mostra só os slots de habilidade (nome + botão) que a carta realmente
+## tem, escondendo os que sobram — ex.: carta com 1 habilidade só mostra
+## skill1, skill2 e skill3 ficam ocultos.
+func _update_skill_slots(data: CardResource) -> void:
+	var name_labels := [preview_skill_name_label_1, preview_skill_name_label_2, preview_skill_name_label_3]
+	var buttons := [preview_skill_button_1, preview_skill_button_2, preview_skill_button_3]
+
+	for i in range(3):
+		var has_ability: bool = i < data.abilities.size() and data.abilities[i] != null
+		if name_labels[i]:
+			name_labels[i].visible = has_ability
+			if has_ability:
+				name_labels[i].text = data.abilities[i].ability_name
+		if buttons[i]:
+			buttons[i].visible = has_ability
+
+
+## Clique num dos botões skill1/2/3 do preview: mostra a descrição
+## completa daquela habilidade em Hud/label_skill_details.
+func _on_skill_button_pressed(index: int) -> void:
+	if not _preview_card_data or index >= _preview_card_data.abilities.size():
+		return
+
+	var ability := _preview_card_data.abilities[index]
+	if not ability or not skill_details_label:
+		return
+
+	skill_details_label.text = "%s\n\n%s" % [ability.ability_name, ability.description]
+	skill_details_label.visible = true
+
+
+func _hide_skill_details() -> void:
+	if skill_details_label:
+		skill_details_label.visible = false
+
 
 ## Esconde o PreviewLayer. Chamada pelo CloseButton e também ao clicar
 ## fora do preview (em qualquer carta da mão ou em qualquer lugar da tela).
 func _hide_card_preview() -> void:
 	preview_layer.visible = false
+	_hide_skill_details()
 #endregion
 
 
 func _on_blood_changed(current: int, max_b: int) -> void:
 	blood_label.text = "%d / %d" % [current, max_b]
-	_check_queued_cards()
+	_update_blood_cup(blood_cup_plane_player, current, max_b)
 
 
 func _on_enemy_blood_changed(current: int, max_b: int) -> void:
 	blood_label_enemy.text = "%d / %d" % [current, max_b]
+	_update_blood_cup(blood_cup_plane_enemy, current, max_b)
+
+
+## Move o Plane do blood_cup no eixo Y proporcionalmente ao Sangue atual,
+## simulando o nível do líquido subindo/descendo dentro do copo.
+func _update_blood_cup(plane: MeshInstance3D, current: int, max_b: int) -> void:
+	if not plane or max_b <= 0:
+		return
+
+	var fraction := clampf(float(current) / float(max_b), 0.0, 1.0)
+	var local_pos := plane.position
+	local_pos.y = lerpf(blood_cup_empty_y, blood_cup_full_y, fraction)
+	plane.position = local_pos

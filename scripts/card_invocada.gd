@@ -31,6 +31,15 @@ var is_selected: bool = false
 var _base_scale: Vector3 = Vector3.ONE
 var _select_tween: Tween
 
+## Estado de combate "atual" desta cópia em campo, separado dos valores
+## impressos em card_data (que continuam intactos — o mesmo CardResource
+## pode voltar pra mão/baralho depois e não deve carregar dano residual).
+## Inicializados a partir de card_data assim que ela é atribuída
+## (ver update_visuals) e só modificados por CombatManager a partir daí.
+var current_defense: int = 1
+var current_shield: int = 0
+var current_horde: int = 0
+
 ## Selo grande sobre a carta indicando que ela não pode ser escolhida na
 ## fase de combate atual (nem como atacante, nem como bloqueadora).
 @onready var timeout_indicator: Label = $CardViewport/CardUI/TimeoutIndicador
@@ -47,11 +56,28 @@ func _ready() -> void:
 ## Além do preenchimento visual herdado, aplica a regra especial de cartas
 ## com a habilidade "Passo Rápido" (CardResource.can_attack_on_turn_created):
 ## essas nascem sem doença de invocação e já podem atacar no turno em que
-## foram invocadas.
+## foram invocadas. Também inicializa o estado de combate "atual" (Defesa,
+## Escudo, Horda) a partir dos valores impressos em card_data.
 func update_visuals() -> void:
 	super.update_visuals()
 	if card_data:
 		is_summoning_sick = not card_data.can_attack_on_turn_created
+		current_defense = card_data.defense
+		current_shield = card_data.shild
+		current_horde = card_data.horde
+		refresh_stat_labels()
+
+
+## Consulta rápida se esta carta possui uma habilidade específica.
+func has_ability(ability_id: String) -> bool:
+	return card_data != null and card_data.has_ability(ability_id)
+
+
+## Atualiza o texto de Defesa na carta pra refletir current_defense (o
+## dano acumulado em combate) em vez do valor impresso original.
+func refresh_stat_labels() -> void:
+	if defense_label:
+		defense_label.text = str(current_defense)
 
 
 ## Regra de elegibilidade para ser escolhida como atacante nesta fase de

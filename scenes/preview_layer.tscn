@@ -1,0 +1,213 @@
+[gd_scene format=3 uid="uid://ivknrd5rsj71"]
+
+[ext_resource type="Texture2D" uid="uid://bc2w8re3b2fhh" path="res://sprites/card_bg.png" id="1_6a7fa"]
+[ext_resource type="Texture2D" uid="uid://b2r1liclew5gv" path="res://artwork/alquimista.jpg" id="2_kgtdw"]
+[ext_resource type="Texture2D" uid="uid://cgs0bhq8s4eoj" path="res://sprites/card_mod.png" id="3_0u1u1"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hyap7"]
+border_width_left = 32
+border_width_top = 16
+border_width_right = 8
+border_width_bottom = 8
+border_color = Color(0.9780726, 0.76807886, 0.20029333, 1)
+border_blend = true
+shadow_size = 11
+
+[node name="PreviewLayer" type="CanvasLayer" unique_id=2128574386]
+
+[node name="CardUI" type="Control" parent="." unique_id=1114644304]
+custom_minimum_size = Vector2(300, 420)
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = 86.51
+offset_right = -852.0
+offset_bottom = -74.48993
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Descricao" type="Label" parent="CardUI" unique_id=452423852]
+layout_mode = 0
+offset_left = 278.0
+offset_right = 613.0
+offset_bottom = 158.48999
+theme_override_font_sizes/font_size = 10
+theme_override_styles/normal = SubResource("StyleBoxFlat_hyap7")
+text = "teste steste stes"
+
+[node name="label_skill1" type="Label" parent="CardUI" unique_id=743011595]
+custom_minimum_size = Vector2(0, 50)
+layout_mode = 0
+offset_left = 278.0
+offset_top = 169.0
+offset_right = 613.0
+offset_bottom = 235.70999
+theme_override_font_sizes/font_size = 10
+theme_override_styles/normal = SubResource("StyleBoxFlat_hyap7")
+text = "teste steste stes"
+
+[node name="label_skill2" type="Label" parent="CardUI" unique_id=563100354]
+custom_minimum_size = Vector2(0, 50)
+layout_mode = 0
+offset_left = 278.0
+offset_top = 262.745
+offset_right = 613.0
+offset_bottom = 329.455
+theme_override_font_sizes/font_size = 10
+theme_override_styles/normal = SubResource("StyleBoxFlat_hyap7")
+text = "teste steste stes"
+
+[node name="label_skill3" type="Label" parent="CardUI" unique_id=2105419557]
+custom_minimum_size = Vector2(0, 50)
+layout_mode = 0
+offset_left = 278.0
+offset_top = 356.49
+offset_right = 613.0
+offset_bottom = 423.19998
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_shadow_color = Color(0.18039216, 0.18039216, 0.18039216, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_font_sizes/font_size = 10
+theme_override_styles/normal = SubResource("StyleBoxFlat_hyap7")
+text = "teste steste stes"
+
+[node name="bg" type="Sprite2D" parent="CardUI" unique_id=401299421]
+texture = ExtResource("1_6a7fa")
+offset = Vector2(150, 210)
+
+[node name="Artwork" type="TextureRect" parent="CardUI" unique_id=853158403]
+clip_contents = true
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -127.0
+offset_top = 23.0
+offset_right = 143.0
+offset_bottom = 423.0
+grow_horizontal = 2
+texture = ExtResource("2_kgtdw")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="ColorRect" type="ColorRect" parent="CardUI" unique_id=1177871128]
+custom_minimum_size = Vector2(300, 35)
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = 246.0
+offset_bottom = -206.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.7647059)
+
+[node name="NameLabel" type="Label" parent="CardUI" unique_id=1860666065]
+modulate = Color(1, 1, 0, 1)
+layout_mode = 0
+offset_right = 300.0
+offset_bottom = 31.0
+offset_transform_enabled = true
+offset_transform_position = Vector2(0, 250)
+offset_transform_pivot_ratio = Vector2(0, 0)
+theme_override_font_sizes/font_size = 22
+text = "dasidj asidjsia jdisa"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="mod" type="Sprite2D" parent="CardUI" unique_id=219816543]
+texture = ExtResource("3_0u1u1")
+offset = Vector2(150, 210)
+
+[node name="HeaderPanel" type="Control" parent="CardUI" unique_id=387327194]
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="SacrificeProgress" type="ProgressBar" parent="CardUI/HeaderPanel" unique_id=508138619]
+layout_mode = 0
+offset_top = 200.0
+offset_right = 300.0
+offset_bottom = 240.0
+min_value = 50.0
+value = 50.0
+
+[node name="BloodCostLabel" type="Label" parent="CardUI/HeaderPanel" unique_id=1886832488]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 23.0
+offset_transform_enabled = true
+offset_transform_position = Vector2(130, 6)
+text = "01"
+horizontal_alignment = 1
+
+[node name="FooterPanel" type="Control" parent="CardUI" unique_id=1267387145]
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="AttackLabel" type="Label" parent="CardUI/FooterPanel" unique_id=155375472]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 23.0
+offset_transform_enabled = true
+offset_transform_position = Vector2(100, 380)
+theme_override_colors/font_color = Color(1, 1, 0, 1)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_font_sizes/font_size = 27
+text = "1"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="DefenseLabel" type="Label" parent="CardUI/FooterPanel" unique_id=874949432]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 23.0
+offset_transform_enabled = true
+offset_transform_position = Vector2(153, 380)
+theme_override_colors/font_color = Color(1, 1, 0, 1)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_font_sizes/font_size = 27
+text = "1"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="CloseButton" type="Button" parent="CardUI" unique_id=1516004277]
+layout_mode = 0
+offset_top = 443.0
+offset_right = 299.0
+offset_bottom = 479.0
+text = "Fechar"
+
+[node name="Skills" type="Control" parent="." unique_id=72918594]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="skill1" type="Button" parent="Skills" unique_id=2050797959]
+layout_mode = 0
+offset_left = 28.0
+offset_top = 370.0
+offset_right = 70.0
+offset_bottom = 414.0
+text = "🎈"
+
+[node name="skill2" type="Button" parent="Skills" unique_id=1610554397]
+layout_mode = 0
+offset_left = 130.5
+offset_top = 370.0
+offset_right = 172.5
+offset_bottom = 414.0
+text = "🎈"
+
+[node name="skill3" type="Button" parent="Skills" unique_id=1206286161]
+layout_mode = 0
+offset_left = 233.0
+offset_top = 369.0
+offset_right = 275.0
+offset_bottom = 413.0
+text = "🎈"

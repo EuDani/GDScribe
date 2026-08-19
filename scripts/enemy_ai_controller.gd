@@ -24,13 +24,20 @@ func draw_initial_hand(deck_data: DeckResource, amount: int) -> void:
 	_refresh_hand_visual()
 
 
-## Fila modular de ações do turno de invocação: por enquanto só invoca
-## cartas; puxar carta, sacrificar e usar habilidade entram como próximas
-## ações dessa mesma fila.
+## Fila modular de ações do turno de invocação: tenta invocar; se não
+## conseguir pagar nada da mão, sacrifica a carta mais barata em troca de
+## Sangue e tenta de novo antes de desistir.
 func run_invocation_phase() -> void:
 	var summons := 0
 	while summons < max_summons_per_turn and enemy_field.get_child_count() < duel_scene.max_field_size:
 		var card_data := _pick_affordable_card()
+
+		if not card_data and hand_data.size() > 1:
+			if not _sacrifice_cheapest_card():
+				break
+			await get_tree().create_timer(action_delay).timeout
+			card_data = _pick_affordable_card()
+
 		if not card_data:
 			break
 
@@ -40,6 +47,25 @@ func run_invocation_phase() -> void:
 
 		summons += 1
 		await get_tree().create_timer(action_delay).timeout
+
+
+## Sacrifica a carta de menor custo da mão em troca de Sangue (blood_val
+## dela), pra tentar destravar uma invocação que não cabia no Sangue
+## disponível. Nunca esvazia a mão por completo (chamado só quando há
+## mais de 1 carta — ver run_invocation_phase).
+func _sacrifice_cheapest_card() -> bool:
+	if hand_data.is_empty():
+		return false
+
+	var cheapest: CardResource = hand_data[0]
+	for card_data in hand_data:
+		if card_data.blood_cost < cheapest.blood_cost:
+			cheapest = card_data
+
+	hand_data.erase(cheapest)
+	_refresh_hand_visual()
+	enemy_blood_manager.add_blood(cheapest.blood_val)
+	return true
 
 
 ## Escolhe quais cartas do campo do oponente atacam neste turno. Como o
@@ -54,9 +80,11 @@ func decide_attackers() -> Array[CardInvocada]:
 
 ## Decide quais cartas do oponente bloqueiam quais atacantes do jogador. Só
 ## bloqueia quando sobrevive ao bloqueio (DEF >= ATK do atacante); senão
-## prefere levar o dano a perder uma carta à toa. Cada atacante recebe no
-## máximo 1 bloqueadora aqui — a IA não monta bloqueio em grupo por
-## enquanto, mesmo que o motor de combate já suporte isso para o jogador.
+## prefere levar o dano a perder uma carta à toa. Atacantes com "Voar" só
+## podem ser bloqueados por candidatas com "Voar" ou "Alcance". Cada
+## atacante recebe no máximo 1 bloqueadora aqui — a IA não monta bloqueio
+## em grupo por enquanto, mesmo que o motor de combate já suporte isso
+## para o jogador.
 func decide_blocks(attackers: Array[CardInvocada]) -> Dictionary:
 	var blocks: Dictionary = {}
 	var available: Array[CardInvocada] = []
@@ -65,10 +93,16 @@ func decide_blocks(attackers: Array[CardInvocada]) -> Dictionary:
 			available.append(child)
 
 	for attacker in attackers:
+		var flying := attacker.has_ability("voar")
 		var safe_blocker: CardInvocada = null
 		for candidate in available:
-			if candidate.card_data.defense >= attacker.card_data.attack:
-				if safe_blocker == null or candidate.card_data.defense < safe_blocker.card_data.defense:
+			if flying and not (candidate.has_ability("voar") or candidate.has_ability("alcance")):
+				continue
+			# current_shield conta como "Defesa extra" pra fins de segurança:
+			# se o Escudo sozinho já absorve o golpe, a Defesa nem é tocada.
+			var effective_toughness: int = candidate.current_defense + candidate.current_shield
+			if effective_toughness >= attacker.card_data.attack:
+				if safe_blocker == null or candidate.current_defense < safe_blocker.current_defense:
 					safe_blocker = candidate
 
 		if safe_blocker:
@@ -110,6 +144,10 @@ func _summon(card_data: CardResource) -> void:
 	invoked_entity.card_data = card_data
 	invoked_entity.rotation_degrees = Vector3.ZERO
 	invoked_entity.global_position.y = 3.0
+	invoked_entity.card_invocada_clicked.connect(duel_scene.on_field_card_clicked_for_preview)
+
+	if card_data.has_ability("saqueador"):
+		enemy_blood_manager.add_blood(1)
 
 	duel_scene.reorganize_field(enemy_field, duel_scene.field_card_spacing)
 	await get_tree().create_timer(duel_scene.field_drop_anim_time).timeout

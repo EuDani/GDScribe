@@ -310,11 +310,16 @@ func _on_player_blocker_clicked(card: CardInvocada, button_index: int) -> void:
 
 ## Clique num atacante inimigo: associa a bloqueadora pendente a ele, até
 ## o limite de CardResource.max_blockers do atacante (padrão 1 — cartas
-## com o limite maior podem ser cercadas por mais bloqueadoras).
+## com o limite maior podem ser cercadas por mais bloqueadoras). Atacantes
+## com a habilidade "Voar" só podem ser bloqueados por cartas com "Voar"
+## ou "Alcance".
 func _on_enemy_attacker_clicked(card: CardInvocada, button_index: int) -> void:
 	if button_index != MOUSE_BUTTON_LEFT:
 		return
 	if not _pending_blocker:
+		return
+
+	if card.has_ability("voar") and not (_pending_blocker.has_ability("voar") or _pending_blocker.has_ability("alcance")):
 		return
 
 	var current_blockers: Array = combat_manager.blocks.get(card, [])
