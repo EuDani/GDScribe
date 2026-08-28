@@ -3,7 +3,7 @@
 
 @theme {
   --color-ink: #0b0b0c;
-  --color-ink-soft: #17171a;
+  --color-line: #0b0b0c;
   --color-paper: #f3efe3;
   --color-paper-dim: #d8d3c4;
   --color-accent-red: #ff3b30;
@@ -11,6 +11,11 @@
   --color-accent-blue: #0a84ff;
   --color-accent-green: #30d158;
   --color-accent-purple: #bf5af2;
+
+  /* Canvas/surface tokens flip between light and dark app themes (see below) */
+  --color-canvas: #0b0b0c;
+  --color-canvas-fg: #f3efe3;
+  --color-surface: #17171a;
 
   --font-display: "Archivo Black", "Space Grotesk", sans-serif;
   --font-sans: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
@@ -23,21 +28,37 @@
 }
 
 :root {
-  /* Per-project theme overrides — set at runtime by ThemeContext, these are the defaults */
+  /* Per-project theme overrides — set at runtime by ProjectThemeContext */
   --project-primary: var(--color-accent-red);
   --project-accent: var(--color-accent-yellow);
   --project-bg: var(--color-ink);
   --project-fg: var(--color-paper);
+
+  color-scheme: dark;
+}
+
+/* Tema claro do app: automático (segue o sistema) a menos que o usuário
+   force um dos dois via o menu de usuário (data-theme="light"/"dark"). */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --color-canvas: #f3efe3;
+    --color-canvas-fg: #0b0b0c;
+    --color-surface: #ffffff;
+    color-scheme: light;
+  }
+}
+
+:root[data-theme="light"] {
+  --color-canvas: #f3efe3;
+  --color-canvas-fg: #0b0b0c;
+  --color-surface: #ffffff;
+  color-scheme: light;
 }
 
 @layer base {
-  html {
-    color-scheme: dark;
-  }
-
   body {
-    background-color: var(--color-ink);
-    color: var(--color-paper);
+    background-color: var(--color-canvas);
+    color: var(--color-canvas-fg);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
   }
@@ -52,7 +73,7 @@
     height: 10px;
   }
   ::-webkit-scrollbar-track {
-    background: var(--color-ink);
+    background: var(--color-canvas);
   }
   ::-webkit-scrollbar-thumb {
     background: var(--color-paper-dim);

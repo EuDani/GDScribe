@@ -1,5 +1,7 @@
 -- GDScribe — Supabase schema
--- Cole este arquivo inteiro no SQL Editor do seu projeto Supabase e rode uma vez.
+-- Cole este arquivo inteiro no SQL Editor do seu projeto Supabase e rode.
+-- Idempotente: pode rodar de novo sempre que este arquivo for atualizado
+-- (ex: depois de puxar uma versão nova do app) para aplicar migrações.
 
 create extension if not exists "pgcrypto";
 
@@ -42,9 +44,11 @@ create table if not exists public.gdd_modules (
   title text not null,
   icon text not null default 'FileText',
   phase text not null default 'all' check (phase in ('pre_production', 'production', 'post_production', 'all')),
+  status text,
   sort_order integer not null default 0,
   is_custom boolean not null default false,
   content text not null default '',
+  extra_fields jsonb not null default '[]'::jsonb,
   updated_at timestamptz not null default now()
 );
 
@@ -68,6 +72,7 @@ create table if not exists public.inventory_items (
   id uuid primary key default gen_random_uuid(),
   type_id uuid not null references public.inventory_types (id) on delete cascade,
   project_id uuid not null references public.projects (id) on delete cascade,
+  status text,
   data jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -96,6 +101,11 @@ create table if not exists public.kanban_cards (
   title text not null,
   description text,
   tags text[] not null default '{}',
+  icon text,
+  cover_image_url text,
+  checklist jsonb not null default '[]'::jsonb,
+  start_date date,
+  due_date date,
   sort_order integer not null default 0,
   created_at timestamptz not null default now()
 );
@@ -118,6 +128,19 @@ create table if not exists public.ideas (
 );
 
 create index if not exists ideas_project_id_idx on public.ideas (project_id);
+
+-- ============================================================
+-- Migrações — garante as colunas novas em bancos criados com uma
+-- versão anterior deste arquivo.
+-- ============================================================
+alter table public.gdd_modules add column if not exists status text;
+alter table public.gdd_modules add column if not exists extra_fields jsonb not null default '[]'::jsonb;
+alter table public.inventory_items add column if not exists status text;
+alter table public.kanban_cards add column if not exists icon text;
+alter table public.kanban_cards add column if not exists cover_image_url text;
+alter table public.kanban_cards add column if not exists checklist jsonb not null default '[]'::jsonb;
+alter table public.kanban_cards add column if not exists start_date date;
+alter table public.kanban_cards add column if not exists due_date date;
 
 -- ============================================================
 -- updated_at triggers
@@ -160,9 +183,11 @@ alter table public.kanban_columns enable row level security;
 alter table public.kanban_cards enable row level security;
 alter table public.ideas enable row level security;
 
+drop policy if exists "own projects" on public.projects;
 create policy "own projects" on public.projects
   for all using (owner_id = auth.uid()) with check (owner_id = auth.uid());
 
+drop policy if exists "own project_themes" on public.project_themes;
 create policy "own project_themes" on public.project_themes
   for all using (
     exists (select 1 from public.projects p where p.id = project_id and p.owner_id = auth.uid())
@@ -171,6 +196,7 @@ create policy "own project_themes" on public.project_themes
     exists (select 1 from public.projects p where p.id = project_id and p.owner_id = auth.uid())
   );
 
+drop policy if exists "own gdd_modules" on public.gdd_modules;
 create policy "own gdd_modules" on public.gdd_modules
   for all using (
     exists (select 1 from public.projects p where p.id = project_id and p.owner_id = auth.uid())
@@ -179,6 +205,7 @@ create policy "own gdd_modules" on public.gdd_modules
     exists (select 1 from public.projects p where p.id = project_id and p.owner_id = auth.uid())
   );
 
+drop policy if exists "own inventory_types" on public.inventory_types;
 create policy "own inventory_types" on public.inventory_types
   for all using (
     exists (select 1 from public.projects p where p.id = project_id and p.owner_id = auth.uid())
@@ -187,6 +214,7 @@ create policy "own inventory_types" on public.inventory_types
     exists (select 1 from public.projects p where p.id = project_id and p.owner_id = auth.uid())
   );
 
+drop policy if exists "own inventory_items" on public.inventory_items;
 create policy "own inventory_items" on public.inventory_items
   for all using (
     exists (select 1 from public.projects p where p.id = project_id and p.owner_id = auth.uid())
@@ -195,6 +223,7 @@ create policy "own inventory_items" on public.inventory_items
     exists (select 1 from public.projects p where p.id = project_id and p.owner_id = auth.uid())
   );
 
+drop policy if exists "own kanban_columns" on public.kanban_columns;
 create policy "own kanban_columns" on public.kanban_columns
   for all using (
     exists (select 1 from public.projects p where p.id = project_id and p.owner_id = auth.uid())
@@ -203,6 +232,7 @@ create policy "own kanban_columns" on public.kanban_columns
     exists (select 1 from public.projects p where p.id = project_id and p.owner_id = auth.uid())
   );
 
+drop policy if exists "own kanban_cards" on public.kanban_cards;
 create policy "own kanban_cards" on public.kanban_cards
   for all using (
     exists (select 1 from public.projects p where p.id = project_id and p.owner_id = auth.uid())
@@ -211,6 +241,7 @@ create policy "own kanban_cards" on public.kanban_cards
     exists (select 1 from public.projects p where p.id = project_id and p.owner_id = auth.uid())
   );
 
+drop policy if exists "own ideas" on public.ideas;
 create policy "own ideas" on public.ideas
   for all using (
     exists (select 1 from public.projects p where p.id = project_id and p.owner_id = auth.uid())
@@ -220,7 +251,7 @@ create policy "own ideas" on public.ideas
   );
 
 -- ============================================================
--- Storage bucket para logos, capas e imagens de inventário
+-- Storage bucket para logos, capas e imagens embutidas em texto
 -- ============================================================
 insert into storage.buckets (id, name, public)
 values ('project-assets', 'project-assets', true)
@@ -228,11 +259,13 @@ on conflict (id) do nothing;
 
 -- Caminho esperado: <project_id>/arquivo.ext — o primeiro segmento do path
 -- precisa ser o id de um projeto que pertence ao usuário autenticado.
+drop policy if exists "own project assets read" on storage.objects;
 create policy "own project assets read" on storage.objects
   for select using (
     bucket_id = 'project-assets'
   );
 
+drop policy if exists "own project assets write" on storage.objects;
 create policy "own project assets write" on storage.objects
   for insert with check (
     bucket_id = 'project-assets'
@@ -243,6 +276,7 @@ create policy "own project assets write" on storage.objects
     )
   );
 
+drop policy if exists "own project assets update" on storage.objects;
 create policy "own project assets update" on storage.objects
   for update using (
     bucket_id = 'project-assets'
@@ -253,6 +287,7 @@ create policy "own project assets update" on storage.objects
     )
   );
 
+drop policy if exists "own project assets delete" on storage.objects;
 create policy "own project assets delete" on storage.objects
   for delete using (
     bucket_id = 'project-assets'

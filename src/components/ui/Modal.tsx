@@ -23,20 +23,20 @@ export function Modal({ open, onClose, title, children, wide = false }: ModalPro
           onClick={onClose}
         >
           <motion.div
-            className={`text-paper w-full ${wide ? 'max-w-3xl' : 'max-w-lg'} max-h-[85vh] overflow-y-auto border-2 border-ink bg-ink-soft shadow-brutal-lg`}
+            className={`text-canvas-fg w-full ${wide ? 'max-w-3xl' : 'max-w-lg'} max-h-[85vh] overflow-y-auto border-2 border-line bg-surface shadow-brutal-lg`}
             initial={{ opacity: 0, y: 12, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 12, scale: 0.98 }}
             transition={{ duration: 0.15 }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between border-b-2 border-ink px-5 py-4">
+            <div className="flex items-center justify-between border-b-2 border-line px-5 py-4">
               <h2 className="text-display text-lg">{title}</h2>
               <button
                 type="button"
                 onClick={onClose}
                 aria-label="Fechar"
-                className="cursor-pointer border-2 border-ink bg-paper p-1 text-ink hover:bg-accent-red hover:text-paper"
+                className="cursor-pointer border-2 border-line bg-paper p-1 text-ink hover:bg-accent-red hover:text-canvas-fg"
               >
                 <X size={18} />
               </button>

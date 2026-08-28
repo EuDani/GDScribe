@@ -20,20 +20,20 @@ export function KanbanColumnView({
   const { setNodeRef } = useDroppable({ id: column.id, data: { type: 'column' } })
 
   return (
-    <div className="flex w-72 shrink-0 flex-col border-2 border-ink bg-ink-soft">
+    <div className="flex w-72 shrink-0 flex-col border-2 border-line bg-surface">
       <div
-        className="flex items-center justify-between gap-2 border-b-2 border-ink px-3 py-2.5"
+        className="flex items-center justify-between gap-2 border-b-2 border-line px-3 py-2.5"
         style={{ boxShadow: `inset 4px 0 0 0 ${column.color}` }}
       >
         <h3 className="text-label text-xs font-semibold">
-          {column.name} <span className="text-paper/40">({cards.length})</span>
+          {column.name} <span className="text-canvas-fg/40">({cards.length})</span>
         </h3>
         <div className="flex items-center gap-1">
           <button
             type="button"
             onClick={onAddCard}
             aria-label="Novo card"
-            className="cursor-pointer border-2 border-ink p-1 text-paper/60 hover:bg-accent-yellow hover:text-ink"
+            className="cursor-pointer border-2 border-line p-1 text-canvas-fg/60 hover:bg-accent-yellow hover:text-ink"
           >
             <Plus size={13} />
           </button>
@@ -41,7 +41,7 @@ export function KanbanColumnView({
             type="button"
             onClick={onDeleteColumn}
             aria-label="Excluir coluna"
-            className="cursor-pointer border-2 border-ink p-1 text-paper/60 hover:bg-accent-red hover:text-paper"
+            className="cursor-pointer border-2 border-line p-1 text-canvas-fg/60 hover:bg-accent-red hover:text-canvas-fg"
           >
             <Trash2 size={13} />
           </button>

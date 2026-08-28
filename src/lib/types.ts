@@ -28,6 +28,20 @@ export interface ProjectTheme {
   font_choice: string
 }
 
+export type ExtraFieldType = 'text' | 'number' | 'list' | 'chart'
+
+export interface ChartPoint {
+  label: string
+  value: number
+}
+
+export interface ExtraField {
+  id: string
+  label: string
+  type: ExtraFieldType
+  value: string | number | string[] | ChartPoint[]
+}
+
 export interface GddModule {
   id: string
   project_id: string
@@ -35,9 +49,11 @@ export interface GddModule {
   title: string
   icon: string
   phase: Phase
+  status: string | null
   sort_order: number
   is_custom: boolean
   content: string
+  extra_fields: ExtraField[]
   updated_at: string
 }
 
@@ -63,6 +79,7 @@ export interface InventoryItem {
   id: string
   type_id: string
   project_id: string
+  status: string | null
   data: Record<string, string | number | null>
   created_at: string
   updated_at: string
@@ -76,6 +93,12 @@ export interface KanbanColumn {
   sort_order: number
 }
 
+export interface ChecklistItem {
+  id: string
+  text: string
+  done: boolean
+}
+
 export interface KanbanCard {
   id: string
   column_id: string
@@ -83,6 +106,11 @@ export interface KanbanCard {
   title: string
   description: string | null
   tags: string[]
+  icon: string | null
+  cover_image_url: string | null
+  checklist: ChecklistItem[]
+  start_date: string | null
+  due_date: string | null
   sort_order: number
   created_at: string
 }
@@ -106,3 +134,5 @@ export interface Idea {
   created_at: string
   updated_at: string
 }
+
+export type AppThemeMode = 'light' | 'dark' | 'auto'

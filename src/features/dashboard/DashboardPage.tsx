@@ -7,6 +7,7 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { Field, TextInput, Textarea } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { UserMenu } from '@/components/UserMenu'
 import { useAuth } from '@/contexts/AuthContext'
 import { useCreateProject, useDeleteProject, useProjects } from '@/features/dashboard/useProjects'
 
@@ -21,6 +22,8 @@ export function DashboardPage() {
   const [description, setDescription] = useState('')
   const [pendingDelete, setPendingDelete] = useState<string | null>(null)
 
+  const displayName = (user?.user_metadata?.display_name as string | undefined)?.trim()
+
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault()
     if (!name.trim()) return
@@ -31,16 +34,18 @@ export function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-ink text-paper">
-      <header className="flex items-center justify-between border-b-2 border-ink px-6 py-4 sm:px-10">
+    <div className="min-h-screen bg-canvas text-canvas-fg">
+      <header className="flex items-center justify-between border-b-2 border-line px-6 py-4 sm:px-10">
         <div className="text-display flex items-center gap-2 text-lg">
-          <span className="flex h-7 w-7 items-center justify-center border-2 border-ink bg-accent-yellow text-ink">
+          <span className="flex h-7 w-7 items-center justify-center border-2 border-line bg-accent-yellow text-ink">
             G
           </span>
           GDScribe
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-label hidden text-xs text-paper/50 sm:inline">{user?.email}</span>
+          <span className="text-label hidden text-xs text-canvas-fg/50 sm:inline">
+            {displayName || user?.email}
+          </span>
           <Button variant="ghost" size="sm" onClick={signOut}>
             Sair
           </Button>
@@ -49,13 +54,15 @@ export function DashboardPage() {
 
       <main className="mx-auto max-w-5xl px-6 py-10 sm:px-10">
         <div className="mb-8 flex items-center justify-between">
-          <h1 className="text-display text-2xl sm:text-3xl">Seus projetos</h1>
+          <h1 className="text-display text-2xl sm:text-3xl">
+            {displayName ? `Projetos de ${displayName}` : 'Seus projetos'}
+          </h1>
           <Button icon={<Plus size={16} />} onClick={() => setCreating(true)}>
             Novo projeto
           </Button>
         </div>
 
-        {isLoading && <p className="text-label text-sm text-paper/50">Carregando…</p>}
+        {isLoading && <p className="text-label text-sm text-canvas-fg/50">Carregando…</p>}
 
         {!isLoading && projects?.length === 0 && (
           <EmptyState
@@ -74,19 +81,19 @@ export function DashboardPage() {
             <Card key={project.id} className="flex flex-col justify-between">
               <div>
                 <h2 className="text-display mb-1.5 text-lg">{project.name}</h2>
-                <p className="mb-4 line-clamp-3 text-sm text-paper/60">
+                <p className="mb-4 line-clamp-3 text-sm text-canvas-fg/60">
                   {project.description || 'Sem descrição.'}
                 </p>
               </div>
               <div className="flex items-center justify-between">
-                <Link to={`/project/${project.id}/gdd`}>
+                <Link to={`/project/${project.id}/overview`}>
                   <Button size="sm">Abrir</Button>
                 </Link>
                 <button
                   type="button"
                   onClick={() => setPendingDelete(project.id)}
                   aria-label="Excluir projeto"
-                  className="cursor-pointer border-2 border-ink bg-transparent p-1.5 text-paper/50 hover:bg-accent-red hover:text-paper"
+                  className="cursor-pointer border-2 border-line bg-transparent p-1.5 text-canvas-fg/50 hover:bg-accent-red hover:text-canvas-fg"
                 >
                   <Trash2 size={14} />
                 </button>
@@ -134,6 +141,8 @@ export function DashboardPage() {
         description="Essa ação apaga o projeto e todo o conteúdo relacionado (módulos, inventário, kanban, ideias). Não pode ser desfeita."
         confirmLabel="Excluir"
       />
+
+      <UserMenu />
     </div>
   )
 }

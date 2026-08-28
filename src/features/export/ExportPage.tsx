@@ -35,7 +35,7 @@ export function ExportPage() {
         </div>
       </div>
 
-      {isLoading && <p className="text-label text-sm text-paper/50">Montando documento…</p>}
+      {isLoading && <p className="text-label text-sm text-canvas-fg/50">Montando documento…</p>}
 
       {!isLoading && (
         <Card className="prose prose-invert max-w-none">

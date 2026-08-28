@@ -5,10 +5,11 @@ import { useOutletContext } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { EmptyState } from '@/components/ui/EmptyState'
-import { Field, Select, TextInput, Textarea } from '@/components/ui/Input'
+import { Field, Select, TextInput } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
 import { Badge, accentFromString } from '@/components/ui/Badge'
 import { Tabs } from '@/components/ui/Tabs'
+import { MarkdownEditor } from '@/components/MarkdownEditor'
 import { IDEA_STATUSES, type Idea, type IdeaStatus, type Project } from '@/lib/types'
 import { useCreateIdea, useDeleteIdea, useIdeas, useUpdateIdea } from '@/features/ideas/useIdeas'
 
@@ -22,6 +23,7 @@ export function IdeasPage() {
   const deleteIdea = useDeleteIdea(project.id)
 
   const [statusFilter, setStatusFilter] = useState<IdeaStatus | 'all'>('all')
+  const [tagFilter, setTagFilter] = useState<string[]>([])
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<Idea | null>(null)
   const [title, setTitle] = useState('')
@@ -29,10 +31,24 @@ export function IdeasPage() {
   const [tagsInput, setTagsInput] = useState('')
   const [pendingDelete, setPendingDelete] = useState<string | null>(null)
 
-  const filtered = useMemo(
-    () => (ideas ?? []).filter((i) => statusFilter === 'all' || i.status === statusFilter),
-    [ideas, statusFilter],
+  const allTags = useMemo(
+    () => Array.from(new Set((ideas ?? []).flatMap((i) => i.tags))).sort(),
+    [ideas],
   )
+
+  const filtered = useMemo(
+    () =>
+      (ideas ?? []).filter((i) => {
+        const matchesStatus = statusFilter === 'all' || i.status === statusFilter
+        const matchesTags = tagFilter.length === 0 || tagFilter.some((t) => i.tags.includes(t))
+        return matchesStatus && matchesTags
+      }),
+    [ideas, statusFilter, tagFilter],
+  )
+
+  function toggleTag(tag: string) {
+    setTagFilter((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]))
+  }
 
   function openCreate() {
     setEditing(null)
@@ -77,7 +93,37 @@ export function IdeasPage() {
 
       <Tabs items={FILTER_ITEMS} value={statusFilter} onChange={setStatusFilter} />
 
-      {isLoading && <p className="text-label mt-6 text-sm text-paper/50">Carregando…</p>}
+      {allTags.length > 0 && (
+        <div className="mt-3 flex flex-wrap items-center gap-1.5">
+          <span className="text-label text-[10px] text-canvas-fg/40">Tags:</span>
+          {allTags.map((tag) => (
+            <button
+              key={tag}
+              type="button"
+              onClick={() => toggleTag(tag)}
+              className={clsx(
+                'text-label border-2 border-line px-1.5 py-0.5 text-[10px]',
+                tagFilter.includes(tag)
+                  ? 'bg-accent-blue text-ink'
+                  : 'bg-transparent text-canvas-fg/50 hover:text-canvas-fg',
+              )}
+            >
+              {tag}
+            </button>
+          ))}
+          {tagFilter.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setTagFilter([])}
+              className="text-label text-[10px] text-canvas-fg/40 underline hover:text-canvas-fg"
+            >
+              limpar
+            </button>
+          )}
+        </div>
+      )}
+
+      {isLoading && <p className="text-label mt-6 text-sm text-canvas-fg/50">Carregando…</p>}
 
       {!isLoading && filtered.length === 0 && (
         <div className="mt-6">
@@ -92,18 +138,18 @@ export function IdeasPage() {
             <div
               key={idea.id}
               onClick={() => openEdit(idea)}
-              className="cursor-pointer border-2 border-ink bg-ink-soft p-4 shadow-brutal-sm transition-transform hover:-translate-x-0.5 hover:-translate-y-0.5"
+              className="cursor-pointer border-2 border-line bg-surface p-4 shadow-brutal-sm transition-transform hover:-translate-x-0.5 hover:-translate-y-0.5"
             >
               <div className="mb-2 flex items-center justify-between gap-2">
                 <span
-                  className="text-label border-2 border-ink px-1.5 py-0.5 text-[10px] text-ink"
+                  className="text-label border-2 border-line px-1.5 py-0.5 text-[10px] text-ink"
                   style={{ backgroundColor: statusMeta.color }}
                 >
                   {statusMeta.label}
                 </span>
               </div>
               <h3 className="text-display mb-1 text-base">{idea.title}</h3>
-              {idea.body && <p className="mb-2 line-clamp-3 text-sm text-paper/60">{idea.body}</p>}
+              {idea.body && <p className="mb-2 line-clamp-3 text-sm text-canvas-fg/60">{idea.body}</p>}
               {idea.tags.length > 0 && (
                 <div className="flex flex-wrap gap-1">
                   {idea.tags.map((tag) => (
@@ -123,8 +169,8 @@ export function IdeasPage() {
           <Field label="Título">
             <TextInput required autoFocus value={title} onChange={(e) => setTitle(e.target.value)} />
           </Field>
-          <Field label="Descrição" hint="Opcional">
-            <Textarea rows={4} value={body} onChange={(e) => setBody(e.target.value)} />
+          <Field label="Descrição" hint="Opcional — aceita Markdown e imagens">
+            <MarkdownEditor projectId={project.id} value={body} onChange={setBody} rows={5} />
           </Field>
           <Field label="Tags" hint="Separadas por vírgula">
             <TextInput value={tagsInput} onChange={(e) => setTagsInput(e.target.value)} placeholder="combate, ui, som" />

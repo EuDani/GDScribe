@@ -30,8 +30,8 @@ export function Badge({
   return (
     <span
       className={clsx(
-        'text-label inline-flex items-center border-2 border-ink px-2 py-0.5 text-[11px] font-semibold',
-        outline ? 'bg-transparent text-paper' : ACCENT_CLASSES[accent],
+        'text-label inline-flex items-center border-2 border-line px-2 py-0.5 text-[11px] font-semibold',
+        outline ? 'bg-transparent text-canvas-fg' : ACCENT_CLASSES[accent],
       )}
     >
       {children}

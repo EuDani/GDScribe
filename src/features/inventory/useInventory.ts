@@ -79,6 +79,21 @@ export function useDeleteInventoryType(projectId: string) {
   })
 }
 
+export function useAllInventoryItems(projectId: string | undefined) {
+  return useQuery({
+    queryKey: ['inventory_items', projectId, 'all'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('inventory_items')
+        .select('*')
+        .eq('project_id', projectId)
+      if (error) throw error
+      return data as InventoryItem[]
+    },
+    enabled: Boolean(projectId),
+  })
+}
+
 export function useInventoryItems(projectId: string | undefined, typeId: string | undefined) {
   return useQuery({
     queryKey: ['inventory_items', projectId, typeId],
@@ -101,17 +116,19 @@ export function useUpsertInventoryItem(projectId: string, typeId: string) {
     mutationFn: async ({
       id,
       data,
+      status,
     }: {
       id?: string
       data: Record<string, string | number | null>
+      status?: string | null
     }) => {
       if (id) {
-        const { error } = await supabase.from('inventory_items').update({ data }).eq('id', id)
+        const { error } = await supabase.from('inventory_items').update({ data, status }).eq('id', id)
         if (error) throw error
       } else {
         const { error } = await supabase
           .from('inventory_items')
-          .insert({ project_id: projectId, type_id: typeId, data })
+          .insert({ project_id: projectId, type_id: typeId, data, status })
         if (error) throw error
       }
     },

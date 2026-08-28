@@ -7,14 +7,17 @@ import {
   useSensor,
   useSensors,
 } from '@dnd-kit/core'
-import { Plus } from 'lucide-react'
+import { Plus, Upload } from 'lucide-react'
 import { useOutletContext } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Field, TextInput, Textarea } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
-import type { KanbanCard, Project } from '@/lib/types'
+import { ChecklistEditor } from '@/components/ChecklistEditor'
+import { IconPicker } from '@/components/IconPicker'
+import { useUploadImage } from '@/lib/useUploadImage'
+import type { ChecklistItem, KanbanCard, Project } from '@/lib/types'
 import { KanbanColumnView } from '@/features/kanban/KanbanColumn'
 import {
   useCreateCard,
@@ -59,7 +62,15 @@ export function KanbanPage() {
   const [editingCard, setEditingCard] = useState<KanbanCard | null>(null)
   const [editTitle, setEditTitle] = useState('')
   const [editDescription, setEditDescription] = useState('')
+  const [editTags, setEditTags] = useState('')
+  const [editIcon, setEditIcon] = useState<string | null>(null)
+  const [editCover, setEditCover] = useState<string | null>(null)
+  const [editChecklist, setEditChecklist] = useState<ChecklistItem[]>([])
+  const [editStartDate, setEditStartDate] = useState('')
+  const [editDueDate, setEditDueDate] = useState('')
   const [pendingDeleteCard, setPendingDeleteCard] = useState<string | null>(null)
+
+  const { upload: uploadCover, uploading: uploadingCover } = useUploadImage(project.id)
 
   function cardsFor(columnId: string) {
     return (cards ?? [])
@@ -93,6 +104,12 @@ export function KanbanPage() {
     setEditingCard(card)
     setEditTitle(card.title)
     setEditDescription(card.description ?? '')
+    setEditTags(card.tags.join(', '))
+    setEditIcon(card.icon)
+    setEditCover(card.cover_image_url)
+    setEditChecklist(card.checklist)
+    setEditStartDate(card.start_date ?? '')
+    setEditDueDate(card.due_date ?? '')
   }
 
   async function handleSaveCard(e: React.FormEvent) {
@@ -102,8 +119,22 @@ export function KanbanPage() {
       id: editingCard.id,
       title: editTitle.trim(),
       description: editDescription.trim() || null,
+      tags: editTags
+        .split(',')
+        .map((t) => t.trim())
+        .filter(Boolean),
+      icon: editIcon,
+      cover_image_url: editCover,
+      checklist: editChecklist,
+      start_date: editStartDate || null,
+      due_date: editDueDate || null,
     })
     setEditingCard(null)
+  }
+
+  async function handleCoverUpload(file: File) {
+    const url = await uploadCover(file, 'kanban-covers')
+    if (url) setEditCover(url)
   }
 
   function handleDragEnd(event: DragEndEvent) {
@@ -148,7 +179,7 @@ export function KanbanPage() {
         </Button>
       </div>
 
-      {columnsLoading && <p className="text-label text-sm text-paper/50">Carregando…</p>}
+      {columnsLoading && <p className="text-label text-sm text-canvas-fg/50">Carregando…</p>}
 
       {!columnsLoading && columns?.length === 0 && (
         <EmptyState title="Nenhuma coluna ainda" description="Crie a primeira coluna do seu quadro." />
@@ -208,14 +239,69 @@ export function KanbanPage() {
         </form>
       </Modal>
 
-      <Modal open={Boolean(editingCard)} onClose={() => setEditingCard(null)} title="Editar card">
+      <Modal open={Boolean(editingCard)} onClose={() => setEditingCard(null)} title="Editar card" wide>
         <form onSubmit={handleSaveCard}>
           <Field label="Título">
             <TextInput required value={editTitle} onChange={(e) => setEditTitle(e.target.value)} />
           </Field>
           <Field label="Descrição">
-            <Textarea rows={4} value={editDescription} onChange={(e) => setEditDescription(e.target.value)} />
+            <Textarea rows={3} value={editDescription} onChange={(e) => setEditDescription(e.target.value)} />
           </Field>
+
+          <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Field label="Início">
+              <TextInput type="date" value={editStartDate} onChange={(e) => setEditStartDate(e.target.value)} />
+            </Field>
+            <Field label="Conclusão">
+              <TextInput type="date" value={editDueDate} onChange={(e) => setEditDueDate(e.target.value)} />
+            </Field>
+          </div>
+
+          <Field label="Tags" hint="Separadas por vírgula">
+            <TextInput value={editTags} onChange={(e) => setEditTags(e.target.value)} placeholder="urgente, arte, bug" />
+          </Field>
+
+          <Field label="Ícone">
+            <IconPicker value={editIcon} onChange={setEditIcon} />
+          </Field>
+
+          <Field label="Capa">
+            <div className="flex items-center gap-3">
+              {editCover && (
+                <img src={editCover} alt="" className="h-14 w-24 border-2 border-line object-cover" />
+              )}
+              <label className="cursor-pointer">
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) handleCoverUpload(file)
+                    e.target.value = ''
+                  }}
+                />
+                <span className="text-label inline-flex cursor-pointer items-center gap-1.5 border-2 border-line px-2.5 py-1.5 text-[11px] text-canvas-fg/70 hover:bg-accent-blue hover:text-ink">
+                  <Upload size={12} />
+                  {uploadingCover ? 'Enviando…' : 'Trocar capa'}
+                </span>
+              </label>
+              {editCover && (
+                <button
+                  type="button"
+                  onClick={() => setEditCover(null)}
+                  className="text-label text-[11px] text-canvas-fg/40 underline hover:text-canvas-fg"
+                >
+                  remover
+                </button>
+              )}
+            </div>
+          </Field>
+
+          <Field label="Checklist">
+            <ChecklistEditor items={editChecklist} onChange={setEditChecklist} />
+          </Field>
+
           <div className="flex justify-between gap-2">
             <Button
               type="button"
