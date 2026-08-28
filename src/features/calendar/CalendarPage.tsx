@@ -1,5 +1,14 @@
 import { useMemo, useState } from 'react'
-import { AlertTriangle, CalendarClock, CalendarRange, ChevronLeft, ChevronRight, ListChecks } from 'lucide-react'
+import {
+  AlertTriangle,
+  Bell,
+  CalendarClock,
+  CalendarRange,
+  ChevronLeft,
+  ChevronRight,
+  ListChecks,
+  Plus,
+} from 'lucide-react'
 import { clsx } from 'clsx'
 import { AnimatePresence, motion } from 'motion/react'
 import { useOutletContext } from 'react-router-dom'
@@ -8,8 +17,10 @@ import { Card } from '@/components/ui/Card'
 import { Tabs } from '@/components/ui/Tabs'
 import { Modal } from '@/components/ui/Modal'
 import { Badge, accentFromString } from '@/components/ui/Badge'
-import type { KanbanCard, Project } from '@/lib/types'
+import type { KanbanCard, Project, Reminder } from '@/lib/types'
 import { useKanbanCards, useKanbanColumns } from '@/features/kanban/useKanban'
+import { useReminders } from '@/features/reminders/useReminders'
+import { ReminderModal } from '@/features/reminders/ReminderModal'
 import {
   MONTH_LABELS,
   WEEKDAY_LABELS,
@@ -33,9 +44,11 @@ export function CalendarPage() {
   const { project } = useOutletContext<{ project: Project }>()
   const { data: cards } = useKanbanCards(project.id)
   const { data: columns } = useKanbanColumns(project.id)
+  const { data: reminders } = useReminders(project.id)
   const [view, setView] = useState<ViewMode>('month')
   const [anchor, setAnchor] = useState(new Date())
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
+  const [reminderModal, setReminderModal] = useState<{ reminder?: Reminder; date?: string } | null>(null)
 
   const columnColor = useMemo(() => {
     const map = new Map<string, string>()
@@ -53,6 +66,16 @@ export function CalendarPage() {
     }
     return map
   }, [cards])
+
+  const remindersByDate = useMemo(() => {
+    const map = new Map<string, Reminder[]>()
+    for (const reminder of reminders ?? []) {
+      const list = map.get(reminder.event_date) ?? []
+      list.push(reminder)
+      map.set(reminder.event_date, list)
+    }
+    return map
+  }, [reminders])
 
   const stats = useMemo(() => {
     const now = new Date()
@@ -94,12 +117,22 @@ export function CalendarPage() {
   }, [view, anchor])
 
   const selectedDayCards = selectedDate ? (cardsByDate.get(selectedDate) ?? []) : []
+  const selectedDayReminders = selectedDate ? (remindersByDate.get(selectedDate) ?? []) : []
 
   return (
     <div>
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-display text-2xl">Calendário</h1>
-        <Tabs items={VIEW_ITEMS} value={view} onChange={setView} />
+        <div className="flex flex-wrap items-center gap-3">
+          <Button
+            size="sm"
+            icon={<Plus size={14} />}
+            onClick={() => setReminderModal({ date: toISODate(new Date()) })}
+          >
+            Lembrete
+          </Button>
+          <Tabs items={VIEW_ITEMS} value={view} onChange={setView} />
+        </div>
       </div>
 
       <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -165,15 +198,28 @@ export function CalendarPage() {
           transition={{ duration: 0.15 }}
         >
           {view === 'month' && (
-            <MonthView anchor={anchor} cardsByDate={cardsByDate} columnColor={columnColor} onPickDay={setSelectedDate} />
+            <MonthView
+              anchor={anchor}
+              cardsByDate={cardsByDate}
+              remindersByDate={remindersByDate}
+              columnColor={columnColor}
+              onPickDay={setSelectedDate}
+            />
           )}
           {view === 'week' && (
-            <WeekView anchor={anchor} cardsByDate={cardsByDate} columnColor={columnColor} onPickDay={setSelectedDate} />
+            <WeekView
+              anchor={anchor}
+              cardsByDate={cardsByDate}
+              remindersByDate={remindersByDate}
+              columnColor={columnColor}
+              onPickDay={setSelectedDate}
+            />
           )}
           {view === 'year' && (
             <YearView
               anchor={anchor}
               cardsByDate={cardsByDate}
+              remindersByDate={remindersByDate}
               onPickMonth={(m) => {
                 setAnchor(new Date(anchor.getFullYear(), m, 1))
                 setView('month')
@@ -185,30 +231,83 @@ export function CalendarPage() {
       </AnimatePresence>
 
       <Modal open={Boolean(selectedDate)} onClose={() => setSelectedDate(null)} title={selectedDate ?? ''}>
-        <div className="space-y-2">
-          {selectedDayCards.map((card) => (
-            <div key={card.id} className="border-2 border-line/40 p-3">
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-sm font-semibold text-canvas-fg">{card.title}</p>
-                <span
-                  className="h-2.5 w-2.5 shrink-0 border border-line"
-                  style={{ backgroundColor: columnColor.get(card.column_id) }}
-                />
+        <div className="space-y-4">
+          {selectedDayReminders.length > 0 && (
+            <div>
+              <p className="text-label mb-1.5 text-[10px] text-canvas-fg/50">Lembretes</p>
+              <div className="space-y-2">
+                {selectedDayReminders.map((reminder) => (
+                  <button
+                    key={reminder.id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedDate(null)
+                      setReminderModal({ reminder })
+                    }}
+                    className="flex w-full cursor-pointer items-center gap-2.5 border-2 border-line bg-accent-yellow p-3 text-left text-ink"
+                  >
+                    <Bell size={14} className="shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold">{reminder.title}</p>
+                      {reminder.event_time && <p className="text-label text-[10px] opacity-70">{reminder.event_time}</p>}
+                    </div>
+                  </button>
+                ))}
               </div>
-              {card.description && <p className="mt-1 text-xs text-canvas-fg/60">{card.description}</p>}
-              {card.tags.length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-1">
-                  {card.tags.map((tag) => (
-                    <Badge key={tag} accent={accentFromString(tag)}>
-                      {tag}
-                    </Badge>
-                  ))}
-                </div>
-              )}
             </div>
-          ))}
+          )}
+
+          {selectedDayCards.length > 0 && (
+            <div>
+              <p className="text-label mb-1.5 text-[10px] text-canvas-fg/50">Cards do kanban</p>
+              <div className="space-y-2">
+                {selectedDayCards.map((card) => (
+                  <div key={card.id} className="border-2 border-line/40 p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-sm font-semibold text-canvas-fg">{card.title}</p>
+                      <span
+                        className="h-2.5 w-2.5 shrink-0 border border-line"
+                        style={{ backgroundColor: columnColor.get(card.column_id) }}
+                      />
+                    </div>
+                    {card.description && <p className="mt-1 text-xs text-canvas-fg/60">{card.description}</p>}
+                    {card.tags.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        {card.tags.map((tag) => (
+                          <Badge key={tag} accent={accentFromString(tag)}>
+                            {tag}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <Button
+            size="sm"
+            variant="ghost"
+            icon={<Plus size={14} />}
+            onClick={() => {
+              const date = selectedDate
+              setSelectedDate(null)
+              setReminderModal({ date: date ?? undefined })
+            }}
+          >
+            Novo lembrete nesse dia
+          </Button>
         </div>
       </Modal>
+
+      <ReminderModal
+        projectId={project.id}
+        open={Boolean(reminderModal)}
+        onClose={() => setReminderModal(null)}
+        reminder={reminderModal?.reminder}
+        defaultDate={reminderModal?.date}
+      />
     </div>
   )
 }
@@ -225,14 +324,28 @@ function DayChip({ card, color }: { card: KanbanCard; color?: string }) {
   )
 }
 
+function ReminderChip({ reminder }: { reminder: Reminder }) {
+  return (
+    <div
+      className="flex items-center gap-1 truncate border-2 border-line bg-accent-purple px-1.5 py-0.5 text-[10px] text-ink"
+      title={reminder.title}
+    >
+      <Bell size={9} className="shrink-0" />
+      {reminder.title}
+    </div>
+  )
+}
+
 function MonthView({
   anchor,
   cardsByDate,
+  remindersByDate,
   columnColor,
   onPickDay,
 }: {
   anchor: Date
   cardsByDate: Map<string, KanbanCard[]>
+  remindersByDate: Map<string, Reminder[]>
   columnColor: Map<string, string>
   onPickDay: (iso: string) => void
 }) {
@@ -252,17 +365,19 @@ function MonthView({
         {grid.map((date, i) => {
           const iso = toISODate(date)
           const dayCards = cardsByDate.get(iso) ?? []
+          const dayReminders = remindersByDate.get(iso) ?? []
+          const total = dayCards.length + dayReminders.length
           const inMonth = date.getMonth() === anchor.getMonth()
           return (
             <button
               key={i}
               type="button"
-              disabled={dayCards.length === 0}
+              disabled={total === 0}
               onClick={() => onPickDay(iso)}
               className={clsx(
                 'min-h-[92px] border-b border-r border-line/30 p-1.5 text-left transition-colors [&:nth-child(7n)]:border-r-0',
                 !inMonth && 'bg-canvas/40',
-                dayCards.length > 0 ? 'cursor-pointer hover:bg-accent-yellow/10' : 'cursor-default',
+                total > 0 ? 'cursor-pointer hover:bg-accent-yellow/10' : 'cursor-default',
               )}
             >
               <div
@@ -275,12 +390,13 @@ function MonthView({
                 {date.getDate()}
               </div>
               <div className="space-y-1">
-                {dayCards.slice(0, 3).map((card) => (
+                {dayReminders.slice(0, 2).map((reminder) => (
+                  <ReminderChip key={reminder.id} reminder={reminder} />
+                ))}
+                {dayCards.slice(0, 3 - Math.min(2, dayReminders.length)).map((card) => (
                   <DayChip key={card.id} card={card} color={columnColor.get(card.column_id)} />
                 ))}
-                {dayCards.length > 3 && (
-                  <p className="text-label text-[10px] text-canvas-fg/40">+{dayCards.length - 3}</p>
-                )}
+                {total > 3 && <p className="text-label text-[10px] text-canvas-fg/40">+{total - 3}</p>}
               </div>
             </button>
           )
@@ -293,11 +409,13 @@ function MonthView({
 function WeekView({
   anchor,
   cardsByDate,
+  remindersByDate,
   columnColor,
   onPickDay,
 }: {
   anchor: Date
   cardsByDate: Map<string, KanbanCard[]>
+  remindersByDate: Map<string, Reminder[]>
   columnColor: Map<string, string>
   onPickDay: (iso: string) => void
 }) {
@@ -309,14 +427,16 @@ function WeekView({
       {days.map((date) => {
         const iso = toISODate(date)
         const dayCards = cardsByDate.get(iso) ?? []
+        const dayReminders = remindersByDate.get(iso) ?? []
+        const total = dayCards.length + dayReminders.length
         return (
           <button
             type="button"
             key={iso}
-            onClick={() => dayCards.length > 0 && onPickDay(iso)}
+            onClick={() => total > 0 && onPickDay(iso)}
             className={clsx(
               'border-2 border-line text-left',
-              dayCards.length > 0 ? 'cursor-pointer hover:bg-accent-yellow/10' : 'cursor-default',
+              total > 0 ? 'cursor-pointer hover:bg-accent-yellow/10' : 'cursor-default',
             )}
           >
             <div
@@ -328,6 +448,9 @@ function WeekView({
               {WEEKDAY_LABELS[date.getDay()]} {date.getDate()}
             </div>
             <div className="min-h-[100px] space-y-1 p-1.5">
+              {dayReminders.map((reminder) => (
+                <ReminderChip key={reminder.id} reminder={reminder} />
+              ))}
               {dayCards.map((card) => (
                 <DayChip key={card.id} card={card} color={columnColor.get(card.column_id)} />
               ))}
@@ -342,10 +465,12 @@ function WeekView({
 function YearView({
   anchor,
   cardsByDate,
+  remindersByDate,
   onPickMonth,
 }: {
   anchor: Date
   cardsByDate: Map<string, KanbanCard[]>
+  remindersByDate: Map<string, Reminder[]>
   onPickMonth: (month: number) => void
 }) {
   return (
@@ -364,7 +489,7 @@ function YearView({
             <div className="grid grid-cols-7 gap-0.5">
               {grid.map((date, i) => {
                 const iso = toISODate(date)
-                const hasCards = cardsByDate.has(iso)
+                const hasCards = cardsByDate.has(iso) || remindersByDate.has(iso)
                 const inMonth = date.getMonth() === month
                 return (
                   <div

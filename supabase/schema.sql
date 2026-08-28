@@ -15,6 +15,8 @@ create table if not exists public.projects (
   slug text not null,
   description text,
   status text not null default 'pre_production',
+  primary_genre text,
+  secondary_genre text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -162,12 +164,32 @@ create table if not exists public.game_references (
 create index if not exists game_references_project_id_idx on public.game_references (project_id);
 
 -- ============================================================
+-- reminders — eventos/lembretes com notificações configuráveis
+-- ============================================================
+create table if not exists public.reminders (
+  id uuid primary key default gen_random_uuid(),
+  project_id uuid not null references public.projects (id) on delete cascade,
+  title text not null,
+  event_date date not null,
+  event_time time,
+  notes text,
+  notifications jsonb not null default '[]'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists reminders_project_id_idx on public.reminders (project_id);
+create index if not exists reminders_event_date_idx on public.reminders (event_date);
+
+-- ============================================================
 -- Migrações — garante as colunas novas em bancos criados com uma
 -- versão anterior deste arquivo.
 -- ============================================================
 alter table public.gdd_modules add column if not exists status text;
 alter table public.gdd_modules add column if not exists extra_fields jsonb not null default '[]'::jsonb;
 alter table public.inventory_items add column if not exists status text;
+alter table public.projects add column if not exists primary_genre text;
+alter table public.projects add column if not exists secondary_genre text;
 alter table public.kanban_cards add column if not exists icon text;
 alter table public.kanban_cards add column if not exists cover_image_url text;
 alter table public.kanban_cards add column if not exists checklist jsonb not null default '[]'::jsonb;
@@ -211,6 +233,10 @@ drop trigger if exists set_updated_at on public.game_references;
 create trigger set_updated_at before update on public.game_references
   for each row execute function public.set_updated_at();
 
+drop trigger if exists set_updated_at on public.reminders;
+create trigger set_updated_at before update on public.reminders
+  for each row execute function public.set_updated_at();
+
 -- ============================================================
 -- Row Level Security — tudo restrito ao dono do projeto
 -- ============================================================
@@ -224,6 +250,7 @@ alter table public.kanban_cards enable row level security;
 alter table public.ideas enable row level security;
 alter table public.story_blocks enable row level security;
 alter table public.game_references enable row level security;
+alter table public.reminders enable row level security;
 
 drop policy if exists "own projects" on public.projects;
 create policy "own projects" on public.projects
@@ -303,6 +330,15 @@ create policy "own story_blocks" on public.story_blocks
 
 drop policy if exists "own game_references" on public.game_references;
 create policy "own game_references" on public.game_references
+  for all using (
+    exists (select 1 from public.projects p where p.id = project_id and p.owner_id = auth.uid())
+  )
+  with check (
+    exists (select 1 from public.projects p where p.id = project_id and p.owner_id = auth.uid())
+  );
+
+drop policy if exists "own reminders" on public.reminders;
+create policy "own reminders" on public.reminders
   for all using (
     exists (select 1 from public.projects p where p.id = project_id and p.owner_id = auth.uid())
   )

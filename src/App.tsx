@@ -18,6 +18,7 @@ import { InventoryPage } from '@/features/inventory/InventoryPage'
 import { KanbanPage } from '@/features/kanban/KanbanPage'
 import { IdeasPage } from '@/features/ideas/IdeasPage'
 import { CalendarPage } from '@/features/calendar/CalendarPage'
+import { ProjectSettingsPage } from '@/features/settings/ProjectSettingsPage'
 import { ExportPage } from '@/features/export/ExportPage'
 import { PrintExportPage } from '@/features/export/PrintExportPage'
 
@@ -82,6 +83,7 @@ function App() {
                   <Route path="ideas" element={<IdeasPage />} />
                   <Route path="calendar" element={<CalendarPage />} />
                   <Route path="export" element={<ExportPage />} />
+                  <Route path="settings" element={<ProjectSettingsPage />} />
                 </Route>
 
                 <Route path="*" element={<Navigate to="/" replace />} />

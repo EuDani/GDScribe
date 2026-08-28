@@ -4,12 +4,14 @@ import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { EmptyState } from '@/components/ui/EmptyState'
-import { Field, TextInput, Textarea } from '@/components/ui/Input'
+import { Field, Select, TextInput, Textarea } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { Badge } from '@/components/ui/Badge'
 import { UserMenu } from '@/components/UserMenu'
 import { Logo } from '@/components/Logo'
 import { useAuth } from '@/contexts/AuthContext'
+import { STEAM_GENRES } from '@/lib/types'
 import { useCreateProject, useDeleteProject, useProjects } from '@/features/dashboard/useProjects'
 
 export function DashboardPage() {
@@ -21,6 +23,8 @@ export function DashboardPage() {
   const [creating, setCreating] = useState(false)
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
+  const [primaryGenre, setPrimaryGenre] = useState('')
+  const [secondaryGenre, setSecondaryGenre] = useState('')
   const [pendingDelete, setPendingDelete] = useState<string | null>(null)
 
   const displayName = (user?.user_metadata?.display_name as string | undefined)?.trim()
@@ -28,9 +32,16 @@ export function DashboardPage() {
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault()
     if (!name.trim()) return
-    await createProject.mutateAsync({ name: name.trim(), description: description.trim() })
+    await createProject.mutateAsync({
+      name: name.trim(),
+      description: description.trim(),
+      primaryGenre,
+      secondaryGenre,
+    })
     setName('')
     setDescription('')
+    setPrimaryGenre('')
+    setSecondaryGenre('')
     setCreating(false)
   }
 
@@ -80,6 +91,12 @@ export function DashboardPage() {
             <Card key={project.id} className="flex flex-col justify-between">
               <div>
                 <h2 className="text-display mb-1.5 text-lg">{project.name}</h2>
+                {(project.primary_genre || project.secondary_genre) && (
+                  <div className="mb-2 flex flex-wrap gap-1">
+                    {project.primary_genre && <Badge accent="blue">{project.primary_genre}</Badge>}
+                    {project.secondary_genre && <Badge accent="purple">{project.secondary_genre}</Badge>}
+                  </div>
+                )}
                 <p className="mb-4 line-clamp-3 text-sm text-canvas-fg/60">
                   {project.description || 'Sem descrição.'}
                 </p>
@@ -121,6 +138,28 @@ export function DashboardPage() {
               placeholder="Um duelo de cartas roguelike sobre dívidas e barganhas…"
             />
           </Field>
+          <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Field label="Gênero primário" hint="Opcional">
+              <Select value={primaryGenre} onChange={(e) => setPrimaryGenre(e.target.value)}>
+                <option value="">—</option>
+                {STEAM_GENRES.map((g) => (
+                  <option key={g} value={g}>
+                    {g}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <Field label="Gênero secundário" hint="Opcional">
+              <Select value={secondaryGenre} onChange={(e) => setSecondaryGenre(e.target.value)}>
+                <option value="">—</option>
+                {STEAM_GENRES.map((g) => (
+                  <option key={g} value={g}>
+                    {g}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          </div>
           <div className="flex justify-end gap-2">
             <Button type="button" variant="ghost" onClick={() => setCreating(false)}>
               Cancelar

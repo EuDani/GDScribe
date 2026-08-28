@@ -13,6 +13,7 @@ import {
   LogOut,
   PanelLeftClose,
   PanelLeftOpen,
+  Settings,
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { motion } from 'motion/react'
@@ -22,6 +23,8 @@ import { ProjectThemeProvider } from '@/contexts/ProjectThemeContext'
 import { useProject } from '@/features/dashboard/useProjects'
 import { useProjectThemeQuery } from '@/features/theme-settings/useProjectTheme'
 import { UserMenu } from '@/components/UserMenu'
+import { TodayReminderBanner } from '@/features/reminders/TodayReminderBanner'
+import { useReminderScheduler } from '@/features/reminders/useReminderScheduler'
 
 const NAV_ITEMS = [
   { to: 'overview', label: 'Visão Geral', icon: LayoutDashboard },
@@ -33,6 +36,7 @@ const NAV_ITEMS = [
   { to: 'calendar', label: 'Calendário', icon: CalendarDays },
   { to: 'ideas', label: 'Hub de Ideias', icon: Lightbulb },
   { to: 'export', label: 'Exportar', icon: Download },
+  { to: 'settings', label: 'Configurações', icon: Settings },
 ]
 
 const COLLAPSE_KEY = 'gdscribe.sidebarCollapsed'
@@ -48,6 +52,8 @@ export function ProjectLayout() {
   useEffect(() => {
     localStorage.setItem(COLLAPSE_KEY, collapsed ? '1' : '0')
   }, [collapsed])
+
+  useReminderScheduler(projectId)
 
   if (isLoading || !project) {
     return (
@@ -142,7 +148,8 @@ export function ProjectLayout() {
         <main className="min-w-0 flex-1 p-6 sm:p-8">
           <Outlet context={{ project }} />
         </main>
-        <UserMenu projectId={project.id} />
+        <UserMenu />
+        <TodayReminderBanner projectId={project.id} />
       </div>
     </ProjectThemeProvider>
   )

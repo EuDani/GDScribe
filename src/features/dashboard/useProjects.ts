@@ -66,7 +66,17 @@ export function useCreateProject() {
   const { user } = useAuth()
 
   return useMutation({
-    mutationFn: async ({ name, description }: { name: string; description: string }) => {
+    mutationFn: async ({
+      name,
+      description,
+      primaryGenre,
+      secondaryGenre,
+    }: {
+      name: string
+      description: string
+      primaryGenre?: string
+      secondaryGenre?: string
+    }) => {
       if (!user) throw new Error('Não autenticado')
 
       const { data: project, error } = await supabase
@@ -77,6 +87,8 @@ export function useCreateProject() {
           slug: slugify(name),
           description: description || null,
           status: 'pre_production',
+          primary_genre: primaryGenre || null,
+          secondary_genre: secondaryGenre || null,
         })
         .select('*')
         .single()
@@ -110,6 +122,20 @@ export function useCreateProject() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['projects'] })
+    },
+  })
+}
+
+export function useUpdateProject(projectId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (changes: Partial<Project>) => {
+      const { error } = await supabase.from('projects').update(changes).eq('id', projectId)
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['projects'] })
+      queryClient.invalidateQueries({ queryKey: ['projects', projectId] })
     },
   })
 }

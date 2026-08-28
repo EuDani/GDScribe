@@ -7,6 +7,33 @@ export const PHASES: { value: Phase; label: string }[] = [
   { value: 'post_production', label: 'Pós-produção' },
 ]
 
+export const STEAM_GENRES = [
+  'Ação',
+  'Aventura',
+  'Casual',
+  'Indie',
+  'RPG',
+  'Simulação',
+  'Estratégia',
+  'Esportes',
+  'Corrida',
+  'Multijogador massivo',
+  'Terror',
+  'Puzzle',
+  'Plataforma',
+  'Luta',
+  'Roguelike',
+  'Metroidvania',
+  'Sobrevivência',
+  'Sandbox',
+  'Visual Novel',
+  'Card Game',
+  'Educacional',
+  'Música/Ritmo',
+  'Acesso Antecipado',
+  'Free to Play',
+]
+
 export interface Project {
   id: string
   owner_id: string
@@ -14,6 +41,8 @@ export interface Project {
   slug: string
   description: string | null
   status: string
+  primary_genre: string | null
+  secondary_genre: string | null
   created_at: string
   updated_at: string
 }
@@ -154,6 +183,37 @@ export interface GameReference {
   image_url: string | null
   notes: string
   checklist: ChecklistItem[]
+  created_at: string
+  updated_at: string
+}
+
+export type NotificationUnit = 'minutes' | 'hours' | 'days' | 'weeks'
+
+export const NOTIFICATION_UNITS: { value: NotificationUnit; label: string }[] = [
+  { value: 'minutes', label: 'minutos' },
+  { value: 'hours', label: 'horas' },
+  { value: 'days', label: 'dias' },
+  { value: 'weeks', label: 'semanas' },
+]
+
+export type NotificationKind = 'before' | 'same_day_at'
+
+export interface NotificationRule {
+  id: string
+  kind: NotificationKind
+  amount: number | null // usado quando kind === 'before'
+  unit: NotificationUnit | null // usado quando kind === 'before'
+  time: string | null // "HH:mm", usado quando kind === 'same_day_at'
+}
+
+export interface Reminder {
+  id: string
+  project_id: string
+  title: string
+  event_date: string // YYYY-MM-DD
+  event_time: string | null // HH:mm
+  notes: string | null
+  notifications: NotificationRule[]
   created_at: string
   updated_at: string
 }

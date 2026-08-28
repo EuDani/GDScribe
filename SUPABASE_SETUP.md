@@ -18,9 +18,9 @@ Storage (upload de imagens de tema). Siga os passos abaixo — leva uns 10 minut
 3. Abra o arquivo [`supabase/schema.sql`](supabase/schema.sql) deste repositório, copie todo o
    conteúdo e cole no editor.
 4. Clique em **Run**. Isso cria todas as tabelas (`projects`, `gdd_modules`, `story_blocks`,
-   `inventory_types`, `inventory_items`, `game_references`, `kanban_columns`, `kanban_cards`,
-   `ideas`, `project_themes`), as políticas de Row Level Security (cada usuário só vê os próprios
-   projetos) e o bucket de storage `project-assets` com suas políticas de acesso.
+   `inventory_types`, `inventory_items`, `game_references`, `reminders`, `kanban_columns`,
+   `kanban_cards`, `ideas`, `project_themes`), as políticas de Row Level Security (cada usuário só vê
+   os próprios projetos) e o bucket de storage `project-assets` com suas políticas de acesso.
 
 O script é idempotente — pode colar e rodar de novo sempre que atualizar o repositório (ex: depois
 de um `git pull`), para aplicar migrações de colunas/tabelas novas com segurança.
