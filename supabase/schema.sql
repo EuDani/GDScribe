@@ -130,6 +130,38 @@ create table if not exists public.ideas (
 create index if not exists ideas_project_id_idx on public.ideas (project_id);
 
 -- ============================================================
+-- story_blocks — blocos de história/narrativa
+-- ============================================================
+create table if not exists public.story_blocks (
+  id uuid primary key default gen_random_uuid(),
+  project_id uuid not null references public.projects (id) on delete cascade,
+  title text not null,
+  content text not null default '',
+  sort_order integer not null default 0,
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists story_blocks_project_id_idx on public.story_blocks (project_id);
+
+-- ============================================================
+-- game_references — referências externas + checklist do que aproveitar
+-- ("references" é palavra reservada em SQL, por isso o nome mais específico)
+-- ============================================================
+create table if not exists public.game_references (
+  id uuid primary key default gen_random_uuid(),
+  project_id uuid not null references public.projects (id) on delete cascade,
+  title text not null,
+  source_url text,
+  image_url text,
+  notes text not null default '',
+  checklist jsonb not null default '[]'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists game_references_project_id_idx on public.game_references (project_id);
+
+-- ============================================================
 -- Migrações — garante as colunas novas em bancos criados com uma
 -- versão anterior deste arquivo.
 -- ============================================================
@@ -171,6 +203,14 @@ drop trigger if exists set_updated_at on public.ideas;
 create trigger set_updated_at before update on public.ideas
   for each row execute function public.set_updated_at();
 
+drop trigger if exists set_updated_at on public.story_blocks;
+create trigger set_updated_at before update on public.story_blocks
+  for each row execute function public.set_updated_at();
+
+drop trigger if exists set_updated_at on public.game_references;
+create trigger set_updated_at before update on public.game_references
+  for each row execute function public.set_updated_at();
+
 -- ============================================================
 -- Row Level Security — tudo restrito ao dono do projeto
 -- ============================================================
@@ -182,6 +222,8 @@ alter table public.inventory_items enable row level security;
 alter table public.kanban_columns enable row level security;
 alter table public.kanban_cards enable row level security;
 alter table public.ideas enable row level security;
+alter table public.story_blocks enable row level security;
+alter table public.game_references enable row level security;
 
 drop policy if exists "own projects" on public.projects;
 create policy "own projects" on public.projects
@@ -250,6 +292,24 @@ create policy "own ideas" on public.ideas
     exists (select 1 from public.projects p where p.id = project_id and p.owner_id = auth.uid())
   );
 
+drop policy if exists "own story_blocks" on public.story_blocks;
+create policy "own story_blocks" on public.story_blocks
+  for all using (
+    exists (select 1 from public.projects p where p.id = project_id and p.owner_id = auth.uid())
+  )
+  with check (
+    exists (select 1 from public.projects p where p.id = project_id and p.owner_id = auth.uid())
+  );
+
+drop policy if exists "own game_references" on public.game_references;
+create policy "own game_references" on public.game_references
+  for all using (
+    exists (select 1 from public.projects p where p.id = project_id and p.owner_id = auth.uid())
+  )
+  with check (
+    exists (select 1 from public.projects p where p.id = project_id and p.owner_id = auth.uid())
+  );
+
 -- ============================================================
 -- Storage bucket para logos, capas e imagens embutidas em texto
 -- ============================================================
@@ -257,43 +317,38 @@ insert into storage.buckets (id, name, public)
 values ('project-assets', 'project-assets', true)
 on conflict (id) do nothing;
 
--- Caminho esperado: <project_id>/arquivo.ext — o primeiro segmento do path
--- precisa ser o id de um projeto que pertence ao usuário autenticado.
+-- Caminho esperado: <user_id>/<project_id>/pasta/arquivo.ext — o primeiro
+-- segmento do path precisa ser o id do usuário autenticado. Esse é o padrão
+-- recomendado pela própria Supabase (auth.uid() direto, sem join), evita
+-- qualquer ambiguidade de tipo/índice que o padrão anterior (baseado em
+-- project_id + join na tabela projects) podia disparar.
 drop policy if exists "own project assets read" on storage.objects;
-create policy "own project assets read" on storage.objects
+drop policy if exists "project assets read" on storage.objects;
+create policy "project assets read" on storage.objects
   for select using (
     bucket_id = 'project-assets'
   );
 
 drop policy if exists "own project assets write" on storage.objects;
-create policy "own project assets write" on storage.objects
+drop policy if exists "project assets write" on storage.objects;
+create policy "project assets write" on storage.objects
   for insert with check (
     bucket_id = 'project-assets'
-    and exists (
-      select 1 from public.projects p
-      where p.id::text = (storage.foldername(name))[1]
-      and p.owner_id = auth.uid()
-    )
+    and (storage.foldername(name))[1] = auth.uid()::text
   );
 
 drop policy if exists "own project assets update" on storage.objects;
-create policy "own project assets update" on storage.objects
+drop policy if exists "project assets update" on storage.objects;
+create policy "project assets update" on storage.objects
   for update using (
     bucket_id = 'project-assets'
-    and exists (
-      select 1 from public.projects p
-      where p.id::text = (storage.foldername(name))[1]
-      and p.owner_id = auth.uid()
-    )
+    and (storage.foldername(name))[1] = auth.uid()::text
   );
 
 drop policy if exists "own project assets delete" on storage.objects;
-create policy "own project assets delete" on storage.objects
+drop policy if exists "project assets delete" on storage.objects;
+create policy "project assets delete" on storage.objects
   for delete using (
     bucket_id = 'project-assets'
-    and exists (
-      select 1 from public.projects p
-      where p.id::text = (storage.foldername(name))[1]
-      and p.owner_id = auth.uid()
-    )
+    and (storage.foldername(name))[1] = auth.uid()::text
   );

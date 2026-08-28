@@ -17,13 +17,17 @@ Storage (upload de imagens de tema). Siga os passos abaixo — leva uns 10 minut
 2. Clique em **New query**.
 3. Abra o arquivo [`supabase/schema.sql`](supabase/schema.sql) deste repositório, copie todo o
    conteúdo e cole no editor.
-4. Clique em **Run**. Isso cria todas as tabelas (`projects`, `gdd_modules`, `inventory_types`,
-   `inventory_items`, `kanban_columns`, `kanban_cards`, `ideas`, `project_themes`), as políticas de
-   Row Level Security (cada usuário só vê os próprios projetos) e o bucket de storage
-   `project-assets` com suas políticas de acesso.
+4. Clique em **Run**. Isso cria todas as tabelas (`projects`, `gdd_modules`, `story_blocks`,
+   `inventory_types`, `inventory_items`, `game_references`, `kanban_columns`, `kanban_cards`,
+   `ideas`, `project_themes`), as políticas de Row Level Security (cada usuário só vê os próprios
+   projetos) e o bucket de storage `project-assets` com suas políticas de acesso.
 
-Se precisar rodar de novo (ex: depois de um `reset`), o script é idempotente — pode rodar quantas
-vezes quiser.
+O script é idempotente — pode colar e rodar de novo sempre que atualizar o repositório (ex: depois
+de um `git pull`), para aplicar migrações de colunas/tabelas novas com segurança.
+
+> **Já tinha rodado antes e o upload de imagem está dando erro de RLS?** As políticas de storage
+> mudaram de formato (agora usam `auth.uid()` diretamente). Rode o `schema.sql` atualizado de novo —
+> ele substitui as políticas antigas pelas novas.
 
 ## 3. Pegar a URL e a chave anônima
 

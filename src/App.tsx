@@ -12,6 +12,8 @@ import { AuthPage } from '@/features/auth/AuthPage'
 import { DashboardPage } from '@/features/dashboard/DashboardPage'
 import { OverviewPage } from '@/features/overview/OverviewPage'
 import { GddPage } from '@/features/gdd/GddPage'
+import { StoryPage } from '@/features/story/StoryPage'
+import { ReferencesPage } from '@/features/references/ReferencesPage'
 import { InventoryPage } from '@/features/inventory/InventoryPage'
 import { KanbanPage } from '@/features/kanban/KanbanPage'
 import { IdeasPage } from '@/features/ideas/IdeasPage'
@@ -73,7 +75,9 @@ function App() {
                   <Route index element={<Navigate to="overview" replace />} />
                   <Route path="overview" element={<OverviewPage />} />
                   <Route path="gdd" element={<GddPage />} />
+                  <Route path="story" element={<StoryPage />} />
                   <Route path="inventory" element={<InventoryPage />} />
+                  <Route path="references" element={<ReferencesPage />} />
                   <Route path="kanban" element={<KanbanPage />} />
                   <Route path="ideas" element={<IdeasPage />} />
                   <Route path="calendar" element={<CalendarPage />} />

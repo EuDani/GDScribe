@@ -1,14 +1,19 @@
 import { useMemo, useState } from 'react'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { AlertTriangle, CalendarClock, CalendarRange, ChevronLeft, ChevronRight, ListChecks } from 'lucide-react'
 import { clsx } from 'clsx'
+import { AnimatePresence, motion } from 'motion/react'
 import { useOutletContext } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
+import { Card } from '@/components/ui/Card'
 import { Tabs } from '@/components/ui/Tabs'
+import { Modal } from '@/components/ui/Modal'
+import { Badge, accentFromString } from '@/components/ui/Badge'
 import type { KanbanCard, Project } from '@/lib/types'
 import { useKanbanCards, useKanbanColumns } from '@/features/kanban/useKanban'
 import {
   MONTH_LABELS,
   WEEKDAY_LABELS,
+  addDays,
   getMonthGrid,
   getWeekDays,
   isSameDay,
@@ -30,6 +35,7 @@ export function CalendarPage() {
   const { data: columns } = useKanbanColumns(project.id)
   const [view, setView] = useState<ViewMode>('month')
   const [anchor, setAnchor] = useState(new Date())
+  const [selectedDate, setSelectedDate] = useState<string | null>(null)
 
   const columnColor = useMemo(() => {
     const map = new Map<string, string>()
@@ -46,6 +52,25 @@ export function CalendarPage() {
       map.set(card.due_date, list)
     }
     return map
+  }, [cards])
+
+  const stats = useMemo(() => {
+    const now = new Date()
+    const todayIso = toISODate(now)
+    const weekEndIso = toISODate(addDays(now, 7))
+    const monthEndIso = toISODate(new Date(now.getFullYear(), now.getMonth() + 1, 0))
+    let overdue = 0
+    let dueWeek = 0
+    let dueMonth = 0
+    let total = 0
+    for (const card of cards ?? []) {
+      if (!card.due_date) continue
+      total++
+      if (card.due_date < todayIso) overdue++
+      if (card.due_date >= todayIso && card.due_date <= weekEndIso) dueWeek++
+      if (card.due_date >= todayIso && card.due_date <= monthEndIso) dueMonth++
+    }
+    return { overdue, dueWeek, dueMonth, total }
   }, [cards])
 
   function shift(amount: number) {
@@ -68,11 +93,44 @@ export function CalendarPage() {
     return 'Linha do tempo'
   }, [view, anchor])
 
+  const selectedDayCards = selectedDate ? (cardsByDate.get(selectedDate) ?? []) : []
+
   return (
     <div>
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-display text-2xl">Calendário</h1>
         <Tabs items={VIEW_ITEMS} value={view} onChange={setView} />
+      </div>
+
+      <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <Card padded={false} className="p-3">
+          <div className="flex items-center gap-2 text-accent-red">
+            <AlertTriangle size={16} />
+            <span className="text-display text-xl">{stats.overdue}</span>
+          </div>
+          <p className="text-label mt-1 text-[10px] text-canvas-fg/50">Atrasados</p>
+        </Card>
+        <Card padded={false} className="p-3">
+          <div className="flex items-center gap-2 text-accent-yellow">
+            <CalendarClock size={16} />
+            <span className="text-display text-xl">{stats.dueWeek}</span>
+          </div>
+          <p className="text-label mt-1 text-[10px] text-canvas-fg/50">Nos próximos 7 dias</p>
+        </Card>
+        <Card padded={false} className="p-3">
+          <div className="flex items-center gap-2 text-accent-blue">
+            <CalendarRange size={16} />
+            <span className="text-display text-xl">{stats.dueMonth}</span>
+          </div>
+          <p className="text-label mt-1 text-[10px] text-canvas-fg/50">Neste mês</p>
+        </Card>
+        <Card padded={false} className="p-3">
+          <div className="flex items-center gap-2 text-accent-green">
+            <ListChecks size={16} />
+            <span className="text-display text-xl">{stats.total}</span>
+          </div>
+          <p className="text-label mt-1 text-[10px] text-canvas-fg/50">Total agendado</p>
+        </Card>
       </div>
 
       {view !== 'roadmap' && (
@@ -98,23 +156,59 @@ export function CalendarPage() {
         </div>
       )}
 
-      {view === 'month' && (
-        <MonthView anchor={anchor} cardsByDate={cardsByDate} columnColor={columnColor} />
-      )}
-      {view === 'week' && (
-        <WeekView anchor={anchor} cardsByDate={cardsByDate} columnColor={columnColor} />
-      )}
-      {view === 'year' && (
-        <YearView
-          anchor={anchor}
-          cardsByDate={cardsByDate}
-          onPickMonth={(m) => {
-            setAnchor(new Date(anchor.getFullYear(), m, 1))
-            setView('month')
-          }}
-        />
-      )}
-      {view === 'roadmap' && <RoadmapView cards={cards ?? []} columnColor={columnColor} />}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={view}
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.15 }}
+        >
+          {view === 'month' && (
+            <MonthView anchor={anchor} cardsByDate={cardsByDate} columnColor={columnColor} onPickDay={setSelectedDate} />
+          )}
+          {view === 'week' && (
+            <WeekView anchor={anchor} cardsByDate={cardsByDate} columnColor={columnColor} onPickDay={setSelectedDate} />
+          )}
+          {view === 'year' && (
+            <YearView
+              anchor={anchor}
+              cardsByDate={cardsByDate}
+              onPickMonth={(m) => {
+                setAnchor(new Date(anchor.getFullYear(), m, 1))
+                setView('month')
+              }}
+            />
+          )}
+          {view === 'roadmap' && <RoadmapView cards={cards ?? []} columnColor={columnColor} />}
+        </motion.div>
+      </AnimatePresence>
+
+      <Modal open={Boolean(selectedDate)} onClose={() => setSelectedDate(null)} title={selectedDate ?? ''}>
+        <div className="space-y-2">
+          {selectedDayCards.map((card) => (
+            <div key={card.id} className="border-2 border-line/40 p-3">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-sm font-semibold text-canvas-fg">{card.title}</p>
+                <span
+                  className="h-2.5 w-2.5 shrink-0 border border-line"
+                  style={{ backgroundColor: columnColor.get(card.column_id) }}
+                />
+              </div>
+              {card.description && <p className="mt-1 text-xs text-canvas-fg/60">{card.description}</p>}
+              {card.tags.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {card.tags.map((tag) => (
+                    <Badge key={tag} accent={accentFromString(tag)}>
+                      {tag}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </Modal>
     </div>
   )
 }
@@ -135,10 +229,12 @@ function MonthView({
   anchor,
   cardsByDate,
   columnColor,
+  onPickDay,
 }: {
   anchor: Date
   cardsByDate: Map<string, KanbanCard[]>
   columnColor: Map<string, string>
+  onPickDay: (iso: string) => void
 }) {
   const grid = getMonthGrid(anchor)
   const today = new Date()
@@ -158,11 +254,15 @@ function MonthView({
           const dayCards = cardsByDate.get(iso) ?? []
           const inMonth = date.getMonth() === anchor.getMonth()
           return (
-            <div
+            <button
               key={i}
+              type="button"
+              disabled={dayCards.length === 0}
+              onClick={() => onPickDay(iso)}
               className={clsx(
-                'min-h-[92px] border-b border-r border-line/30 p-1.5 [&:nth-child(7n)]:border-r-0',
+                'min-h-[92px] border-b border-r border-line/30 p-1.5 text-left transition-colors [&:nth-child(7n)]:border-r-0',
                 !inMonth && 'bg-canvas/40',
+                dayCards.length > 0 ? 'cursor-pointer hover:bg-accent-yellow/10' : 'cursor-default',
               )}
             >
               <div
@@ -182,7 +282,7 @@ function MonthView({
                   <p className="text-label text-[10px] text-canvas-fg/40">+{dayCards.length - 3}</p>
                 )}
               </div>
-            </div>
+            </button>
           )
         })}
       </div>
@@ -194,10 +294,12 @@ function WeekView({
   anchor,
   cardsByDate,
   columnColor,
+  onPickDay,
 }: {
   anchor: Date
   cardsByDate: Map<string, KanbanCard[]>
   columnColor: Map<string, string>
+  onPickDay: (iso: string) => void
 }) {
   const days = getWeekDays(anchor)
   const today = new Date()
@@ -208,7 +310,15 @@ function WeekView({
         const iso = toISODate(date)
         const dayCards = cardsByDate.get(iso) ?? []
         return (
-          <div key={iso} className="border-2 border-line">
+          <button
+            type="button"
+            key={iso}
+            onClick={() => dayCards.length > 0 && onPickDay(iso)}
+            className={clsx(
+              'border-2 border-line text-left',
+              dayCards.length > 0 ? 'cursor-pointer hover:bg-accent-yellow/10' : 'cursor-default',
+            )}
+          >
             <div
               className={clsx(
                 'text-label border-b-2 border-line p-2 text-center text-[11px]',
@@ -222,7 +332,7 @@ function WeekView({
                 <DayChip key={card.id} card={card} color={columnColor.get(card.column_id)} />
               ))}
             </div>
-          </div>
+          </button>
         )
       })}
     </div>
@@ -316,7 +426,7 @@ function RoadmapView({
           />
         )}
       </div>
-      {sorted.map((card) => {
+      {sorted.map((card, i) => {
         const startMs = new Date(card.start_date ?? card.due_date!).getTime()
         const endMs = new Date(card.due_date!).getTime()
         const left = ((startMs - min) / span) * 100
@@ -325,11 +435,13 @@ function RoadmapView({
           <div key={card.id} className="flex items-center gap-3">
             <span className="w-40 shrink-0 truncate text-sm text-canvas-fg/80">{card.title}</span>
             <div className="relative h-5 flex-1 border border-line/30 bg-canvas">
-              <div
+              <motion.div
                 className="absolute h-full border border-line"
+                initial={{ width: 0 }}
+                animate={{ width: `${width}%` }}
+                transition={{ duration: 0.35, delay: i * 0.02 }}
                 style={{
                   left: `${left}%`,
-                  width: `${width}%`,
                   backgroundColor: columnColor.get(card.column_id) ?? 'var(--color-accent-yellow)',
                 }}
               />

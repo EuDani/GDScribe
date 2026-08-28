@@ -136,3 +136,24 @@ export interface Idea {
 }
 
 export type AppThemeMode = 'light' | 'dark' | 'auto'
+
+export interface StoryBlock {
+  id: string
+  project_id: string
+  title: string
+  content: string
+  sort_order: number
+  updated_at: string
+}
+
+export interface GameReference {
+  id: string
+  project_id: string
+  title: string
+  source_url: string | null
+  image_url: string | null
+  notes: string
+  checklist: ChecklistItem[]
+  created_at: string
+  updated_at: string
+}

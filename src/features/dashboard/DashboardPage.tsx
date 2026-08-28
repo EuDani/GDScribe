@@ -8,6 +8,7 @@ import { Field, TextInput, Textarea } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { UserMenu } from '@/components/UserMenu'
+import { Logo } from '@/components/Logo'
 import { useAuth } from '@/contexts/AuthContext'
 import { useCreateProject, useDeleteProject, useProjects } from '@/features/dashboard/useProjects'
 
@@ -37,9 +38,7 @@ export function DashboardPage() {
     <div className="min-h-screen bg-canvas text-canvas-fg">
       <header className="flex items-center justify-between border-b-2 border-line px-6 py-4 sm:px-10">
         <div className="text-display flex items-center gap-2 text-lg">
-          <span className="flex h-7 w-7 items-center justify-center border-2 border-line bg-accent-yellow text-ink">
-            G
-          </span>
+          <Logo />
           GDScribe
         </div>
         <div className="flex items-center gap-3">

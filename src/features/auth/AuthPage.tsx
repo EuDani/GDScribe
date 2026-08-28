@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { Field, TextInput } from '@/components/ui/Input'
 import { Card } from '@/components/ui/Card'
+import { Logo } from '@/components/Logo'
 import { useAuth } from '@/contexts/AuthContext'
 import { isSupabaseConfigured } from '@/lib/supabase'
 
@@ -43,9 +44,7 @@ export function AuthPage({ mode }: { mode: 'login' | 'signup' }) {
     <div className="flex min-h-screen items-center justify-center bg-canvas px-4 text-canvas-fg">
       <div className="w-full max-w-sm">
         <Link to="/" className="text-display mb-6 flex items-center justify-center gap-2 text-lg">
-          <span className="flex h-7 w-7 items-center justify-center border-2 border-line bg-accent-yellow text-ink">
-            G
-          </span>
+          <Logo />
           GDScribe
         </Link>
         <Card>
