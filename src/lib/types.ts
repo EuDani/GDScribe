@@ -52,9 +52,12 @@ export interface ProjectTheme {
   primary_color: string
   accent_color: string
   background_color: string
+  surface_color: string
+  text_color: string
   logo_url: string | null
   cover_image_url: string | null
   font_choice: string
+  chart_colors: string[]
 }
 
 export type ExtraFieldType = 'text' | 'number' | 'list' | 'chart'
@@ -93,6 +96,7 @@ export interface InventoryField {
   label: string
   type: FieldType
   options?: string[]
+  required?: boolean
 }
 
 export interface InventoryType {

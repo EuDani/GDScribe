@@ -12,6 +12,8 @@ import { useKanbanCards, useKanbanColumns } from '@/features/kanban/useKanban'
 import { IDEA_STATUSES } from '@/lib/types'
 import { useIdeas } from '@/features/ideas/useIdeas'
 import { useReminders } from '@/features/reminders/useReminders'
+import { useProjectThemeQuery } from '@/features/theme-settings/useProjectTheme'
+import { isHtmlEmpty } from '@/lib/html'
 
 function formatDate(iso: string) {
   const [y, m, d] = iso.split('-')
@@ -32,10 +34,11 @@ export function OverviewPage() {
   const { data: cards } = useKanbanCards(project.id)
   const { data: ideas } = useIdeas(project.id)
   const { data: reminders } = useReminders(project.id)
+  const { data: theme } = useProjectThemeQuery(project.id)
 
   const moduleStats = useMemo(() => {
     const total = modules?.length ?? 0
-    const filled = modules?.filter((m) => m.content.trim().length > 0).length ?? 0
+    const filled = modules?.filter((m) => !isHtmlEmpty(m.content)).length ?? 0
     const byPhase = PHASES.filter((p) => p.value !== 'all').map((p) => ({
       label: p.label,
       value: modules?.filter((m) => m.phase === p.value).length ?? 0,
@@ -186,7 +189,7 @@ export function OverviewPage() {
             <Card>
               <h2 className="text-display mb-3 text-sm">{title}</h2>
               {points.length > 0 ? (
-                <MiniBarChart points={points} />
+                <MiniBarChart points={points} colors={theme?.chart_colors} />
               ) : (
                 <p className="text-xs text-canvas-fg/40">Nada por aqui ainda.</p>
               )}

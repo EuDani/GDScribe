@@ -9,7 +9,7 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Field, TextInput } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
-import { MarkdownEditor } from '@/components/MarkdownEditor'
+import { RichTextEditor } from '@/components/RichTextEditor'
 import type { Project } from '@/lib/types'
 import { StoryBlockListItem } from '@/features/story/StoryBlockListItem'
 import {
@@ -163,7 +163,7 @@ export function StoryPage() {
                   </div>
                 </div>
                 <div className="p-4">
-                  <MarkdownEditor projectId={project.id} value={draft} onChange={setDraft} rows={20} />
+                  <RichTextEditor projectId={project.id} value={draft} onChange={setDraft} minHeight={360} />
                 </div>
               </motion.div>
             )}
@@ -171,7 +171,12 @@ export function StoryPage() {
         </div>
       )}
 
-      <Modal open={creating} onClose={() => setCreating(false)} title="Novo bloco de história">
+      <Modal
+        open={creating}
+        onClose={() => setCreating(false)}
+        title="Novo bloco de história"
+        isDirty={Boolean(newTitle.trim())}
+      >
         <form onSubmit={handleCreate}>
           <Field label="Título">
             <TextInput

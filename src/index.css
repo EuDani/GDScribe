@@ -99,4 +99,13 @@
     text-transform: uppercase;
     letter-spacing: 0.08em;
   }
+
+  .ProseMirror p.is-editor-empty:first-child::before {
+    content: attr(data-placeholder);
+    float: left;
+    height: 0;
+    pointer-events: none;
+    color: var(--color-canvas-fg);
+    opacity: 0.35;
+  }
 }

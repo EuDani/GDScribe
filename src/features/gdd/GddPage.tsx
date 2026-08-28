@@ -10,7 +10,7 @@ import { Modal } from '@/components/ui/Modal'
 import { Tabs } from '@/components/ui/Tabs'
 import { Badge } from '@/components/ui/Badge'
 import { StatusSelect } from '@/components/StatusSelect'
-import { MarkdownEditor } from '@/components/MarkdownEditor'
+import { RichTextEditor } from '@/components/RichTextEditor'
 import { PHASES, type ExtraField, type GddModule, type Phase, type Project } from '@/lib/types'
 import {
   useCreateModule,
@@ -206,7 +206,7 @@ export function GddPage() {
               </div>
 
               <div className="p-4">
-                <MarkdownEditor projectId={project.id} value={draft} onChange={setDraft} rows={16} />
+                <RichTextEditor projectId={project.id} value={draft} onChange={setDraft} minHeight={300} />
 
                 <div className="mt-5 border-t-2 border-line/30 pt-4">
                   <h3 className="text-label mb-3 text-xs text-canvas-fg/60">Campos extras</h3>
@@ -218,7 +218,12 @@ export function GddPage() {
         </div>
       )}
 
-      <Modal open={creating} onClose={() => setCreating(false)} title="Novo módulo">
+      <Modal
+        open={creating}
+        onClose={() => setCreating(false)}
+        title="Novo módulo"
+        isDirty={Boolean(newTitle.trim())}
+      >
         <form onSubmit={handleCreate}>
           <Field label="Título">
             <TextInput

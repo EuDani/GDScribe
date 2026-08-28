@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Plus, Trash2 } from 'lucide-react'
+import { AlertTriangle, Plus, Trash2 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
@@ -15,7 +15,7 @@ import { STEAM_GENRES } from '@/lib/types'
 import { useCreateProject, useDeleteProject, useProjects } from '@/features/dashboard/useProjects'
 
 export function DashboardPage() {
-  const { data: projects, isLoading } = useProjects()
+  const { data: projects, isLoading, isError, error, refetch } = useProjects()
   const createProject = useCreateProject()
   const deleteProject = useDeleteProject()
   const { signOut, user } = useAuth()
@@ -74,7 +74,23 @@ export function DashboardPage() {
 
         {isLoading && <p className="text-label text-sm text-canvas-fg/50">Carregando…</p>}
 
-        {!isLoading && projects?.length === 0 && (
+        {isError && (
+          <div className="flex items-start gap-3 border-2 border-accent-red bg-accent-red/10 p-4">
+            <AlertTriangle size={18} className="mt-0.5 shrink-0 text-accent-red" />
+            <div>
+              <p className="text-sm font-semibold text-accent-red">Não deu para carregar seus projetos</p>
+              <p className="mt-1 text-xs text-canvas-fg/60">
+                {error instanceof Error ? error.message : 'Erro desconhecido.'} — confira se rodou a versão
+                mais recente de <code>supabase/schema.sql</code> no seu projeto Supabase.
+              </p>
+              <Button size="sm" variant="ghost" className="mt-2" onClick={() => refetch()}>
+                Tentar de novo
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {!isLoading && !isError && projects?.length === 0 && (
           <EmptyState
             title="Nenhum projeto ainda"
             description="Crie seu primeiro projeto para começar a documentar seu jogo."
@@ -119,7 +135,12 @@ export function DashboardPage() {
         </div>
       </main>
 
-      <Modal open={creating} onClose={() => setCreating(false)} title="Novo projeto">
+      <Modal
+        open={creating}
+        onClose={() => setCreating(false)}
+        title="Novo projeto"
+        isDirty={Boolean(name.trim() || description.trim() || primaryGenre || secondaryGenre)}
+      >
         <form onSubmit={handleCreate}>
           <Field label="Nome do jogo">
             <TextInput

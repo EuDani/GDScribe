@@ -71,7 +71,21 @@ export function ReminderModal({
   }
 
   return (
-    <Modal open={open} onClose={onClose} title={reminder ? 'Editar lembrete' : 'Novo lembrete'} wide>
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={reminder ? 'Editar lembrete' : 'Novo lembrete'}
+      wide
+      isDirty={
+        reminder
+          ? title !== reminder.title ||
+            eventDate !== reminder.event_date ||
+            eventTime !== (reminder.event_time ?? '') ||
+            notes !== (reminder.notes ?? '') ||
+            JSON.stringify(rules) !== JSON.stringify(reminder.notifications)
+          : Boolean(title.trim() || notes.trim() || rules.length > 0)
+      }
+    >
       <form onSubmit={handleSubmit}>
         <Field label="Título">
           <TextInput required autoFocus value={title} onChange={(e) => setTitle(e.target.value)} />

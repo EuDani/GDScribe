@@ -9,7 +9,8 @@ import { Field, Select, TextInput } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
 import { Badge, accentFromString } from '@/components/ui/Badge'
 import { Tabs } from '@/components/ui/Tabs'
-import { MarkdownEditor } from '@/components/MarkdownEditor'
+import { RichTextEditor } from '@/components/RichTextEditor'
+import { isHtmlEmpty, stripHtml } from '@/lib/html'
 import { IDEA_STATUSES, type Idea, type IdeaStatus, type Project } from '@/lib/types'
 import { useCreateIdea, useDeleteIdea, useIdeas, useUpdateIdea } from '@/features/ideas/useIdeas'
 
@@ -149,7 +150,9 @@ export function IdeasPage() {
                 </span>
               </div>
               <h3 className="text-display mb-1 text-base">{idea.title}</h3>
-              {idea.body && <p className="mb-2 line-clamp-3 text-sm text-canvas-fg/60">{idea.body}</p>}
+              {idea.body && !isHtmlEmpty(idea.body) && (
+                <p className="mb-2 line-clamp-3 text-sm text-canvas-fg/60">{stripHtml(idea.body)}</p>
+              )}
               {idea.tags.length > 0 && (
                 <div className="flex flex-wrap gap-1">
                   {idea.tags.map((tag) => (
@@ -164,13 +167,22 @@ export function IdeasPage() {
         })}
       </div>
 
-      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? 'Editar ideia' : 'Nova ideia'}>
+      <Modal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        title={editing ? 'Editar ideia' : 'Nova ideia'}
+        isDirty={
+          editing
+            ? title !== editing.title || body !== (editing.body ?? '') || tagsInput !== editing.tags.join(', ')
+            : Boolean(title.trim() || body.trim() || tagsInput.trim())
+        }
+      >
         <form onSubmit={handleSubmit}>
           <Field label="Título">
             <TextInput required autoFocus value={title} onChange={(e) => setTitle(e.target.value)} />
           </Field>
           <Field label="Descrição" hint="Opcional — aceita Markdown e imagens">
-            <MarkdownEditor projectId={project.id} value={body} onChange={setBody} rows={5} />
+            <RichTextEditor projectId={project.id} value={body} onChange={setBody} minHeight={140} />
           </Field>
           <Field label="Tags" hint="Separadas por vírgula">
             <TextInput value={tagsInput} onChange={(e) => setTagsInput(e.target.value)} placeholder="combate, ui, som" />

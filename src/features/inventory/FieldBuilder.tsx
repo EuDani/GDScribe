@@ -1,4 +1,5 @@
 import { Plus, Trash2 } from 'lucide-react'
+import { clsx } from 'clsx'
 import type { FieldType, InventoryField } from '@/lib/types'
 import { Button } from '@/components/ui/Button'
 import { Select, TextInput } from '@/components/ui/Input'
@@ -81,6 +82,16 @@ export function FieldBuilder({
               className="min-w-[160px] flex-1"
             />
           )}
+          <button
+            type="button"
+            onClick={() => updateField(i, { required: !field.required })}
+            className={clsx(
+              'text-label cursor-pointer border-2 border-line px-2 py-1.5 text-[10px]',
+              field.required ? 'bg-accent-red text-canvas-fg' : 'text-canvas-fg/50 hover:text-canvas-fg',
+            )}
+          >
+            Obrigatório
+          </button>
           <button
             type="button"
             onClick={() => removeField(i)}

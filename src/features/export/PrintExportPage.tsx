@@ -1,12 +1,10 @@
 import { Printer } from 'lucide-react'
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
 import { useParams } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { useProject } from '@/features/dashboard/useProjects'
 import { useGddModules } from '@/features/gdd/useGddModules'
 import { useProjectThemeQuery } from '@/features/theme-settings/useProjectTheme'
-import { buildGddMarkdown } from '@/lib/buildGddDocument'
+import { buildGddHtmlFragment } from '@/lib/buildGddDocument'
 
 export function PrintExportPage() {
   const { projectId } = useParams<{ projectId: string }>()
@@ -18,7 +16,7 @@ export function PrintExportPage() {
     return <p className="p-8 text-sm">Carregando documento…</p>
   }
 
-  const markdown = buildGddMarkdown(project, modules)
+  const fragment = buildGddHtmlFragment(project, modules)
 
   return (
     <div className="min-h-screen bg-white text-black">
@@ -29,14 +27,19 @@ export function PrintExportPage() {
       </div>
 
       <article className="mx-auto max-w-3xl px-8 py-12">
-        <header className="mb-10 border-b-4 pb-6" style={{ borderColor: theme?.primary_color ?? '#000' }}>
-          {theme?.logo_url && <img src={theme.logo_url} alt="" className="mb-4 h-16 w-16 object-cover" />}
-          <h1 className="text-4xl font-black uppercase">{project.name}</h1>
-          {project.description && <p className="mt-2 text-lg text-black/70">{project.description}</p>}
-        </header>
-        <div className="prose max-w-none prose-headings:font-black prose-headings:uppercase">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{markdown}</ReactMarkdown>
-        </div>
+        {theme?.logo_url && (
+          <img
+            src={theme.logo_url}
+            alt=""
+            className="mb-6 h-16 w-16 object-cover"
+            style={{ border: `4px solid ${theme.primary_color}` }}
+          />
+        )}
+        <div
+          className="prose max-w-none prose-headings:font-black prose-headings:uppercase prose-h2:border-b-4 prose-h2:pb-1"
+          style={{ ['--tw-prose-headings' as string]: theme?.primary_color }}
+          dangerouslySetInnerHTML={{ __html: fragment }}
+        />
       </article>
     </div>
   )

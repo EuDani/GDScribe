@@ -1,5 +1,6 @@
 import { QueryClientProvider } from '@tanstack/react-query'
 import { HashRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { AppThemeProvider } from '@/contexts/AppThemeContext'
 import { ToastProvider } from '@/contexts/ToastContext'
@@ -24,6 +25,7 @@ import { PrintExportPage } from '@/features/export/PrintExportPage'
 
 function App() {
   return (
+    <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <AppThemeProvider>
@@ -93,6 +95,7 @@ function App() {
         </AppThemeProvider>
       </AuthProvider>
     </QueryClientProvider>
+    </ErrorBoundary>
   )
 }
 

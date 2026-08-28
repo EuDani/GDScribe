@@ -31,9 +31,12 @@ create table if not exists public.project_themes (
   primary_color text not null default '#ff3b30',
   accent_color text not null default '#ffd60a',
   background_color text not null default '#0b0b0c',
+  surface_color text not null default '#17171a',
+  text_color text not null default '#f3efe3',
   logo_url text,
   cover_image_url text,
-  font_choice text not null default 'default'
+  font_choice text not null default 'default',
+  chart_colors jsonb not null default '["#ff3b30","#0a84ff","#ffd60a","#30d158","#bf5af2"]'::jsonb
 );
 
 -- ============================================================
@@ -190,6 +193,9 @@ alter table public.gdd_modules add column if not exists extra_fields jsonb not n
 alter table public.inventory_items add column if not exists status text;
 alter table public.projects add column if not exists primary_genre text;
 alter table public.projects add column if not exists secondary_genre text;
+alter table public.project_themes add column if not exists surface_color text not null default '#17171a';
+alter table public.project_themes add column if not exists text_color text not null default '#f3efe3';
+alter table public.project_themes add column if not exists chart_colors jsonb not null default '["#ff3b30","#0a84ff","#ffd60a","#30d158","#bf5af2"]'::jsonb;
 alter table public.kanban_cards add column if not exists icon text;
 alter table public.kanban_cards add column if not exists cover_image_url text;
 alter table public.kanban_cards add column if not exists checklist jsonb not null default '[]'::jsonb;

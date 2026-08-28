@@ -8,7 +8,7 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { Field, TextInput } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
 import { ChecklistEditor } from '@/components/ChecklistEditor'
-import { MarkdownEditor } from '@/components/MarkdownEditor'
+import { RichTextEditor } from '@/components/RichTextEditor'
 import { useUploadImage } from '@/lib/useUploadImage'
 import type { ChecklistItem, GameReference, Project } from '@/lib/types'
 import {
@@ -130,7 +130,12 @@ export function ReferencesPage() {
         })}
       </div>
 
-      <Modal open={creating} onClose={() => setCreating(false)} title="Nova referência">
+      <Modal
+        open={creating}
+        onClose={() => setCreating(false)}
+        title="Nova referência"
+        isDirty={Boolean(newTitle.trim())}
+      >
         <form onSubmit={handleCreate}>
           <Field label="Título">
             <TextInput
@@ -152,7 +157,20 @@ export function ReferencesPage() {
         </form>
       </Modal>
 
-      <Modal open={Boolean(editing)} onClose={() => setEditing(null)} title="Editar referência" wide>
+      <Modal
+        open={Boolean(editing)}
+        onClose={() => setEditing(null)}
+        title="Editar referência"
+        wide
+        isDirty={Boolean(
+          editing &&
+            (editTitle !== editing.title ||
+              editSourceUrl !== (editing.source_url ?? '') ||
+              editImage !== editing.image_url ||
+              editNotes !== editing.notes ||
+              JSON.stringify(editChecklist) !== JSON.stringify(editing.checklist)),
+        )}
+      >
         <form onSubmit={handleSave}>
           <Field label="Título">
             <TextInput required value={editTitle} onChange={(e) => setEditTitle(e.target.value)} />
@@ -197,7 +215,7 @@ export function ReferencesPage() {
           </Field>
 
           <Field label="Observações" hint="Aceita Markdown e imagens">
-            <MarkdownEditor projectId={project.id} value={editNotes} onChange={setEditNotes} rows={5} />
+            <RichTextEditor projectId={project.id} value={editNotes} onChange={setEditNotes} minHeight={140} />
           </Field>
 
           <Field label="O que eu quero aproveitar dessa referência">

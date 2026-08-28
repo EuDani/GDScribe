@@ -17,7 +17,8 @@ import {
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { motion } from 'motion/react'
-import { NavLink, Outlet, useParams } from 'react-router-dom'
+import { Link, NavLink, Outlet, useParams } from 'react-router-dom'
+import { Button } from '@/components/ui/Button'
 import { useAuth } from '@/contexts/AuthContext'
 import { ProjectThemeProvider } from '@/contexts/ProjectThemeContext'
 import { useProject } from '@/features/dashboard/useProjects'
@@ -43,7 +44,7 @@ const COLLAPSE_KEY = 'gdscribe.sidebarCollapsed'
 
 export function ProjectLayout() {
   const { projectId } = useParams<{ projectId: string }>()
-  const { data: project, isLoading } = useProject(projectId)
+  const { data: project, isLoading, isError, error, refetch } = useProject(projectId)
   const { data: theme } = useProjectThemeQuery(projectId)
   const { signOut } = useAuth()
 
@@ -54,6 +55,25 @@ export function ProjectLayout() {
   }, [collapsed])
 
   useReminderScheduler(projectId)
+
+  if (isError) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-canvas p-6 text-center text-canvas-fg">
+        <p className="text-display text-lg">Não deu para carregar esse projeto</p>
+        <p className="max-w-sm text-sm text-canvas-fg/60">
+          {error instanceof Error ? error.message : 'Erro desconhecido.'}
+        </p>
+        <div className="flex gap-2">
+          <Button variant="ghost" onClick={() => refetch()}>
+            Tentar de novo
+          </Button>
+          <Link to="/dashboard">
+            <Button>Voltar aos projetos</Button>
+          </Link>
+        </div>
+      </div>
+    )
+  }
 
   if (isLoading || !project) {
     return (

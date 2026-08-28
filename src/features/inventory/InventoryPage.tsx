@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Pencil, Plus, Trash2 } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { LayoutGrid, Pencil, Plus, Table as TableIcon, Trash2 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { useOutletContext } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
@@ -7,10 +7,13 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Field, TextInput } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
+import { Tabs } from '@/components/ui/Tabs'
 import { StatusBadge, StatusSelect } from '@/components/StatusSelect'
+import { useToast } from '@/contexts/ToastContext'
 import type { InventoryField, InventoryItem, InventoryType, Project } from '@/lib/types'
 import { FieldBuilder } from '@/features/inventory/FieldBuilder'
-import { ItemForm } from '@/features/inventory/ItemForm'
+import { getMissingRequiredFields, ItemForm } from '@/features/inventory/ItemForm'
+import { InventoryTableView } from '@/features/inventory/InventoryTableView'
 import {
   useCreateInventoryType,
   useDeleteInventoryItem,
@@ -22,6 +25,8 @@ import {
 } from '@/features/inventory/useInventory'
 
 const DEFAULT_FIELDS: InventoryField[] = [{ key: 'descricao', label: 'Descrição', type: 'textarea' }]
+
+type ViewMode = 'cards' | 'table'
 
 export function InventoryPage() {
   const { project } = useOutletContext<{ project: Project }>()
@@ -36,6 +41,7 @@ export function InventoryPage() {
   const [typeName, setTypeName] = useState('')
   const [typeFields, setTypeFields] = useState<InventoryField[]>(DEFAULT_FIELDS)
   const [pendingDeleteType, setPendingDeleteType] = useState<string | null>(null)
+  const [view, setView] = useState<ViewMode>('cards')
 
   const selectedType = types?.find((t) => t.id === selectedTypeId) ?? types?.[0] ?? null
 
@@ -70,9 +76,19 @@ export function InventoryPage() {
     <div>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-display text-2xl">Inventário</h1>
-        <Button size="sm" icon={<Plus size={16} />} onClick={openCreateType}>
-          Novo tipo
-        </Button>
+        <div className="flex items-center gap-3">
+          <Tabs
+            items={[
+              { value: 'cards', label: 'Cards' },
+              { value: 'table', label: 'Tabela' },
+            ]}
+            value={view}
+            onChange={setView}
+          />
+          <Button size="sm" icon={<Plus size={16} />} onClick={openCreateType}>
+            Novo tipo
+          </Button>
+        </div>
       </div>
 
       {typesLoading && <p className="text-label text-sm text-canvas-fg/50">Carregando…</p>}
@@ -114,6 +130,7 @@ export function InventoryPage() {
             <InventoryTypePanel
               projectId={project.id}
               type={selectedType}
+              view={view}
               onEditType={() => openEditType(selectedType)}
               onDeleteType={() => setPendingDeleteType(selectedType.id)}
             />
@@ -126,6 +143,11 @@ export function InventoryPage() {
         onClose={() => setTypeModalOpen(false)}
         title={editingType ? 'Editar tipo' : 'Novo tipo de inventário'}
         wide
+        isDirty={
+          editingType
+            ? typeName !== editingType.name || JSON.stringify(typeFields) !== JSON.stringify(editingType.fields_schema)
+            : Boolean(typeName.trim())
+        }
       >
         <form onSubmit={handleSaveType}>
           <Field label="Nome do tipo">
@@ -137,7 +159,7 @@ export function InventoryPage() {
               placeholder="Ex: NPCs, Armas, Inimigos"
             />
           </Field>
-          <Field label="Campos">
+          <Field label="Campos" hint="Marque 'Obrigatório' para exigir preenchimento ao salvar um item">
             <FieldBuilder fields={typeFields} onChange={setTypeFields} />
           </Field>
           <div className="mt-4 flex justify-end gap-2">
@@ -169,28 +191,38 @@ export function InventoryPage() {
 function InventoryTypePanel({
   projectId,
   type,
+  view,
   onEditType,
   onDeleteType,
 }: {
   projectId: string
   type: InventoryType
+  view: ViewMode
   onEditType: () => void
   onDeleteType: () => void
 }) {
   const { data: items, isLoading } = useInventoryItems(projectId, type.id)
   const upsertItem = useUpsertInventoryItem(projectId, type.id)
   const deleteItem = useDeleteInventoryItem(projectId, type.id)
+  const toast = useToast()
 
   const [itemModalOpen, setItemModalOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null)
   const [values, setValues] = useState<Record<string, string | number | null>>({})
   const [itemStatus, setItemStatus] = useState<string | null>(null)
+  const [showErrors, setShowErrors] = useState(false)
   const [pendingDeleteItem, setPendingDeleteItem] = useState<string | null>(null)
+
+  const missingFields = useMemo(
+    () => getMissingRequiredFields(type.fields_schema, values),
+    [type.fields_schema, values],
+  )
 
   function openCreateItem() {
     setEditingItem(null)
     setValues({})
     setItemStatus(null)
+    setShowErrors(false)
     setItemModalOpen(true)
   }
 
@@ -198,11 +230,17 @@ function InventoryTypePanel({
     setEditingItem(item)
     setValues(item.data)
     setItemStatus(item.status)
+    setShowErrors(false)
     setItemModalOpen(true)
   }
 
   async function handleSaveItem(e: React.FormEvent) {
     e.preventDefault()
+    if (missingFields.length > 0) {
+      setShowErrors(true)
+      toast.error(`Preencha os campos obrigatórios: ${missingFields.map((f) => f.label).join(', ')}`)
+      return
+    }
     await upsertItem.mutateAsync({ id: editingItem?.id, data: values, status: itemStatus })
     setItemModalOpen(false)
   }
@@ -210,7 +248,10 @@ function InventoryTypePanel({
   return (
     <div className="min-w-0 border-2 border-line bg-surface shadow-brutal">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b-2 border-line p-4">
-        <h2 className="text-display text-lg">{type.name}</h2>
+        <h2 className="text-display flex items-center gap-2 text-lg">
+          {view === 'table' ? <TableIcon size={16} /> : <LayoutGrid size={16} />}
+          {type.name}
+        </h2>
         <div className="flex items-center gap-2">
           <Button size="sm" icon={<Plus size={14} />} onClick={openCreateItem}>
             Novo item
@@ -239,52 +280,34 @@ function InventoryTypePanel({
         {!isLoading && items?.length === 0 && (
           <EmptyState title="Nenhum item ainda" description="Adicione o primeiro item desse tipo." />
         )}
-        {!isLoading && items && items.length > 0 && (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[480px] border-collapse text-sm">
-              <thead>
-                <tr className="text-label border-b-2 border-line text-left text-[11px] text-canvas-fg/60">
-                  {type.fields_schema.map((f) => (
-                    <th key={f.key} className="py-2 pr-4 font-semibold">
-                      {f.label}
-                    </th>
+        {!isLoading && items && items.length > 0 && view === 'table' && (
+          <InventoryTableView projectId={projectId} type={type} items={items} onEditItem={openEditItem} />
+        )}
+        {!isLoading && items && items.length > 0 && view === 'cards' && (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {items.map((item) => {
+              const primary = type.fields_schema[0]
+              const title = primary ? String(item.data[primary.key] ?? 'Sem título') : 'Item'
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => openEditItem(item)}
+                  className="cursor-pointer border-2 border-line/40 bg-canvas p-3 text-left hover:border-line"
+                >
+                  <div className="mb-1 flex items-center justify-between gap-2">
+                    <p className="truncate text-sm font-semibold text-canvas-fg">{title}</p>
+                    <StatusBadge projectId={projectId} value={item.status} />
+                  </div>
+                  {type.fields_schema.slice(1, 4).map((f) => (
+                    <p key={f.key} className="truncate text-xs text-canvas-fg/60">
+                      <span className="text-canvas-fg/40">{f.label}: </span>
+                      {String(item.data[f.key] ?? '—')}
+                    </p>
                   ))}
-                  <th className="py-2 pr-4 font-semibold">Status</th>
-                  <th className="py-2" />
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((item) => (
-                  <tr
-                    key={item.id}
-                    className="cursor-pointer border-b border-line/30 hover:bg-canvas"
-                    onClick={() => openEditItem(item)}
-                  >
-                    {type.fields_schema.map((f) => (
-                      <td key={f.key} className="max-w-[220px] truncate py-2.5 pr-4 text-canvas-fg/85">
-                        {String(item.data[f.key] ?? '—')}
-                      </td>
-                    ))}
-                    <td className="py-2.5 pr-4">
-                      <StatusBadge projectId={projectId} value={item.status} />
-                    </td>
-                    <td className="py-2.5 text-right">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setPendingDeleteItem(item.id)
-                        }}
-                        aria-label="Excluir item"
-                        className="cursor-pointer border-2 border-line p-1 text-canvas-fg/50 hover:bg-accent-red hover:text-canvas-fg"
-                      >
-                        <Trash2 size={12} />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                </button>
+              )
+            })}
           </div>
         )}
       </div>
@@ -293,9 +316,14 @@ function InventoryTypePanel({
         open={itemModalOpen}
         onClose={() => setItemModalOpen(false)}
         title={editingItem ? `Editar ${type.name.replace(/s$/, '')}` : `Novo ${type.name.replace(/s$/, '')}`}
+        isDirty={
+          editingItem
+            ? JSON.stringify(values) !== JSON.stringify(editingItem.data) || itemStatus !== editingItem.status
+            : Object.values(values).some((v) => v !== null && v !== '') || itemStatus !== null
+        }
       >
         <form onSubmit={handleSaveItem}>
-          <ItemForm fields={type.fields_schema} values={values} onChange={setValues} />
+          <ItemForm fields={type.fields_schema} values={values} onChange={setValues} showErrors={showErrors} />
           <Field label="Status">
             <StatusSelect projectId={projectId} value={itemStatus} onChange={setItemStatus} />
           </Field>

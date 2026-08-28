@@ -8,6 +8,17 @@ export function useUploadImage(projectId: string) {
   const { user } = useAuth()
   const [uploading, setUploading] = useState(false)
 
+  async function uploadOne(file: File, folder: string): Promise<string | null> {
+    const ext = file.name.split('.').pop() ?? 'png'
+    // O primeiro segmento do caminho precisa ser o id do usuário logado —
+    // é o que a policy de storage usa pra liberar o upload (auth.uid()).
+    const path = `${user!.id}/${projectId}/${folder}/${Date.now()}-${crypto.randomUUID().slice(0, 8)}.${ext}`
+    const { error } = await supabase.storage.from(ASSETS_BUCKET).upload(path, file)
+    if (error) throw error
+    const { data } = supabase.storage.from(ASSETS_BUCKET).getPublicUrl(path)
+    return data.publicUrl
+  }
+
   async function upload(file: File, folder = 'assets'): Promise<string | null> {
     if (!isSupabaseConfigured) {
       toast.error('Supabase não configurado — upload de imagem indisponível. Veja SUPABASE_SETUP.md.')
@@ -20,15 +31,7 @@ export function useUploadImage(projectId: string) {
 
     setUploading(true)
     try {
-      const ext = file.name.split('.').pop() ?? 'png'
-      // O primeiro segmento do caminho precisa ser o id do usuário logado —
-      // é o que a policy de storage usa pra liberar o upload (auth.uid()).
-      const path = `${user.id}/${projectId}/${folder}/${Date.now()}-${crypto.randomUUID().slice(0, 8)}.${ext}`
-      const { error } = await supabase.storage.from(ASSETS_BUCKET).upload(path, file)
-      if (error) throw error
-
-      const { data } = supabase.storage.from(ASSETS_BUCKET).getPublicUrl(path)
-      return data.publicUrl
+      return await uploadOne(file, folder)
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Erro desconhecido'
       toast.error(`Falha ao enviar imagem: ${message}`)
@@ -38,5 +41,32 @@ export function useUploadImage(projectId: string) {
     }
   }
 
-  return { upload, uploading }
+  /** Envia vários arquivos em paralelo; retorna só as que deram certo (erros já viram toast). */
+  async function uploadMany(files: File[], folder = 'assets'): Promise<string[]> {
+    if (!isSupabaseConfigured) {
+      toast.error('Supabase não configurado — upload de imagem indisponível. Veja SUPABASE_SETUP.md.')
+      return []
+    }
+    if (!user) {
+      toast.error('Você precisa estar logado para enviar imagens.')
+      return []
+    }
+
+    setUploading(true)
+    try {
+      const results = await Promise.allSettled(files.map((file) => uploadOne(file, folder)))
+      const urls: string[] = []
+      let failures = 0
+      for (const result of results) {
+        if (result.status === 'fulfilled' && result.value) urls.push(result.value)
+        else failures++
+      }
+      if (failures > 0) toast.error(`${failures} imagem(ns) falharam ao enviar.`)
+      return urls
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  return { upload, uploadMany, uploading }
 }

@@ -202,7 +202,12 @@ export function KanbanPage() {
         </DndContext>
       )}
 
-      <Modal open={columnModalOpen} onClose={() => setColumnModalOpen(false)} title="Nova coluna">
+      <Modal
+        open={columnModalOpen}
+        onClose={() => setColumnModalOpen(false)}
+        title="Nova coluna"
+        isDirty={Boolean(columnName.trim())}
+      >
         <form onSubmit={handleCreateColumn}>
           <Field label="Nome">
             <TextInput
@@ -222,7 +227,12 @@ export function KanbanPage() {
         </form>
       </Modal>
 
-      <Modal open={Boolean(cardModalColumnId)} onClose={() => setCardModalColumnId(null)} title="Novo card">
+      <Modal
+        open={Boolean(cardModalColumnId)}
+        onClose={() => setCardModalColumnId(null)}
+        title="Novo card"
+        isDirty={Boolean(cardTitle.trim() || cardDescription.trim())}
+      >
         <form onSubmit={handleCreateCard}>
           <Field label="Título">
             <TextInput required autoFocus value={cardTitle} onChange={(e) => setCardTitle(e.target.value)} />
@@ -239,7 +249,23 @@ export function KanbanPage() {
         </form>
       </Modal>
 
-      <Modal open={Boolean(editingCard)} onClose={() => setEditingCard(null)} title="Editar card" wide>
+      <Modal
+        open={Boolean(editingCard)}
+        onClose={() => setEditingCard(null)}
+        title="Editar card"
+        wide
+        isDirty={Boolean(
+          editingCard &&
+            (editTitle !== editingCard.title ||
+              editDescription !== (editingCard.description ?? '') ||
+              editTags !== editingCard.tags.join(', ') ||
+              editIcon !== editingCard.icon ||
+              editCover !== editingCard.cover_image_url ||
+              JSON.stringify(editChecklist) !== JSON.stringify(editingCard.checklist) ||
+              editStartDate !== (editingCard.start_date ?? '') ||
+              editDueDate !== (editingCard.due_date ?? '')),
+        )}
+      >
         <form onSubmit={handleSaveCard}>
           <Field label="Título">
             <TextInput required value={editTitle} onChange={(e) => setEditTitle(e.target.value)} />
