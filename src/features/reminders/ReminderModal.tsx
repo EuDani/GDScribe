@@ -1,11 +1,12 @@
-import { useEffect, useState } from 'react'
-import { Bell } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { Bell, Upload } from 'lucide-react'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
-import { Field, TextInput, Textarea } from '@/components/ui/Input'
+import { Field, Select, TextInput, Textarea } from '@/components/ui/Input'
 import { NotificationRulesEditor } from '@/features/reminders/NotificationRulesEditor'
 import { ensureNotificationPermission, isNotificationSupported } from '@/lib/notifications'
-import type { NotificationRule, Reminder } from '@/lib/types'
+import { useUploadImage } from '@/lib/useUploadImage'
+import { REMINDER_IMPORTANCE, type NotificationRule, type Reminder, type ReminderImportance } from '@/lib/types'
 import {
   useCreateReminder,
   useDeleteReminder,
@@ -30,12 +31,17 @@ export function ReminderModal({
   const updateReminder = useUpdateReminder(projectId)
   const deleteReminder = useDeleteReminder(projectId)
   const toast = useToast()
+  const { upload, uploading } = useUploadImage(projectId)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [title, setTitle] = useState('')
   const [eventDate, setEventDate] = useState('')
   const [eventTime, setEventTime] = useState('')
   const [notes, setNotes] = useState('')
   const [rules, setRules] = useState<NotificationRule[]>([])
+  const [tagsInput, setTagsInput] = useState('')
+  const [imageUrl, setImageUrl] = useState<string | null>(null)
+  const [importance, setImportance] = useState<ReminderImportance>('normal')
 
   useEffect(() => {
     if (!open) return
@@ -44,7 +50,15 @@ export function ReminderModal({
     setEventTime(reminder?.event_time ?? '')
     setNotes(reminder?.notes ?? '')
     setRules(reminder?.notifications ?? [])
+    setTagsInput(reminder?.tags.join(', ') ?? '')
+    setImageUrl(reminder?.image_url ?? null)
+    setImportance(reminder?.importance ?? 'normal')
   }, [open, reminder, defaultDate])
+
+  async function handleImageUpload(file: File) {
+    const url = await upload(file, 'reminder-images')
+    if (url) setImageUrl(url)
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -57,12 +71,20 @@ export function ReminderModal({
       }
     }
 
+    const tags = tagsInput
+      .split(',')
+      .map((t) => t.trim())
+      .filter(Boolean)
+
     const input = {
       title: title.trim(),
       event_date: eventDate,
       event_time: eventTime || null,
       notes: notes.trim() || null,
       notifications: rules,
+      tags,
+      image_url: imageUrl,
+      importance,
     }
 
     if (reminder) await updateReminder.mutateAsync({ id: reminder.id, ...input })
@@ -82,8 +104,11 @@ export function ReminderModal({
             eventDate !== reminder.event_date ||
             eventTime !== (reminder.event_time ?? '') ||
             notes !== (reminder.notes ?? '') ||
+            tagsInput !== reminder.tags.join(', ') ||
+            imageUrl !== reminder.image_url ||
+            importance !== reminder.importance ||
             JSON.stringify(rules) !== JSON.stringify(reminder.notifications)
-          : Boolean(title.trim() || notes.trim() || rules.length > 0)
+          : Boolean(title.trim() || notes.trim() || rules.length > 0 || tagsInput.trim() || imageUrl)
       }
     >
       <form onSubmit={handleSubmit}>
@@ -91,14 +116,63 @@ export function ReminderModal({
           <TextInput required autoFocus value={title} onChange={(e) => setTitle(e.target.value)} />
         </Field>
 
-        <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
           <Field label="Data">
             <TextInput type="date" required value={eventDate} onChange={(e) => setEventDate(e.target.value)} />
           </Field>
           <Field label="Horário" hint="Opcional">
             <TextInput type="time" value={eventTime} onChange={(e) => setEventTime(e.target.value)} />
           </Field>
+          <Field label="Importância">
+            <Select value={importance} onChange={(e) => setImportance(e.target.value as ReminderImportance)}>
+              {REMINDER_IMPORTANCE.map((i) => (
+                <option key={i.value} value={i.value}>
+                  {i.label}
+                </option>
+              ))}
+            </Select>
+          </Field>
         </div>
+
+        <Field label="Tags" hint="Separadas por vírgula">
+          <TextInput value={tagsInput} onChange={(e) => setTagsInput(e.target.value)} placeholder="marketing, build, reunião" />
+        </Field>
+
+        <Field label="Imagem" hint="Opcional">
+          <div className="flex items-center gap-3">
+            {imageUrl && <img src={imageUrl} alt="" className="h-14 w-24 border-2 border-line object-cover" />}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0]
+                if (file) handleImageUpload(file)
+                e.target.value = ''
+              }}
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              icon={<Upload size={12} />}
+              disabled={uploading}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              {uploading ? 'Enviando…' : 'Enviar imagem'}
+            </Button>
+            {imageUrl && (
+              <button
+                type="button"
+                onClick={() => setImageUrl(null)}
+                className="text-label text-[11px] text-canvas-fg/40 underline hover:text-canvas-fg"
+              >
+                remover
+              </button>
+            )}
+          </div>
+        </Field>
 
         <Field label="Notas" hint="Opcional">
           <Textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} />

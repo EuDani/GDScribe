@@ -20,7 +20,10 @@ export function useReminders(projectId: string | undefined) {
   })
 }
 
-type ReminderInput = Pick<Reminder, 'title' | 'event_date' | 'event_time' | 'notes' | 'notifications'>
+type ReminderInput = Pick<
+  Reminder,
+  'title' | 'event_date' | 'event_time' | 'notes' | 'notifications' | 'tags' | 'image_url' | 'importance'
+>
 
 export function useCreateReminder(projectId: string) {
   const queryClient = useQueryClient()

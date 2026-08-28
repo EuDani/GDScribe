@@ -6,6 +6,7 @@ import {
   CalendarRange,
   ChevronLeft,
   ChevronRight,
+  Filter,
   ListChecks,
   Plus,
 } from 'lucide-react'
@@ -17,7 +18,7 @@ import { Card } from '@/components/ui/Card'
 import { Tabs } from '@/components/ui/Tabs'
 import { Modal } from '@/components/ui/Modal'
 import { Badge, accentFromString } from '@/components/ui/Badge'
-import type { KanbanCard, Project, Reminder } from '@/lib/types'
+import { REMINDER_IMPORTANCE, type KanbanCard, type Project, type Reminder, type ReminderImportance } from '@/lib/types'
 import { useKanbanCards, useKanbanColumns } from '@/features/kanban/useKanban'
 import { useReminders } from '@/features/reminders/useReminders'
 import { ReminderModal } from '@/features/reminders/ReminderModal'
@@ -49,12 +50,29 @@ export function CalendarPage() {
   const [anchor, setAnchor] = useState(new Date())
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [reminderModal, setReminderModal] = useState<{ reminder?: Reminder; date?: string } | null>(null)
+  const [tagFilter, setTagFilter] = useState<Set<string>>(new Set())
+  const [importanceFilter, setImportanceFilter] = useState<Set<ReminderImportance>>(new Set())
 
   const columnColor = useMemo(() => {
     const map = new Map<string, string>()
     columns?.forEach((c) => map.set(c.id, c.color))
     return map
   }, [columns])
+
+  const allTags = useMemo(
+    () => Array.from(new Set((reminders ?? []).flatMap((r) => r.tags))).sort(),
+    [reminders],
+  )
+
+  const filteredReminders = useMemo(
+    () =>
+      (reminders ?? []).filter((r) => {
+        const tagOk = tagFilter.size === 0 || r.tags.some((t) => tagFilter.has(t))
+        const importanceOk = importanceFilter.size === 0 || importanceFilter.has(r.importance)
+        return tagOk && importanceOk
+      }),
+    [reminders, tagFilter, importanceFilter],
+  )
 
   const cardsByDate = useMemo(() => {
     const map = new Map<string, KanbanCard[]>()
@@ -69,13 +87,13 @@ export function CalendarPage() {
 
   const remindersByDate = useMemo(() => {
     const map = new Map<string, Reminder[]>()
-    for (const reminder of reminders ?? []) {
+    for (const reminder of filteredReminders) {
       const list = map.get(reminder.event_date) ?? []
       list.push(reminder)
       map.set(reminder.event_date, list)
     }
     return map
-  }, [reminders])
+  }, [filteredReminders])
 
   const stats = useMemo(() => {
     const now = new Date()
@@ -106,6 +124,24 @@ export function CalendarPage() {
     })
   }
 
+  function toggleTag(tag: string) {
+    setTagFilter((prev) => {
+      const next = new Set(prev)
+      if (next.has(tag)) next.delete(tag)
+      else next.add(tag)
+      return next
+    })
+  }
+
+  function toggleImportance(value: ReminderImportance) {
+    setImportanceFilter((prev) => {
+      const next = new Set(prev)
+      if (next.has(value)) next.delete(value)
+      else next.add(value)
+      return next
+    })
+  }
+
   const heading = useMemo(() => {
     if (view === 'week') {
       const days = getWeekDays(anchor)
@@ -118,6 +154,7 @@ export function CalendarPage() {
 
   const selectedDayCards = selectedDate ? (cardsByDate.get(selectedDate) ?? []) : []
   const selectedDayReminders = selectedDate ? (remindersByDate.get(selectedDate) ?? []) : []
+  const hasActiveFilters = tagFilter.size > 0 || importanceFilter.size > 0
 
   return (
     <div>
@@ -166,69 +203,143 @@ export function CalendarPage() {
         </Card>
       </div>
 
-      {view !== 'roadmap' && (
-        <div className="mb-4 flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => shift(-1)}
-            className="cursor-pointer border-2 border-line p-1.5 text-canvas-fg/70 hover:bg-accent-yellow hover:text-ink"
-          >
-            <ChevronLeft size={16} />
-          </button>
-          <button
-            type="button"
-            onClick={() => shift(1)}
-            className="cursor-pointer border-2 border-line p-1.5 text-canvas-fg/70 hover:bg-accent-yellow hover:text-ink"
-          >
-            <ChevronRight size={16} />
-          </button>
-          <Button size="sm" variant="ghost" onClick={() => setAnchor(new Date())}>
-            Hoje
-          </Button>
-          <h2 className="text-display text-lg">{heading}</h2>
-        </div>
-      )}
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[200px_1fr]">
+        <aside className="space-y-4 border-2 border-line bg-surface p-3 lg:sticky lg:top-4 lg:self-start">
+          <div className="flex items-center gap-1.5 text-canvas-fg/70">
+            <Filter size={13} />
+            <span className="text-label text-[11px]">Filtrar lembretes</span>
+          </div>
 
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={view}
-          initial={{ opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.15 }}
-        >
-          {view === 'month' && (
-            <MonthView
-              anchor={anchor}
-              cardsByDate={cardsByDate}
-              remindersByDate={remindersByDate}
-              columnColor={columnColor}
-              onPickDay={setSelectedDate}
-            />
+          <div>
+            <p className="text-label mb-1.5 text-[10px] text-canvas-fg/50">Importância</p>
+            <div className="space-y-1">
+              {REMINDER_IMPORTANCE.map((imp) => (
+                <button
+                  key={imp.value}
+                  type="button"
+                  onClick={() => toggleImportance(imp.value)}
+                  className={clsx(
+                    'flex w-full cursor-pointer items-center gap-1.5 border-2 px-2 py-1 text-left text-[11px]',
+                    importanceFilter.has(imp.value)
+                      ? 'border-line text-canvas-fg'
+                      : 'border-transparent text-canvas-fg/50 hover:text-canvas-fg',
+                  )}
+                >
+                  <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: imp.color }} />
+                  {imp.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {allTags.length > 0 && (
+            <div>
+              <p className="text-label mb-1.5 text-[10px] text-canvas-fg/50">Tags</p>
+              <div className="flex flex-wrap gap-1">
+                {allTags.map((tag) => (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => toggleTag(tag)}
+                    className={clsx(
+                      'text-label border-2 border-line px-1.5 py-0.5 text-[10px]',
+                      tagFilter.has(tag) ? 'bg-accent-blue text-ink' : 'bg-transparent text-canvas-fg/50 hover:text-canvas-fg',
+                    )}
+                  >
+                    {tag}
+                  </button>
+                ))}
+              </div>
+            </div>
           )}
-          {view === 'week' && (
-            <WeekView
-              anchor={anchor}
-              cardsByDate={cardsByDate}
-              remindersByDate={remindersByDate}
-              columnColor={columnColor}
-              onPickDay={setSelectedDate}
-            />
-          )}
-          {view === 'year' && (
-            <YearView
-              anchor={anchor}
-              cardsByDate={cardsByDate}
-              remindersByDate={remindersByDate}
-              onPickMonth={(m) => {
-                setAnchor(new Date(anchor.getFullYear(), m, 1))
-                setView('month')
+
+          {hasActiveFilters && (
+            <button
+              type="button"
+              onClick={() => {
+                setTagFilter(new Set())
+                setImportanceFilter(new Set())
               }}
-            />
+              className="text-label text-[11px] text-canvas-fg/40 underline hover:text-canvas-fg"
+            >
+              limpar filtros
+            </button>
           )}
-          {view === 'roadmap' && <RoadmapView cards={cards ?? []} columnColor={columnColor} />}
-        </motion.div>
-      </AnimatePresence>
+        </aside>
+
+        <div className="min-w-0">
+          {view !== 'roadmap' && (
+            <div className="mb-4 flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => shift(-1)}
+                className="cursor-pointer border-2 border-line p-1.5 text-canvas-fg/70 hover:bg-accent-yellow hover:text-ink"
+              >
+                <ChevronLeft size={16} />
+              </button>
+              <button
+                type="button"
+                onClick={() => shift(1)}
+                className="cursor-pointer border-2 border-line p-1.5 text-canvas-fg/70 hover:bg-accent-yellow hover:text-ink"
+              >
+                <ChevronRight size={16} />
+              </button>
+              <Button size="sm" variant="ghost" onClick={() => setAnchor(new Date())}>
+                Hoje
+              </Button>
+              <h2 className="text-display text-lg">{heading}</h2>
+            </div>
+          )}
+
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={view}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+            >
+              {view === 'month' && (
+                <MonthView
+                  anchor={anchor}
+                  cardsByDate={cardsByDate}
+                  remindersByDate={remindersByDate}
+                  columnColor={columnColor}
+                  onPickDay={setSelectedDate}
+                />
+              )}
+              {view === 'week' && (
+                <WeekView
+                  anchor={anchor}
+                  cardsByDate={cardsByDate}
+                  remindersByDate={remindersByDate}
+                  columnColor={columnColor}
+                  onPickDay={setSelectedDate}
+                />
+              )}
+              {view === 'year' && (
+                <YearView
+                  anchor={anchor}
+                  cardsByDate={cardsByDate}
+                  remindersByDate={remindersByDate}
+                  onPickMonth={(m) => {
+                    setAnchor(new Date(anchor.getFullYear(), m, 1))
+                    setView('month')
+                  }}
+                />
+              )}
+              {view === 'roadmap' && (
+                <RoadmapView
+                  cards={cards ?? []}
+                  columnColor={columnColor}
+                  reminders={filteredReminders}
+                  onPickReminder={(reminder) => setReminderModal({ reminder })}
+                />
+              )}
+            </motion.div>
+          </AnimatePresence>
+        </div>
+      </div>
 
       <Modal open={Boolean(selectedDate)} onClose={() => setSelectedDate(null)} title={selectedDate ?? ''}>
         <div className="space-y-4">
@@ -236,23 +347,40 @@ export function CalendarPage() {
             <div>
               <p className="text-label mb-1.5 text-[10px] text-canvas-fg/50">Lembretes</p>
               <div className="space-y-2">
-                {selectedDayReminders.map((reminder) => (
-                  <button
-                    key={reminder.id}
-                    type="button"
-                    onClick={() => {
-                      setSelectedDate(null)
-                      setReminderModal({ reminder })
-                    }}
-                    className="flex w-full cursor-pointer items-center gap-2.5 border-2 border-line bg-accent-yellow p-3 text-left text-ink"
-                  >
-                    <Bell size={14} className="shrink-0" />
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold">{reminder.title}</p>
-                      {reminder.event_time && <p className="text-label text-[10px] opacity-70">{reminder.event_time}</p>}
-                    </div>
-                  </button>
-                ))}
+                {selectedDayReminders.map((reminder) => {
+                  const imp = REMINDER_IMPORTANCE.find((i) => i.value === reminder.importance)!
+                  return (
+                    <button
+                      key={reminder.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedDate(null)
+                        setReminderModal({ reminder })
+                      }}
+                      className="flex w-full cursor-pointer items-start gap-2.5 border-2 border-line bg-accent-yellow p-3 text-left text-ink"
+                    >
+                      {reminder.image_url && (
+                        <img src={reminder.image_url} alt="" className="h-10 w-10 shrink-0 border-2 border-ink object-cover" />
+                      )}
+                      <Bell size={14} className="mt-0.5 shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold">{reminder.title}</p>
+                        <p className="text-label text-[10px] opacity-70">
+                          {reminder.event_time ?? ''} {imp.label}
+                        </p>
+                        {reminder.tags.length > 0 && (
+                          <div className="mt-1 flex flex-wrap gap-1">
+                            {reminder.tags.map((tag) => (
+                              <Badge key={tag} accent={accentFromString(tag)}>
+                                {tag}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </button>
+                  )
+                })}
               </div>
             </div>
           )}
@@ -325,10 +453,12 @@ function DayChip({ card, color }: { card: KanbanCard; color?: string }) {
 }
 
 function ReminderChip({ reminder }: { reminder: Reminder }) {
+  const imp = REMINDER_IMPORTANCE.find((i) => i.value === reminder.importance)
   return (
     <div
       className="flex items-center gap-1 truncate border-2 border-line bg-accent-purple px-1.5 py-0.5 text-[10px] text-ink"
       title={reminder.title}
+      style={imp && reminder.importance === 'high' ? { boxShadow: `inset 2px 0 0 0 ${imp.color}` } : undefined}
     >
       <Bell size={9} className="shrink-0" />
       {reminder.title}
@@ -516,7 +646,7 @@ function YearView({
   )
 }
 
-function RoadmapView({
+function GanttTimeline({
   cards,
   columnColor,
 }: {
@@ -524,9 +654,7 @@ function RoadmapView({
   columnColor: Map<string, string>
 }) {
   const dated = cards.filter((c) => c.due_date)
-  if (dated.length === 0) {
-    return <p className="text-sm text-canvas-fg/40">Nenhum card com data de conclusão para mostrar no roadmap.</p>
-  }
+  if (dated.length === 0) return null
 
   const starts = dated.map((c) => new Date(c.start_date ?? c.due_date!).getTime())
   const ends = dated.map((c) => new Date(c.due_date!).getTime())
@@ -542,6 +670,7 @@ function RoadmapView({
 
   return (
     <div className="space-y-2">
+      <h3 className="text-label text-[11px] text-canvas-fg/50">Cards do kanban com data</h3>
       <div className="relative h-4 border-b-2 border-line/30">
         {todayPct >= 0 && todayPct <= 100 && (
           <div
@@ -574,6 +703,89 @@ function RoadmapView({
           </div>
         )
       })}
+    </div>
+  )
+}
+
+function RoadmapView({
+  cards,
+  columnColor,
+  reminders,
+  onPickReminder,
+}: {
+  cards: KanbanCard[]
+  columnColor: Map<string, string>
+  reminders: Reminder[]
+  onPickReminder: (reminder: Reminder) => void
+}) {
+  const todayIso = toISODate(new Date())
+
+  const sortedReminders = useMemo(
+    () =>
+      [...reminders].sort((a, b) => {
+        const aKey = `${a.event_date}T${a.event_time ?? '00:00'}`
+        const bKey = `${b.event_date}T${b.event_time ?? '00:00'}`
+        return aKey < bKey ? -1 : aKey > bKey ? 1 : 0
+      }),
+    [reminders],
+  )
+
+  return (
+    <div className="space-y-8">
+      <GanttTimeline cards={cards} columnColor={columnColor} />
+
+      <div>
+        <h3 className="text-label mb-3 text-[11px] text-canvas-fg/50">
+          Lembretes em ordem — passados em cinza, hoje em vermelho, futuros em azul
+        </h3>
+        {sortedReminders.length === 0 ? (
+          <p className="text-sm text-canvas-fg/40">Nenhum lembrete para mostrar.</p>
+        ) : (
+          <ul className="space-y-1.5">
+            {sortedReminders.map((reminder, i) => {
+              const isPast = reminder.event_date < todayIso
+              const isToday = reminder.event_date === todayIso
+              const imp = REMINDER_IMPORTANCE.find((x) => x.value === reminder.importance)!
+              return (
+                <motion.li
+                  key={reminder.id}
+                  initial={{ opacity: 0, x: -8 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.2, delay: i * 0.02 }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => onPickReminder(reminder)}
+                    className={clsx(
+                      'flex w-full cursor-pointer items-center gap-3 border-2 p-2.5 text-left transition-colors',
+                      isPast && 'border-line/30 bg-surface text-canvas-fg/40',
+                      isToday && 'border-accent-red bg-accent-red/10 text-canvas-fg',
+                      !isPast && !isToday && 'border-accent-blue bg-accent-blue/10 text-canvas-fg',
+                    )}
+                  >
+                    {reminder.image_url ? (
+                      <img src={reminder.image_url} alt="" className="h-8 w-8 shrink-0 border border-line object-cover" />
+                    ) : (
+                      <Bell size={14} className="shrink-0 opacity-60" />
+                    )}
+                    <span className="w-24 shrink-0 text-xs">
+                      {reminder.event_date.split('-').reverse().join('/')}
+                      {reminder.event_time && ` ${reminder.event_time}`}
+                    </span>
+                    <span className="min-w-0 flex-1 truncate text-sm font-semibold">{reminder.title}</span>
+                    <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: imp.color }} title={imp.label} />
+                    {reminder.tags.slice(0, 2).map((tag) => (
+                      <Badge key={tag} accent={accentFromString(tag)}>
+                        {tag}
+                      </Badge>
+                    ))}
+                  </button>
+                </motion.li>
+              )
+            })}
+          </ul>
+        )}
+      </div>
     </div>
   )
 }
