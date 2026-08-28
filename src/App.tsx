@@ -5,6 +5,7 @@ import { AppThemeProvider } from '@/contexts/AppThemeContext'
 import { ToastProvider } from '@/contexts/ToastContext'
 import { queryClient } from '@/lib/queryClient'
 import { RequireAuth } from '@/routes/RequireAuth'
+import { RedirectIfAuthed } from '@/routes/RedirectIfAuthed'
 import { ProjectLayout } from '@/routes/ProjectLayout'
 import { LandingPage } from '@/features/landing/LandingPage'
 import { AuthPage } from '@/features/auth/AuthPage'
@@ -26,9 +27,30 @@ function App() {
           <ToastProvider>
             <HashRouter>
               <Routes>
-                <Route path="/" element={<LandingPage />} />
-                <Route path="/login" element={<AuthPage mode="login" />} />
-                <Route path="/signup" element={<AuthPage mode="signup" />} />
+                <Route
+                  path="/"
+                  element={
+                    <RedirectIfAuthed>
+                      <LandingPage />
+                    </RedirectIfAuthed>
+                  }
+                />
+                <Route
+                  path="/login"
+                  element={
+                    <RedirectIfAuthed>
+                      <AuthPage mode="login" />
+                    </RedirectIfAuthed>
+                  }
+                />
+                <Route
+                  path="/signup"
+                  element={
+                    <RedirectIfAuthed>
+                      <AuthPage mode="signup" />
+                    </RedirectIfAuthed>
+                  }
+                />
                 <Route path="/export/print/:projectId" element={<PrintExportPage />} />
 
                 <Route
