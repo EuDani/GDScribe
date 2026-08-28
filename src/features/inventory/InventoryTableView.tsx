@@ -3,7 +3,8 @@ import { Trash2 } from 'lucide-react'
 import { StatusSelect } from '@/components/StatusSelect'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Button } from '@/components/ui/Button'
-import type { InventoryItem, InventoryType } from '@/lib/types'
+import type { InventoryItem, InventoryType, InventoryValue } from '@/lib/types'
+import { formatInventoryValue } from '@/features/inventory/ItemForm'
 import {
   useDeleteInventoryItem,
   useUpsertInventoryItem,
@@ -38,7 +39,7 @@ export function InventoryTableView({
     setSelected((prev) => (prev.size === items.length ? new Set() : new Set(items.map((i) => i.id))))
   }
 
-  function commitField(item: InventoryItem, key: string, value: string | number | null) {
+  function commitField(item: InventoryItem, key: string, value: InventoryValue) {
     if (item.data[key] === value) return
     upsertItem.mutate({ id: item.id, data: { ...item.data, [key]: value }, status: item.status })
   }
@@ -131,13 +132,21 @@ export function InventoryTableView({
                         onBlur={(e) => commitField(item, f.key, e.target.value === '' ? null : Number(e.target.value))}
                         className="w-full min-w-[70px] border border-line/40 bg-transparent px-1 py-1 text-xs text-canvas-fg"
                       />
-                    ) : (
+                    ) : f.type === 'text' ? (
                       <input
                         type="text"
                         defaultValue={(item.data[f.key] as string) ?? ''}
                         onBlur={(e) => commitField(item, f.key, e.target.value)}
                         className="w-full min-w-[100px] truncate border border-line/40 bg-transparent px-1 py-1 text-xs text-canvas-fg"
                       />
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => onEditItem(item)}
+                        className="w-full min-w-[80px] cursor-pointer truncate px-1 py-1 text-left text-xs text-canvas-fg/70 underline decoration-dotted hover:text-canvas-fg"
+                      >
+                        {formatInventoryValue(item.data[f.key])}
+                      </button>
                     )}
                   </td>
                 ))}

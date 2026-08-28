@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { DndContext, type DragEndEvent, PointerSensor, closestCenter, useSensor, useSensors } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
-import { Plus, Trash2 } from 'lucide-react'
+import { CornerDownRight, Plus, Trash2 } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
 import { useOutletContext } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
@@ -10,7 +10,7 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { Field, TextInput } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
 import { RichTextEditor } from '@/components/RichTextEditor'
-import type { Project } from '@/lib/types'
+import type { Project, StoryBlock } from '@/lib/types'
 import { StoryBlockListItem } from '@/features/story/StoryBlockListItem'
 import {
   useCreateStoryBlock,
@@ -33,10 +33,23 @@ export function StoryPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [draft, setDraft] = useState('')
   const [creating, setCreating] = useState(false)
+  const [creatingParentId, setCreatingParentId] = useState<string | null>(null)
   const [newTitle, setNewTitle] = useState('')
   const [pendingDelete, setPendingDelete] = useState<string | null>(null)
 
-  const selected = blocks?.find((b) => b.id === selectedId) ?? blocks?.[0] ?? null
+  const topLevel = useMemo(() => (blocks ?? []).filter((b) => !b.parent_id), [blocks])
+  const childrenByParent = useMemo(() => {
+    const map = new Map<string, StoryBlock[]>()
+    for (const b of blocks ?? []) {
+      if (!b.parent_id) continue
+      const list = map.get(b.parent_id) ?? []
+      list.push(b)
+      map.set(b.parent_id, list)
+    }
+    return map
+  }, [blocks])
+
+  const selected = blocks?.find((b) => b.id === selectedId) ?? topLevel[0] ?? null
 
   useEffect(() => {
     setDraft(selected?.content ?? '')
@@ -69,10 +82,16 @@ export function StoryPage() {
   flushRef.current = flush
   useEffect(() => () => flushRef.current(), [])
 
+  function openCreate(parentId: string | null) {
+    setCreatingParentId(parentId)
+    setNewTitle('')
+    setCreating(true)
+  }
+
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault()
     if (!newTitle.trim()) return
-    const created = await createBlock.mutateAsync(newTitle.trim())
+    const created = await createBlock.mutateAsync({ title: newTitle.trim(), parentId: creatingParentId })
     selectBlock(created.id)
     setNewTitle('')
     setCreating(false)
@@ -80,12 +99,12 @@ export function StoryPage() {
 
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event
-    if (!over || !blocks || active.id === over.id) return
-    const oldIndex = blocks.findIndex((b) => b.id === active.id)
-    const newIndex = blocks.findIndex((b) => b.id === over.id)
+    if (!over || active.id === over.id) return
+    const oldIndex = topLevel.findIndex((b) => b.id === active.id)
+    const newIndex = topLevel.findIndex((b) => b.id === over.id)
     if (oldIndex < 0 || newIndex < 0) return
 
-    const reordered = [...blocks]
+    const reordered = [...topLevel]
     const [moved] = reordered.splice(oldIndex, 1)
     reordered.splice(newIndex, 0, moved)
     reorderBlocks.mutate(reordered.map((b, i) => ({ id: b.id, sort_order: i })))
@@ -95,37 +114,68 @@ export function StoryPage() {
     <div className="flex h-full min-h-[70vh] flex-col">
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-display text-2xl">História</h1>
-        <Button size="sm" icon={<Plus size={16} />} onClick={() => setCreating(true)}>
+        <Button size="sm" icon={<Plus size={16} />} onClick={() => openCreate(null)}>
           Novo bloco
         </Button>
       </div>
 
       {isLoading && <p className="text-label text-sm text-canvas-fg/50">Carregando…</p>}
 
-      {!isLoading && blocks?.length === 0 && (
+      {!isLoading && topLevel.length === 0 && (
         <EmptyState
           title="Nenhum bloco de história ainda"
           description="Crie capítulos, cenas ou beats narrativos — arraste para reordenar."
           action={
-            <Button icon={<Plus size={16} />} onClick={() => setCreating(true)}>
+            <Button icon={<Plus size={16} />} onClick={() => openCreate(null)}>
               Criar bloco
             </Button>
           }
         />
       )}
 
-      {!isLoading && blocks && blocks.length > 0 && (
-        <div className="grid flex-1 grid-cols-1 gap-5 lg:grid-cols-[260px_1fr]">
+      {!isLoading && topLevel.length > 0 && (
+        <div className="grid flex-1 grid-cols-1 gap-5 lg:grid-cols-[280px_1fr]">
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-            <SortableContext items={blocks.map((b) => b.id)} strategy={verticalListSortingStrategy}>
+            <SortableContext items={topLevel.map((b) => b.id)} strategy={verticalListSortingStrategy}>
               <ul className="space-y-1.5">
-                {blocks.map((block) => (
+                {topLevel.map((block) => (
                   <li key={block.id}>
-                    <StoryBlockListItem
-                      block={block}
-                      active={selected?.id === block.id}
-                      onClick={() => selectBlock(block.id)}
-                    />
+                    <div className="flex items-center gap-1">
+                      <StoryBlockListItem
+                        block={block}
+                        active={selected?.id === block.id}
+                        onClick={() => selectBlock(block.id)}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => openCreate(block.id)}
+                        aria-label="Novo sub-bloco"
+                        title="Novo sub-bloco"
+                        className="shrink-0 cursor-pointer border-2 border-line/40 p-1.5 text-canvas-fg/40 hover:border-line hover:text-canvas-fg"
+                      >
+                        <Plus size={12} />
+                      </button>
+                    </div>
+                    {(childrenByParent.get(block.id) ?? []).length > 0 && (
+                      <ul className="mt-1 ml-4 space-y-1 border-l-2 border-line/30 pl-2">
+                        {(childrenByParent.get(block.id) ?? []).map((child) => (
+                          <li key={child.id}>
+                            <button
+                              type="button"
+                              onClick={() => selectBlock(child.id)}
+                              className={`flex w-full cursor-pointer items-center gap-1.5 border-2 px-2.5 py-1.5 text-left text-xs transition-colors ${
+                                selected?.id === child.id
+                                  ? 'border-line bg-accent-yellow text-ink'
+                                  : 'border-line/30 bg-surface text-canvas-fg/70 hover:border-line'
+                              }`}
+                            >
+                              <CornerDownRight size={11} className="shrink-0 opacity-50" />
+                              <span className="truncate">{child.title}</span>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -143,11 +193,14 @@ export function StoryPage() {
                 className="min-w-0 border-2 border-line bg-surface shadow-brutal"
               >
                 <div className="flex flex-wrap items-center justify-between gap-3 border-b-2 border-line p-4">
-                  <TextInput
-                    value={selected.title}
-                    onChange={(e) => updateBlock.mutate({ id: selected.id, title: e.target.value })}
-                    className="max-w-sm"
-                  />
+                  <div className="flex items-center gap-2">
+                    {selected.parent_id && <CornerDownRight size={14} className="text-canvas-fg/40" />}
+                    <TextInput
+                      value={selected.title}
+                      onChange={(e) => updateBlock.mutate({ id: selected.id, title: e.target.value })}
+                      className="max-w-sm"
+                    />
+                  </div>
                   <div className="flex items-center gap-3">
                     <span className="text-label text-[10px] text-canvas-fg/40">
                       {updateBlock.isPending ? 'Salvando…' : isDirty ? 'Alterações pendentes' : 'Salvo automaticamente'}
@@ -174,7 +227,7 @@ export function StoryPage() {
       <Modal
         open={creating}
         onClose={() => setCreating(false)}
-        title="Novo bloco de história"
+        title={creatingParentId ? 'Novo sub-bloco' : 'Novo bloco de história'}
         isDirty={Boolean(newTitle.trim())}
       >
         <form onSubmit={handleCreate}>
@@ -206,7 +259,7 @@ export function StoryPage() {
           setSelectedId(null)
         }}
         title="Excluir bloco"
-        description="O conteúdo desse bloco será apagado permanentemente."
+        description="O conteúdo desse bloco (e dos sub-blocos, se houver) será apagado permanentemente."
         confirmLabel="Excluir"
       />
     </div>

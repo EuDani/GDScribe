@@ -8,8 +8,9 @@ const FIELD_TYPES: { value: FieldType; label: string }[] = [
   { value: 'text', label: 'Texto curto' },
   { value: 'textarea', label: 'Texto longo' },
   { value: 'number', label: 'Número' },
-  { value: 'select', label: 'Lista de opções' },
+  { value: 'select', label: 'Lista de opções (uma escolha)' },
   { value: 'image', label: 'Imagem (URL)' },
+  { value: 'list', label: 'Sublista (várias linhas)' },
 ]
 
 function slugify(value: string) {

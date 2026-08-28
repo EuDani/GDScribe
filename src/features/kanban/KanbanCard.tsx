@@ -10,30 +10,12 @@ function formatDate(iso: string) {
   return `${d}/${m}/${y.slice(2)}`
 }
 
-export function KanbanCardView({
-  card,
-  onClick,
-}: {
-  card: KanbanCardType
-  onClick: () => void
-}) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: card.id,
-    data: { type: 'card', columnId: card.column_id },
-  })
-
+export function KanbanCardFace({ card }: { card: KanbanCardType }) {
   const doneCount = card.checklist.filter((i) => i.done).length
   const overdue = card.due_date ? new Date(card.due_date) < new Date(new Date().toDateString()) : false
 
   return (
-    <div
-      ref={setNodeRef}
-      style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 }}
-      {...attributes}
-      {...listeners}
-      onClick={onClick}
-      className="cursor-grab touch-none overflow-hidden border-2 border-line bg-paper text-ink shadow-brutal-sm active:cursor-grabbing"
-    >
+    <>
       {card.cover_image_url && (
         <img src={card.cover_image_url} alt="" className="h-24 w-full border-b-2 border-line object-cover" />
       )}
@@ -73,6 +55,32 @@ export function KanbanCardView({
           </div>
         )}
       </div>
+    </>
+  )
+}
+
+export function KanbanCardView({
+  card,
+  onClick,
+}: {
+  card: KanbanCardType
+  onClick: () => void
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: card.id,
+    data: { type: 'card', columnId: card.column_id },
+  })
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.3 : 1 }}
+      {...attributes}
+      {...listeners}
+      onClick={onClick}
+      className="cursor-grab touch-none overflow-hidden border-2 border-line bg-paper text-ink shadow-brutal-sm active:cursor-grabbing"
+    >
+      <KanbanCardFace card={card} />
     </div>
   )
 }

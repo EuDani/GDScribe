@@ -21,11 +21,18 @@ export function useStoryBlocks(projectId: string | undefined) {
 export function useCreateStoryBlock(projectId: string) {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async (title: string) => {
+    mutationFn: async ({ title, parentId }: { title: string; parentId?: string | null }) => {
       const existing = queryClient.getQueryData<StoryBlock[]>(['story_blocks', projectId]) ?? []
+      const siblings = existing.filter((b) => (b.parent_id ?? null) === (parentId ?? null))
       const { data, error } = await supabase
         .from('story_blocks')
-        .insert({ project_id: projectId, title, content: '', sort_order: existing.length })
+        .insert({
+          project_id: projectId,
+          parent_id: parentId ?? null,
+          title,
+          content: '',
+          sort_order: siblings.length,
+        })
         .select('*')
         .single()
       if (error) throw error

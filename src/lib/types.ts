@@ -89,7 +89,7 @@ export interface GddModule {
   updated_at: string
 }
 
-export type FieldType = 'text' | 'number' | 'textarea' | 'select' | 'image'
+export type FieldType = 'text' | 'number' | 'textarea' | 'select' | 'image' | 'list'
 
 export interface InventoryField {
   key: string
@@ -108,12 +108,14 @@ export interface InventoryType {
   sort_order: number
 }
 
+export type InventoryValue = string | number | string[] | null
+
 export interface InventoryItem {
   id: string
   type_id: string
   project_id: string
   status: string | null
-  data: Record<string, string | number | null>
+  data: Record<string, InventoryValue>
   created_at: string
   updated_at: string
 }
@@ -142,6 +144,7 @@ export interface KanbanCard {
   icon: string | null
   cover_image_url: string | null
   checklist: ChecklistItem[]
+  extra_fields: ExtraField[]
   start_date: string | null
   due_date: string | null
   sort_order: number
@@ -173,6 +176,7 @@ export type AppThemeMode = 'light' | 'dark' | 'auto'
 export interface StoryBlock {
   id: string
   project_id: string
+  parent_id: string | null
   title: string
   content: string
   sort_order: number
@@ -210,6 +214,14 @@ export interface NotificationRule {
   time: string | null // "HH:mm", usado quando kind === 'same_day_at'
 }
 
+export type ReminderImportance = 'low' | 'normal' | 'high'
+
+export const REMINDER_IMPORTANCE: { value: ReminderImportance; label: string; color: string }[] = [
+  { value: 'low', label: 'Baixa', color: 'var(--color-accent-blue)' },
+  { value: 'normal', label: 'Normal', color: 'var(--color-accent-yellow)' },
+  { value: 'high', label: 'Alta', color: 'var(--color-accent-red)' },
+]
+
 export interface Reminder {
   id: string
   project_id: string
@@ -218,6 +230,9 @@ export interface Reminder {
   event_time: string | null // HH:mm
   notes: string | null
   notifications: NotificationRule[]
+  tags: string[]
+  image_url: string | null
+  importance: ReminderImportance
   created_at: string
   updated_at: string
 }

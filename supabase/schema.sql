@@ -109,6 +109,7 @@ create table if not exists public.kanban_cards (
   icon text,
   cover_image_url text,
   checklist jsonb not null default '[]'::jsonb,
+  extra_fields jsonb not null default '[]'::jsonb,
   start_date date,
   due_date date,
   sort_order integer not null default 0,
@@ -140,6 +141,7 @@ create index if not exists ideas_project_id_idx on public.ideas (project_id);
 create table if not exists public.story_blocks (
   id uuid primary key default gen_random_uuid(),
   project_id uuid not null references public.projects (id) on delete cascade,
+  parent_id uuid references public.story_blocks (id) on delete cascade,
   title text not null,
   content text not null default '',
   sort_order integer not null default 0,
@@ -147,6 +149,7 @@ create table if not exists public.story_blocks (
 );
 
 create index if not exists story_blocks_project_id_idx on public.story_blocks (project_id);
+create index if not exists story_blocks_parent_id_idx on public.story_blocks (parent_id);
 
 -- ============================================================
 -- game_references — referências externas + checklist do que aproveitar
@@ -177,6 +180,9 @@ create table if not exists public.reminders (
   event_time time,
   notes text,
   notifications jsonb not null default '[]'::jsonb,
+  tags text[] not null default '{}',
+  image_url text,
+  importance text not null default 'normal',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -196,6 +202,11 @@ alter table public.projects add column if not exists secondary_genre text;
 alter table public.project_themes add column if not exists surface_color text not null default '#17171a';
 alter table public.project_themes add column if not exists text_color text not null default '#f3efe3';
 alter table public.project_themes add column if not exists chart_colors jsonb not null default '["#ff3b30","#0a84ff","#ffd60a","#30d158","#bf5af2"]'::jsonb;
+alter table public.story_blocks add column if not exists parent_id uuid references public.story_blocks (id) on delete cascade;
+alter table public.kanban_cards add column if not exists extra_fields jsonb not null default '[]'::jsonb;
+alter table public.reminders add column if not exists tags text[] not null default '{}';
+alter table public.reminders add column if not exists image_url text;
+alter table public.reminders add column if not exists importance text not null default 'normal';
 alter table public.kanban_cards add column if not exists icon text;
 alter table public.kanban_cards add column if not exists cover_image_url text;
 alter table public.kanban_cards add column if not exists checklist jsonb not null default '[]'::jsonb;

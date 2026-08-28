@@ -10,9 +10,9 @@ import { Modal } from '@/components/ui/Modal'
 import { Tabs } from '@/components/ui/Tabs'
 import { StatusBadge, StatusSelect } from '@/components/StatusSelect'
 import { useToast } from '@/contexts/ToastContext'
-import type { InventoryField, InventoryItem, InventoryType, Project } from '@/lib/types'
+import type { InventoryField, InventoryItem, InventoryType, InventoryValue, Project } from '@/lib/types'
 import { FieldBuilder } from '@/features/inventory/FieldBuilder'
-import { getMissingRequiredFields, ItemForm } from '@/features/inventory/ItemForm'
+import { formatInventoryValue, getMissingRequiredFields, ItemForm } from '@/features/inventory/ItemForm'
 import { InventoryTableView } from '@/features/inventory/InventoryTableView'
 import {
   useCreateInventoryType,
@@ -208,7 +208,7 @@ function InventoryTypePanel({
 
   const [itemModalOpen, setItemModalOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null)
-  const [values, setValues] = useState<Record<string, string | number | null>>({})
+  const [values, setValues] = useState<Record<string, InventoryValue>>({})
   const [itemStatus, setItemStatus] = useState<string | null>(null)
   const [showErrors, setShowErrors] = useState(false)
   const [pendingDeleteItem, setPendingDeleteItem] = useState<string | null>(null)
@@ -287,7 +287,7 @@ function InventoryTypePanel({
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {items.map((item) => {
               const primary = type.fields_schema[0]
-              const title = primary ? String(item.data[primary.key] ?? 'Sem título') : 'Item'
+              const title = primary ? formatInventoryValue(item.data[primary.key]) || 'Sem título' : 'Item'
               return (
                 <button
                   key={item.id}
@@ -302,7 +302,7 @@ function InventoryTypePanel({
                   {type.fields_schema.slice(1, 4).map((f) => (
                     <p key={f.key} className="truncate text-xs text-canvas-fg/60">
                       <span className="text-canvas-fg/40">{f.label}: </span>
-                      {String(item.data[f.key] ?? '—')}
+                      {formatInventoryValue(item.data[f.key])}
                     </p>
                   ))}
                 </button>

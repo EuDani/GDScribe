@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import {
   DndContext,
+  DragOverlay,
   type DragEndEvent,
+  type DragStartEvent,
   PointerSensor,
   closestCorners,
   useSensor,
@@ -16,9 +18,11 @@ import { Field, TextInput, Textarea } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
 import { ChecklistEditor } from '@/components/ChecklistEditor'
 import { IconPicker } from '@/components/IconPicker'
+import { ExtraFieldsEditor } from '@/features/gdd/ExtraFieldsEditor'
 import { useUploadImage } from '@/lib/useUploadImage'
-import type { ChecklistItem, KanbanCard, Project } from '@/lib/types'
+import type { ChecklistItem, ExtraField, KanbanCard, Project } from '@/lib/types'
 import { KanbanColumnView } from '@/features/kanban/KanbanColumn'
+import { KanbanCardFace } from '@/features/kanban/KanbanCard'
 import {
   useCreateCard,
   useCreateColumn,
@@ -50,6 +54,7 @@ export function KanbanPage() {
   const moveCards = useMoveCards(project.id)
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
+  const [activeCard, setActiveCard] = useState<KanbanCard | null>(null)
 
   const [columnModalOpen, setColumnModalOpen] = useState(false)
   const [columnName, setColumnName] = useState('')
@@ -66,6 +71,7 @@ export function KanbanPage() {
   const [editIcon, setEditIcon] = useState<string | null>(null)
   const [editCover, setEditCover] = useState<string | null>(null)
   const [editChecklist, setEditChecklist] = useState<ChecklistItem[]>([])
+  const [editExtraFields, setEditExtraFields] = useState<ExtraField[]>([])
   const [editStartDate, setEditStartDate] = useState('')
   const [editDueDate, setEditDueDate] = useState('')
   const [pendingDeleteCard, setPendingDeleteCard] = useState<string | null>(null)
@@ -108,6 +114,7 @@ export function KanbanPage() {
     setEditIcon(card.icon)
     setEditCover(card.cover_image_url)
     setEditChecklist(card.checklist)
+    setEditExtraFields(card.extra_fields)
     setEditStartDate(card.start_date ?? '')
     setEditDueDate(card.due_date ?? '')
   }
@@ -126,6 +133,7 @@ export function KanbanPage() {
       icon: editIcon,
       cover_image_url: editCover,
       checklist: editChecklist,
+      extra_fields: editExtraFields,
       start_date: editStartDate || null,
       due_date: editDueDate || null,
     })
@@ -137,7 +145,13 @@ export function KanbanPage() {
     if (url) setEditCover(url)
   }
 
+  function handleDragStart(event: DragStartEvent) {
+    const card = (cards ?? []).find((c) => c.id === event.active.id)
+    setActiveCard(card ?? null)
+  }
+
   function handleDragEnd(event: DragEndEvent) {
+    setActiveCard(null)
     const { active, over } = event
     if (!over || !cards) return
 
@@ -186,7 +200,12 @@ export function KanbanPage() {
       )}
 
       {!columnsLoading && columns && columns.length > 0 && (
-        <DndContext sensors={sensors} collisionDetection={closestCorners} onDragEnd={handleDragEnd}>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCorners}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+        >
           <div className="flex gap-4 overflow-x-auto pb-4">
             {columns.map((column) => (
               <KanbanColumnView
@@ -199,6 +218,13 @@ export function KanbanPage() {
               />
             ))}
           </div>
+          <DragOverlay>
+            {activeCard && (
+              <div className="w-72 rotate-2 overflow-hidden border-2 border-line bg-paper text-ink shadow-brutal-lg">
+                <KanbanCardFace card={activeCard} />
+              </div>
+            )}
+          </DragOverlay>
         </DndContext>
       )}
 
@@ -262,6 +288,7 @@ export function KanbanPage() {
               editIcon !== editingCard.icon ||
               editCover !== editingCard.cover_image_url ||
               JSON.stringify(editChecklist) !== JSON.stringify(editingCard.checklist) ||
+              JSON.stringify(editExtraFields) !== JSON.stringify(editingCard.extra_fields) ||
               editStartDate !== (editingCard.start_date ?? '') ||
               editDueDate !== (editingCard.due_date ?? '')),
         )}
@@ -328,7 +355,11 @@ export function KanbanPage() {
             <ChecklistEditor items={editChecklist} onChange={setEditChecklist} />
           </Field>
 
-          <div className="flex justify-between gap-2">
+          <Field label="Campos customizados">
+            <ExtraFieldsEditor fields={editExtraFields} onChange={setEditExtraFields} />
+          </Field>
+
+          <div className="mt-4 flex justify-between gap-2">
             <Button
               type="button"
               variant="danger"

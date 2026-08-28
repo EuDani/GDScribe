@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
-import type { InventoryField, InventoryItem, InventoryType } from '@/lib/types'
+import type { InventoryField, InventoryItem, InventoryType, InventoryValue } from '@/lib/types'
 
 export function useInventoryTypes(projectId: string | undefined) {
   return useQuery({
@@ -119,7 +119,7 @@ export function useUpsertInventoryItem(projectId: string, typeId: string) {
       status,
     }: {
       id?: string
-      data: Record<string, string | number | null>
+      data: Record<string, InventoryValue>
       status?: string | null
     }) => {
       if (id) {
