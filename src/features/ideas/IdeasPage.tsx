@@ -1,0 +1,179 @@
+import { useMemo, useState } from 'react'
+import { Plus } from 'lucide-react'
+import { clsx } from 'clsx'
+import { useOutletContext } from 'react-router-dom'
+import { Button } from '@/components/ui/Button'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { EmptyState } from '@/components/ui/EmptyState'
+import { Field, Select, TextInput, Textarea } from '@/components/ui/Input'
+import { Modal } from '@/components/ui/Modal'
+import { Badge, accentFromString } from '@/components/ui/Badge'
+import { Tabs } from '@/components/ui/Tabs'
+import { IDEA_STATUSES, type Idea, type IdeaStatus, type Project } from '@/lib/types'
+import { useCreateIdea, useDeleteIdea, useIdeas, useUpdateIdea } from '@/features/ideas/useIdeas'
+
+const FILTER_ITEMS = [{ value: 'all' as const, label: 'Todas' }, ...IDEA_STATUSES]
+
+export function IdeasPage() {
+  const { project } = useOutletContext<{ project: Project }>()
+  const { data: ideas, isLoading } = useIdeas(project.id)
+  const createIdea = useCreateIdea(project.id)
+  const updateIdea = useUpdateIdea(project.id)
+  const deleteIdea = useDeleteIdea(project.id)
+
+  const [statusFilter, setStatusFilter] = useState<IdeaStatus | 'all'>('all')
+  const [modalOpen, setModalOpen] = useState(false)
+  const [editing, setEditing] = useState<Idea | null>(null)
+  const [title, setTitle] = useState('')
+  const [body, setBody] = useState('')
+  const [tagsInput, setTagsInput] = useState('')
+  const [pendingDelete, setPendingDelete] = useState<string | null>(null)
+
+  const filtered = useMemo(
+    () => (ideas ?? []).filter((i) => statusFilter === 'all' || i.status === statusFilter),
+    [ideas, statusFilter],
+  )
+
+  function openCreate() {
+    setEditing(null)
+    setTitle('')
+    setBody('')
+    setTagsInput('')
+    setModalOpen(true)
+  }
+
+  function openEdit(idea: Idea) {
+    setEditing(idea)
+    setTitle(idea.title)
+    setBody(idea.body ?? '')
+    setTagsInput(idea.tags.join(', '))
+    setModalOpen(true)
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!title.trim()) return
+    const tags = tagsInput
+      .split(',')
+      .map((t) => t.trim())
+      .filter(Boolean)
+
+    if (editing) {
+      await updateIdea.mutateAsync({ id: editing.id, title: title.trim(), body: body.trim() || null, tags })
+    } else {
+      await createIdea.mutateAsync({ title: title.trim(), body: body.trim(), tags })
+    }
+    setModalOpen(false)
+  }
+
+  return (
+    <div>
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-display text-2xl">Hub de Ideias</h1>
+        <Button size="sm" icon={<Plus size={16} />} onClick={openCreate}>
+          Nova ideia
+        </Button>
+      </div>
+
+      <Tabs items={FILTER_ITEMS} value={statusFilter} onChange={setStatusFilter} />
+
+      {isLoading && <p className="text-label mt-6 text-sm text-paper/50">Carregando…</p>}
+
+      {!isLoading && filtered.length === 0 && (
+        <div className="mt-6">
+          <EmptyState title="Nenhuma ideia por aqui" description="Jogue qualquer ideia solta antes que ela vire escopo." />
+        </div>
+      )}
+
+      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {filtered.map((idea) => {
+          const statusMeta = IDEA_STATUSES.find((s) => s.value === idea.status)!
+          return (
+            <div
+              key={idea.id}
+              onClick={() => openEdit(idea)}
+              className="cursor-pointer border-2 border-ink bg-ink-soft p-4 shadow-brutal-sm transition-transform hover:-translate-x-0.5 hover:-translate-y-0.5"
+            >
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <span
+                  className="text-label border-2 border-ink px-1.5 py-0.5 text-[10px] text-ink"
+                  style={{ backgroundColor: statusMeta.color }}
+                >
+                  {statusMeta.label}
+                </span>
+              </div>
+              <h3 className="text-display mb-1 text-base">{idea.title}</h3>
+              {idea.body && <p className="mb-2 line-clamp-3 text-sm text-paper/60">{idea.body}</p>}
+              {idea.tags.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {idea.tags.map((tag) => (
+                    <Badge key={tag} accent={accentFromString(tag)}>
+                      {tag}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+
+      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? 'Editar ideia' : 'Nova ideia'}>
+        <form onSubmit={handleSubmit}>
+          <Field label="Título">
+            <TextInput required autoFocus value={title} onChange={(e) => setTitle(e.target.value)} />
+          </Field>
+          <Field label="Descrição" hint="Opcional">
+            <Textarea rows={4} value={body} onChange={(e) => setBody(e.target.value)} />
+          </Field>
+          <Field label="Tags" hint="Separadas por vírgula">
+            <TextInput value={tagsInput} onChange={(e) => setTagsInput(e.target.value)} placeholder="combate, ui, som" />
+          </Field>
+          {editing && (
+            <Field label="Status">
+              <Select
+                value={editing.status}
+                onChange={(e) => {
+                  const status = e.target.value as IdeaStatus
+                  setEditing({ ...editing, status })
+                  updateIdea.mutate({ id: editing.id, status })
+                }}
+              >
+                {IDEA_STATUSES.map((s) => (
+                  <option key={s.value} value={s.value}>
+                    {s.label}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          )}
+          <div className="flex justify-between gap-2">
+            {editing && (
+              <Button type="button" variant="danger" onClick={() => setPendingDelete(editing.id)}>
+                Excluir
+              </Button>
+            )}
+            <div className={clsx('flex gap-2', !editing && 'ml-auto')}>
+              <Button type="button" variant="ghost" onClick={() => setModalOpen(false)}>
+                Cancelar
+              </Button>
+              <Button type="submit">Salvar</Button>
+            </div>
+          </div>
+        </form>
+      </Modal>
+
+      <ConfirmDialog
+        open={Boolean(pendingDelete)}
+        onClose={() => setPendingDelete(null)}
+        onConfirm={() => {
+          if (pendingDelete) deleteIdea.mutate(pendingDelete)
+          setModalOpen(false)
+        }}
+        title="Excluir ideia"
+        description="Essa ação não pode ser desfeita."
+        confirmLabel="Excluir"
+      />
+    </div>
+  )
+}

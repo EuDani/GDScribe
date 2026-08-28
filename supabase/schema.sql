@@ -1,0 +1,264 @@
+-- GDScribe — Supabase schema
+-- Cole este arquivo inteiro no SQL Editor do seu projeto Supabase e rode uma vez.
+
+create extension if not exists "pgcrypto";
+
+-- ============================================================
+-- projects
+-- ============================================================
+create table if not exists public.projects (
+  id uuid primary key default gen_random_uuid(),
+  owner_id uuid not null references auth.users (id) on delete cascade,
+  name text not null,
+  slug text not null,
+  description text,
+  status text not null default 'pre_production',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists projects_owner_id_idx on public.projects (owner_id);
+
+-- ============================================================
+-- project_themes (1:1 with projects)
+-- ============================================================
+create table if not exists public.project_themes (
+  project_id uuid primary key references public.projects (id) on delete cascade,
+  primary_color text not null default '#ff3b30',
+  accent_color text not null default '#ffd60a',
+  background_color text not null default '#0b0b0c',
+  logo_url text,
+  cover_image_url text,
+  font_choice text not null default 'default'
+);
+
+-- ============================================================
+-- gdd_modules
+-- ============================================================
+create table if not exists public.gdd_modules (
+  id uuid primary key default gen_random_uuid(),
+  project_id uuid not null references public.projects (id) on delete cascade,
+  key text not null,
+  title text not null,
+  icon text not null default 'FileText',
+  phase text not null default 'all' check (phase in ('pre_production', 'production', 'post_production', 'all')),
+  sort_order integer not null default 0,
+  is_custom boolean not null default false,
+  content text not null default '',
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists gdd_modules_project_id_idx on public.gdd_modules (project_id);
+
+-- ============================================================
+-- inventory_types + inventory_items
+-- ============================================================
+create table if not exists public.inventory_types (
+  id uuid primary key default gen_random_uuid(),
+  project_id uuid not null references public.projects (id) on delete cascade,
+  name text not null,
+  icon text not null default 'Box',
+  fields_schema jsonb not null default '[]'::jsonb,
+  sort_order integer not null default 0
+);
+
+create index if not exists inventory_types_project_id_idx on public.inventory_types (project_id);
+
+create table if not exists public.inventory_items (
+  id uuid primary key default gen_random_uuid(),
+  type_id uuid not null references public.inventory_types (id) on delete cascade,
+  project_id uuid not null references public.projects (id) on delete cascade,
+  data jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists inventory_items_type_id_idx on public.inventory_items (type_id);
+create index if not exists inventory_items_project_id_idx on public.inventory_items (project_id);
+
+-- ============================================================
+-- kanban_columns + kanban_cards
+-- ============================================================
+create table if not exists public.kanban_columns (
+  id uuid primary key default gen_random_uuid(),
+  project_id uuid not null references public.projects (id) on delete cascade,
+  name text not null,
+  color text not null default '#ffd60a',
+  sort_order integer not null default 0
+);
+
+create index if not exists kanban_columns_project_id_idx on public.kanban_columns (project_id);
+
+create table if not exists public.kanban_cards (
+  id uuid primary key default gen_random_uuid(),
+  column_id uuid not null references public.kanban_columns (id) on delete cascade,
+  project_id uuid not null references public.projects (id) on delete cascade,
+  title text not null,
+  description text,
+  tags text[] not null default '{}',
+  sort_order integer not null default 0,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists kanban_cards_column_id_idx on public.kanban_cards (column_id);
+create index if not exists kanban_cards_project_id_idx on public.kanban_cards (project_id);
+
+-- ============================================================
+-- ideas
+-- ============================================================
+create table if not exists public.ideas (
+  id uuid primary key default gen_random_uuid(),
+  project_id uuid not null references public.projects (id) on delete cascade,
+  title text not null,
+  body text,
+  tags text[] not null default '{}',
+  status text not null default 'new' check (status in ('new', 'considering', 'approved', 'rejected')),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists ideas_project_id_idx on public.ideas (project_id);
+
+-- ============================================================
+-- updated_at triggers
+-- ============================================================
+create or replace function public.set_updated_at()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$;
+
+drop trigger if exists set_updated_at on public.projects;
+create trigger set_updated_at before update on public.projects
+  for each row execute function public.set_updated_at();
+
+drop trigger if exists set_updated_at on public.gdd_modules;
+create trigger set_updated_at before update on public.gdd_modules
+  for each row execute function public.set_updated_at();
+
+drop trigger if exists set_updated_at on public.inventory_items;
+create trigger set_updated_at before update on public.inventory_items
+  for each row execute function public.set_updated_at();
+
+drop trigger if exists set_updated_at on public.ideas;
+create trigger set_updated_at before update on public.ideas
+  for each row execute function public.set_updated_at();
+
+-- ============================================================
+-- Row Level Security — tudo restrito ao dono do projeto
+-- ============================================================
+alter table public.projects enable row level security;
+alter table public.project_themes enable row level security;
+alter table public.gdd_modules enable row level security;
+alter table public.inventory_types enable row level security;
+alter table public.inventory_items enable row level security;
+alter table public.kanban_columns enable row level security;
+alter table public.kanban_cards enable row level security;
+alter table public.ideas enable row level security;
+
+create policy "own projects" on public.projects
+  for all using (owner_id = auth.uid()) with check (owner_id = auth.uid());
+
+create policy "own project_themes" on public.project_themes
+  for all using (
+    exists (select 1 from public.projects p where p.id = project_id and p.owner_id = auth.uid())
+  )
+  with check (
+    exists (select 1 from public.projects p where p.id = project_id and p.owner_id = auth.uid())
+  );
+
+create policy "own gdd_modules" on public.gdd_modules
+  for all using (
+    exists (select 1 from public.projects p where p.id = project_id and p.owner_id = auth.uid())
+  )
+  with check (
+    exists (select 1 from public.projects p where p.id = project_id and p.owner_id = auth.uid())
+  );
+
+create policy "own inventory_types" on public.inventory_types
+  for all using (
+    exists (select 1 from public.projects p where p.id = project_id and p.owner_id = auth.uid())
+  )
+  with check (
+    exists (select 1 from public.projects p where p.id = project_id and p.owner_id = auth.uid())
+  );
+
+create policy "own inventory_items" on public.inventory_items
+  for all using (
+    exists (select 1 from public.projects p where p.id = project_id and p.owner_id = auth.uid())
+  )
+  with check (
+    exists (select 1 from public.projects p where p.id = project_id and p.owner_id = auth.uid())
+  );
+
+create policy "own kanban_columns" on public.kanban_columns
+  for all using (
+    exists (select 1 from public.projects p where p.id = project_id and p.owner_id = auth.uid())
+  )
+  with check (
+    exists (select 1 from public.projects p where p.id = project_id and p.owner_id = auth.uid())
+  );
+
+create policy "own kanban_cards" on public.kanban_cards
+  for all using (
+    exists (select 1 from public.projects p where p.id = project_id and p.owner_id = auth.uid())
+  )
+  with check (
+    exists (select 1 from public.projects p where p.id = project_id and p.owner_id = auth.uid())
+  );
+
+create policy "own ideas" on public.ideas
+  for all using (
+    exists (select 1 from public.projects p where p.id = project_id and p.owner_id = auth.uid())
+  )
+  with check (
+    exists (select 1 from public.projects p where p.id = project_id and p.owner_id = auth.uid())
+  );
+
+-- ============================================================
+-- Storage bucket para logos, capas e imagens de inventário
+-- ============================================================
+insert into storage.buckets (id, name, public)
+values ('project-assets', 'project-assets', true)
+on conflict (id) do nothing;
+
+-- Caminho esperado: <project_id>/arquivo.ext — o primeiro segmento do path
+-- precisa ser o id de um projeto que pertence ao usuário autenticado.
+create policy "own project assets read" on storage.objects
+  for select using (
+    bucket_id = 'project-assets'
+  );
+
+create policy "own project assets write" on storage.objects
+  for insert with check (
+    bucket_id = 'project-assets'
+    and exists (
+      select 1 from public.projects p
+      where p.id::text = (storage.foldername(name))[1]
+      and p.owner_id = auth.uid()
+    )
+  );
+
+create policy "own project assets update" on storage.objects
+  for update using (
+    bucket_id = 'project-assets'
+    and exists (
+      select 1 from public.projects p
+      where p.id::text = (storage.foldername(name))[1]
+      and p.owner_id = auth.uid()
+    )
+  );
+
+create policy "own project assets delete" on storage.objects
+  for delete using (
+    bucket_id = 'project-assets'
+    and exists (
+      select 1 from public.projects p
+      where p.id::text = (storage.foldername(name))[1]
+      and p.owner_id = auth.uid()
+    )
+  );

@@ -1,0 +1,81 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+@theme {
+  --color-ink: #0b0b0c;
+  --color-ink-soft: #17171a;
+  --color-paper: #f3efe3;
+  --color-paper-dim: #d8d3c4;
+  --color-accent-red: #ff3b30;
+  --color-accent-yellow: #ffd60a;
+  --color-accent-blue: #0a84ff;
+  --color-accent-green: #30d158;
+  --color-accent-purple: #bf5af2;
+
+  --font-display: "Archivo Black", "Space Grotesk", sans-serif;
+  --font-sans: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  --shadow-brutal-sm: 3px 3px 0 0 var(--color-ink);
+  --shadow-brutal: 5px 5px 0 0 var(--color-ink);
+  --shadow-brutal-lg: 8px 8px 0 0 var(--color-ink);
+  --shadow-brutal-paper: 5px 5px 0 0 var(--color-paper);
+}
+
+:root {
+  /* Per-project theme overrides — set at runtime by ThemeContext, these are the defaults */
+  --project-primary: var(--color-accent-red);
+  --project-accent: var(--color-accent-yellow);
+  --project-bg: var(--color-ink);
+  --project-fg: var(--color-paper);
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+  }
+
+  body {
+    background-color: var(--color-ink);
+    color: var(--color-paper);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::selection {
+    background-color: var(--color-accent-yellow);
+    color: var(--color-ink);
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--color-ink);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-paper-dim);
+    border: 2px solid var(--color-ink);
+  }
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+}
+
+@layer components {
+  .text-display {
+    font-family: var(--font-display);
+    text-transform: uppercase;
+    letter-spacing: -0.01em;
+  }
+
+  .text-label {
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+}
