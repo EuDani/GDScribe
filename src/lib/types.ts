@@ -173,6 +173,23 @@ export interface Idea {
 
 export type AppThemeMode = 'light' | 'dark' | 'auto'
 
+export interface MoodboardFolder {
+  id: string
+  project_id: string
+  name: string
+  sort_order: number
+  created_at: string
+}
+
+export interface MoodboardImage {
+  id: string
+  project_id: string
+  folder_id: string | null
+  image_url: string
+  caption: string | null
+  created_at: string
+}
+
 export interface StoryBlock {
   id: string
   project_id: string

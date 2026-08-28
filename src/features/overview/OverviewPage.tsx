@@ -1,9 +1,10 @@
 import { useMemo } from 'react'
-import { AlertTriangle, Bell, BookText, Boxes, CalendarClock, KanbanSquare, Lightbulb } from 'lucide-react'
+import { AlertTriangle, Bell, BookText, Boxes, CalendarClock, KanbanSquare, Lightbulb, ListTodo } from 'lucide-react'
 import { motion } from 'motion/react'
 import { Link, useOutletContext } from 'react-router-dom'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
+import { Select } from '@/components/ui/Input'
 import { MiniBarChart } from '@/components/MiniBarChart'
 import { PHASES, type Project } from '@/lib/types'
 import { useGddModules } from '@/features/gdd/useGddModules'
@@ -13,6 +14,8 @@ import { IDEA_STATUSES } from '@/lib/types'
 import { useIdeas } from '@/features/ideas/useIdeas'
 import { useReminders } from '@/features/reminders/useReminders'
 import { useProjectThemeQuery } from '@/features/theme-settings/useProjectTheme'
+import { useUpdateProject } from '@/features/dashboard/useProjects'
+import { useAuth } from '@/contexts/AuthContext'
 import { isHtmlEmpty } from '@/lib/html'
 
 function formatDate(iso: string) {
@@ -35,6 +38,9 @@ export function OverviewPage() {
   const { data: ideas } = useIdeas(project.id)
   const { data: reminders } = useReminders(project.id)
   const { data: theme } = useProjectThemeQuery(project.id)
+  const updateProject = useUpdateProject(project.id)
+  const { user } = useAuth()
+  const displayName = ((user?.user_metadata?.display_name as string | undefined) || user?.email?.split('@')[0]) ?? ''
 
   const moduleStats = useMemo(() => {
     const total = modules?.length ?? 0
@@ -99,6 +105,13 @@ export function OverviewPage() {
   )
 
   const overdueReminders = (reminders ?? []).filter((r) => r.event_date < today).length
+  const todayReminders = (reminders ?? []).filter((r) => r.event_date === today).length
+
+  const todoCount = useMemo(() => {
+    if (!columns || columns.length === 0) return cards?.length ?? 0
+    const doneColumnId = [...columns].sort((a, b) => a.sort_order - b.sort_order).at(-1)?.id
+    return (cards ?? []).filter((c) => c.column_id !== doneColumnId).length
+  }, [columns, cards])
 
   const statCards = [
     {
@@ -134,6 +147,29 @@ export function OverviewPage() {
 
   return (
     <div>
+      {displayName && (
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.2 }}
+          className="mb-3 text-sm text-canvas-fg/70"
+        >
+          Olá, <span className="font-semibold text-canvas-fg">{displayName}</span> — você ainda tem{' '}
+          <span className="inline-flex items-center gap-1 font-semibold text-accent-green">
+            <ListTodo size={13} className="inline" /> {todoCount} tarefa(s)
+          </span>{' '}
+          a fazer{todayReminders > 0 && (
+            <>
+              {' '}e hoje tem{' '}
+              <span className="inline-flex items-center gap-1 font-semibold text-accent-yellow">
+                <Bell size={13} className="inline" /> {todayReminders} lembrete(s)
+              </span>
+            </>
+          )}
+          .
+        </motion.p>
+      )}
+
       <motion.div
         initial={{ opacity: 0, y: -8 }}
         animate={{ opacity: 1, y: 0 }}
@@ -147,10 +183,20 @@ export function OverviewPage() {
             </h1>
             {project.description && <p className="mt-1 max-w-xl text-sm text-canvas-fg/60">{project.description}</p>}
           </div>
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap items-center gap-1.5">
             {project.primary_genre && <Badge accent="blue">{project.primary_genre}</Badge>}
             {project.secondary_genre && <Badge accent="purple">{project.secondary_genre}</Badge>}
-            <Badge accent="yellow">{PHASES.find((p) => p.value === project.status)?.label ?? project.status}</Badge>
+            <Select
+              value={project.status}
+              onChange={(e) => updateProject.mutate({ status: e.target.value })}
+              className="text-label h-auto w-auto border-2 border-line bg-accent-yellow px-2 py-0.5 text-[10px] font-semibold text-ink"
+            >
+              {PHASES.filter((p) => p.value !== 'all').map((p) => (
+                <option key={p.value} value={p.value}>
+                  {p.label}
+                </option>
+              ))}
+            </Select>
           </div>
         </div>
       </motion.div>

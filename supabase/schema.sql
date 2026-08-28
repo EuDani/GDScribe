@@ -170,6 +170,31 @@ create table if not exists public.game_references (
 create index if not exists game_references_project_id_idx on public.game_references (project_id);
 
 -- ============================================================
+-- moodboard_folders + moodboard_images
+-- ============================================================
+create table if not exists public.moodboard_folders (
+  id uuid primary key default gen_random_uuid(),
+  project_id uuid not null references public.projects (id) on delete cascade,
+  name text not null,
+  sort_order integer not null default 0,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists moodboard_folders_project_id_idx on public.moodboard_folders (project_id);
+
+create table if not exists public.moodboard_images (
+  id uuid primary key default gen_random_uuid(),
+  project_id uuid not null references public.projects (id) on delete cascade,
+  folder_id uuid references public.moodboard_folders (id) on delete cascade,
+  image_url text not null,
+  caption text,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists moodboard_images_project_id_idx on public.moodboard_images (project_id);
+create index if not exists moodboard_images_folder_id_idx on public.moodboard_images (folder_id);
+
+-- ============================================================
 -- reminders — eventos/lembretes com notificações configuráveis
 -- ============================================================
 create table if not exists public.reminders (
@@ -268,6 +293,8 @@ alter table public.ideas enable row level security;
 alter table public.story_blocks enable row level security;
 alter table public.game_references enable row level security;
 alter table public.reminders enable row level security;
+alter table public.moodboard_folders enable row level security;
+alter table public.moodboard_images enable row level security;
 
 drop policy if exists "own projects" on public.projects;
 create policy "own projects" on public.projects
@@ -356,6 +383,24 @@ create policy "own game_references" on public.game_references
 
 drop policy if exists "own reminders" on public.reminders;
 create policy "own reminders" on public.reminders
+  for all using (
+    exists (select 1 from public.projects p where p.id = project_id and p.owner_id = auth.uid())
+  )
+  with check (
+    exists (select 1 from public.projects p where p.id = project_id and p.owner_id = auth.uid())
+  );
+
+drop policy if exists "own moodboard_folders" on public.moodboard_folders;
+create policy "own moodboard_folders" on public.moodboard_folders
+  for all using (
+    exists (select 1 from public.projects p where p.id = project_id and p.owner_id = auth.uid())
+  )
+  with check (
+    exists (select 1 from public.projects p where p.id = project_id and p.owner_id = auth.uid())
+  );
+
+drop policy if exists "own moodboard_images" on public.moodboard_images;
+create policy "own moodboard_images" on public.moodboard_images
   for all using (
     exists (select 1 from public.projects p where p.id = project_id and p.owner_id = auth.uid())
   )
