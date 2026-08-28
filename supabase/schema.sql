@@ -149,7 +149,8 @@ create table if not exists public.story_blocks (
 );
 
 create index if not exists story_blocks_project_id_idx on public.story_blocks (project_id);
-create index if not exists story_blocks_parent_id_idx on public.story_blocks (parent_id);
+-- índice de parent_id fica lá embaixo, depois da migração que garante a coluna
+-- (bancos que já tinham story_blocks antes não ganham a coluna pelo create table acima)
 
 -- ============================================================
 -- game_references — referências externas + checklist do que aproveitar
@@ -228,6 +229,7 @@ alter table public.project_themes add column if not exists surface_color text no
 alter table public.project_themes add column if not exists text_color text not null default '#f3efe3';
 alter table public.project_themes add column if not exists chart_colors jsonb not null default '["#ff3b30","#0a84ff","#ffd60a","#30d158","#bf5af2"]'::jsonb;
 alter table public.story_blocks add column if not exists parent_id uuid references public.story_blocks (id) on delete cascade;
+create index if not exists story_blocks_parent_id_idx on public.story_blocks (parent_id);
 alter table public.kanban_cards add column if not exists extra_fields jsonb not null default '[]'::jsonb;
 alter table public.reminders add column if not exists tags text[] not null default '{}';
 alter table public.reminders add column if not exists image_url text;
