@@ -24,6 +24,7 @@ export function ImageLightbox({
   const [pan, setPan] = useState({ x: 0, y: 0 })
   const [isPanning, setIsPanning] = useState(false)
   const dragRef = useRef<{ startX: number; startY: number; panX: number; panY: number } | null>(null)
+  const viewportRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     setZoom(1)
@@ -45,14 +46,24 @@ export function ImageLightbox({
     return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, z))
   }
 
-  function handleWheel(e: React.WheelEvent) {
-    e.preventDefault()
-    setZoom((prev) => {
-      const next = clampZoom(prev - e.deltaY * 0.0015 * prev)
-      if (next === MIN_ZOOM) setPan({ x: 0, y: 0 })
-      return next
-    })
-  }
+  // React registra onWheel como passive por padrão, então e.preventDefault()
+  // ali dentro não faz nada — a página some rolando junto com o zoom. Um
+  // listener nativo não-passive é o jeito de garantir o preventDefault de verdade.
+  useEffect(() => {
+    if (!open) return
+    const el = viewportRef.current
+    if (!el) return
+    function handleWheel(e: WheelEvent) {
+      e.preventDefault()
+      setZoom((prev) => {
+        const next = clampZoom(prev - e.deltaY * 0.0015 * prev)
+        if (next === MIN_ZOOM) setPan({ x: 0, y: 0 })
+        return next
+      })
+    }
+    el.addEventListener('wheel', handleWheel, { passive: false })
+    return () => el.removeEventListener('wheel', handleWheel)
+  }, [open])
 
   function handlePointerDown(e: React.PointerEvent) {
     if (zoom <= MIN_ZOOM) return
@@ -144,8 +155,8 @@ export function ImageLightbox({
           )}
 
           <div
+            ref={viewportRef}
             className="flex h-full w-full items-center justify-center"
-            onWheel={handleWheel}
             onPointerDown={handlePointerDown}
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}

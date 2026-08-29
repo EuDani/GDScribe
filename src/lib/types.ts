@@ -258,7 +258,7 @@ export interface GameReference {
   updated_at: string
 }
 
-export type FlowchartNodeShape = 'rectangle' | 'rounded' | 'diamond' | 'circle'
+export type FlowchartNodeShape = 'rectangle' | 'rounded' | 'diamond' | 'circle' | 'comment'
 
 export interface FlowchartNode {
   id: string
@@ -270,9 +270,11 @@ export interface FlowchartNode {
   color: string
   shape: FlowchartNodeShape
   comment: string
+  tags: string[]
 }
 
 export type FlowchartLineStyle = 'solid' | 'dashed' | 'dotted'
+export type FlowchartArrowEnds = 'end' | 'start' | 'both' | 'none'
 
 export interface FlowchartEdge {
   id: string
@@ -281,6 +283,7 @@ export interface FlowchartEdge {
   label?: string
   color: string
   lineStyle: FlowchartLineStyle
+  arrowEnds: FlowchartArrowEnds
 }
 
 export interface Flowchart {

@@ -1,5 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Circle, Diamond, Pencil, Plus, RectangleHorizontal, Square, Trash2, Workflow } from 'lucide-react'
+import {
+  Circle,
+  Diamond,
+  MessageSquareDashed,
+  Pencil,
+  Plus,
+  RectangleHorizontal,
+  Square,
+  Trash2,
+  Workflow,
+} from 'lucide-react'
 import { clsx } from 'clsx'
 import { useOutletContext } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
@@ -7,8 +17,10 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Field, Select, TextInput, Textarea } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
+import { TagInput } from '@/components/TagInput'
 import type {
   Flowchart,
+  FlowchartArrowEnds,
   FlowchartEdge,
   FlowchartLineStyle,
   FlowchartNode,
@@ -42,6 +54,14 @@ const SHAPE_DEFS: { value: FlowchartNodeShape; label: string; icon: typeof Squar
   { value: 'rounded', label: 'Retângulo arredondado', icon: Square },
   { value: 'diamond', label: 'Losango', icon: Diamond },
   { value: 'circle', label: 'Círculo', icon: Circle },
+  { value: 'comment', label: 'Comentário', icon: MessageSquareDashed },
+]
+
+const ARROW_ENDS: { value: FlowchartArrowEnds; label: string }[] = [
+  { value: 'end', label: 'Só no fim' },
+  { value: 'start', label: 'Só no início' },
+  { value: 'both', label: 'Nas duas pontas' },
+  { value: 'none', label: 'Sem seta' },
 ]
 
 const NODE_WIDTH = 160
@@ -55,10 +75,11 @@ function newNode(x: number, y: number, shape: FlowchartNodeShape): FlowchartNode
     y,
     width: isRound ? 96 : NODE_WIDTH,
     height: isRound ? 96 : NODE_HEIGHT,
-    text: 'Novo passo',
+    text: shape === 'comment' ? 'Comentário…' : 'Novo passo',
     color: NODE_COLORS[Math.floor(Math.random() * NODE_COLORS.length)],
     shape,
     comment: '',
+    tags: [],
   }
 }
 
@@ -220,6 +241,7 @@ function clipToRect(cx: number, cy: number, node: FlowchartNode, towardX: number
 function shapeClassName(shape: FlowchartNodeShape) {
   if (shape === 'rounded') return 'rounded-2xl'
   if (shape === 'circle') return 'rounded-full'
+  if (shape === 'comment') return 'border-dashed'
   return ''
 }
 
@@ -229,10 +251,18 @@ function strokeDasharray(style: FlowchartLineStyle) {
   return undefined
 }
 
+function normalizeNode(n: Partial<FlowchartNode>): FlowchartNode {
+  return { shape: 'rectangle', comment: '', tags: [], ...n } as FlowchartNode
+}
+
+function normalizeEdge(e: Partial<FlowchartEdge>): FlowchartEdge {
+  return { color: 'var(--color-line)', lineStyle: 'solid', arrowEnds: 'end', ...e } as FlowchartEdge
+}
+
 function FlowchartCanvas({ projectId, flowchart }: { projectId: string; flowchart: Flowchart }) {
   const updateContent = useUpdateFlowchartContent(projectId)
-  const [nodes, setNodes] = useState<FlowchartNode[]>(flowchart.nodes)
-  const [edges, setEdges] = useState<FlowchartEdge[]>(flowchart.edges)
+  const [nodes, setNodes] = useState<FlowchartNode[]>(() => flowchart.nodes.map(normalizeNode))
+  const [edges, setEdges] = useState<FlowchartEdge[]>(() => flowchart.edges.map(normalizeEdge))
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null)
   const [editingNodeId, setEditingNodeId] = useState<string | null>(null)
@@ -343,6 +373,7 @@ function FlowchartCanvas({ projectId, flowchart }: { projectId: string; flowchar
             to: target.id,
             color: 'var(--color-line)',
             lineStyle: 'solid',
+            arrowEnds: 'end',
           }
           setEdges((prev) => [...prev, edge])
           setSelectedEdgeId(edge.id)
@@ -389,6 +420,7 @@ function FlowchartCanvas({ projectId, flowchart }: { projectId: string; flowchar
   const nodeById = useMemo(() => new Map(nodes.map((n) => [n.id, n])), [nodes])
   const selectedNode = selectedNodeId ? (nodeById.get(selectedNodeId) ?? null) : null
   const selectedEdge = selectedEdgeId ? (edges.find((e) => e.id === selectedEdgeId) ?? null) : null
+  const allNodeTags = useMemo(() => Array.from(new Set(nodes.flatMap((n) => n.tags ?? []))).sort(), [nodes])
 
   const bounds = useMemo(() => {
     const maxX = Math.max(900, ...nodes.map((n) => n.x + n.width + 100))
@@ -437,9 +469,26 @@ function FlowchartCanvas({ projectId, flowchart }: { projectId: string; flowchar
           />
           <svg width={bounds.width} height={bounds.height} className="pointer-events-none absolute left-0 top-0">
             <defs>
-              <marker id="arrowhead" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
-                <path d="M0,0 L8,4 L0,8 Z" fill="var(--color-line)" />
-              </marker>
+              {edges.map((edge) => {
+                const strokeColor = selectedEdgeId === edge.id ? 'var(--color-accent-red)' : edge.color || 'var(--color-line)'
+                return (
+                  <g key={edge.id}>
+                    <marker id={`arrow-end-${edge.id}`} markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+                      <path d="M0,0 L8,4 L0,8 Z" fill={strokeColor} />
+                    </marker>
+                    <marker
+                      id={`arrow-start-${edge.id}`}
+                      markerWidth="8"
+                      markerHeight="8"
+                      refX="7"
+                      refY="4"
+                      orient="auto-start-reverse"
+                    >
+                      <path d="M0,0 L8,4 L0,8 Z" fill={strokeColor} />
+                    </marker>
+                  </g>
+                )
+              })}
             </defs>
             {edges.map((edge) => {
               const from = nodeById.get(edge.from)
@@ -450,6 +499,7 @@ function FlowchartCanvas({ projectId, flowchart }: { projectId: string; flowchar
               const midX = (start.x + end.x) / 2
               const midY = (start.y + end.y) / 2
               const color = edge.color || 'var(--color-line)'
+              const arrowEnds = edge.arrowEnds ?? 'end'
               return (
                 <g key={edge.id}>
                   <line
@@ -474,7 +524,10 @@ function FlowchartCanvas({ projectId, flowchart }: { projectId: string; flowchar
                     stroke={selectedEdgeId === edge.id ? 'var(--color-accent-red)' : color}
                     strokeWidth={selectedEdgeId === edge.id ? 3 : 2}
                     strokeDasharray={strokeDasharray(edge.lineStyle)}
-                    markerEnd="url(#arrowhead)"
+                    markerEnd={arrowEnds === 'end' || arrowEnds === 'both' ? `url(#arrow-end-${edge.id})` : undefined}
+                    markerStart={
+                      arrowEnds === 'start' || arrowEnds === 'both' ? `url(#arrow-start-${edge.id})` : undefined
+                    }
                   />
                   {selectedEdgeId === edge.id && (
                     <circle
@@ -544,8 +597,23 @@ function FlowchartCanvas({ projectId, flowchart }: { projectId: string; flowchar
                   style={{ padding: node.shape === 'diamond' ? '22%' : 0 }}
                 />
               ) : (
-                <span className="pointer-events-none" style={{ padding: node.shape === 'diamond' ? '0 12%' : 0 }}>
+                <span
+                  className="pointer-events-none flex flex-col items-center gap-1"
+                  style={{ padding: node.shape === 'diamond' ? '0 12%' : 0 }}
+                >
                   {node.text}
+                  {node.tags.length > 0 && (
+                    <span className="flex flex-wrap justify-center gap-1">
+                      {node.tags.map((tag) => (
+                        <span
+                          key={tag}
+                          className="text-label rounded-full border border-ink/40 bg-ink/10 px-1.5 py-0.5 text-[8px] font-normal normal-case"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </span>
+                  )}
                 </span>
               )}
 
@@ -629,6 +697,15 @@ function FlowchartCanvas({ projectId, flowchart }: { projectId: string; flowchar
               </div>
             </Field>
 
+            <Field label="Tags">
+              <TagInput
+                value={selectedNode.tags}
+                onChange={(tags) => updateNode(selectedNode.id, { tags })}
+                suggestions={allNodeTags}
+                placeholder="sistema, npc, combate…"
+              />
+            </Field>
+
             <Field label="Comentário / Referência" hint="Notas extras que não aparecem no nó, só aqui no painel">
               <Textarea
                 rows={4}
@@ -680,6 +757,19 @@ function FlowchartCanvas({ projectId, flowchart }: { projectId: string; flowchar
                 {LINE_STYLES.map((s) => (
                   <option key={s.value} value={s.value}>
                     {s.label}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+
+            <Field label="Pontas da seta">
+              <Select
+                value={selectedEdge.arrowEnds ?? 'end'}
+                onChange={(e) => updateEdge(selectedEdge.id, { arrowEnds: e.target.value as FlowchartArrowEnds })}
+              >
+                {ARROW_ENDS.map((a) => (
+                  <option key={a.value} value={a.value}>
+                    {a.label}
                   </option>
                 ))}
               </Select>
