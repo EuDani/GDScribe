@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { Plus, Trash2 } from 'lucide-react'
@@ -10,15 +11,18 @@ export function KanbanColumnView({
   cards,
   onAddCard,
   onDeleteColumn,
+  onRenameColumn,
   onCardClick,
 }: {
   column: KanbanColumnType
   cards: KanbanCard[]
   onAddCard: () => void
   onDeleteColumn: () => void
+  onRenameColumn: (name: string) => void
   onCardClick: (card: KanbanCard) => void
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: column.id, data: { type: 'column' } })
+  const [editingName, setEditingName] = useState(false)
 
   return (
     <div
@@ -31,10 +35,31 @@ export function KanbanColumnView({
         className="flex items-center justify-between gap-2 border-b-2 border-line px-3 py-2.5"
         style={{ boxShadow: `inset 4px 0 0 0 ${column.color}` }}
       >
-        <h3 className="text-label text-xs font-semibold">
-          {column.name} <span className="text-canvas-fg/40">({cards.length})</span>
-        </h3>
-        <div className="flex items-center gap-1">
+        {editingName ? (
+          <input
+            autoFocus
+            defaultValue={column.name}
+            onBlur={(e) => {
+              const value = e.target.value.trim()
+              if (value && value !== column.name) onRenameColumn(value)
+              setEditingName(false)
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') e.currentTarget.blur()
+              if (e.key === 'Escape') setEditingName(false)
+            }}
+            className="text-label min-w-0 flex-1 border border-line/40 bg-transparent px-1 py-0.5 text-xs text-canvas-fg outline-none"
+          />
+        ) : (
+          <h3
+            onClick={() => setEditingName(true)}
+            className="text-label cursor-text truncate text-xs font-semibold"
+            title="Clique para renomear"
+          >
+            {column.name} <span className="text-canvas-fg/40">({cards.length})</span>
+          </h3>
+        )}
+        <div className="flex shrink-0 items-center gap-1">
           <button
             type="button"
             onClick={onAddCard}

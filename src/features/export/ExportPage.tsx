@@ -4,12 +4,14 @@ import { Button } from '@/components/ui/Button'
 import type { Project } from '@/lib/types'
 import { buildGddHtmlFragment, buildGddStandaloneHtml, downloadHtml } from '@/lib/buildGddDocument'
 import { useGddModules } from '@/features/gdd/useGddModules'
+import { useProjectPhases } from '@/features/settings/useProjectPhases'
 
 export function ExportPage() {
   const { project } = useOutletContext<{ project: Project }>()
   const { data: modules, isLoading } = useGddModules(project.id)
+  const { data: phases } = useProjectPhases(project.id)
 
-  const fragment = modules ? buildGddHtmlFragment(project, modules) : ''
+  const fragment = modules && phases ? buildGddHtmlFragment(project, modules, phases) : ''
 
   return (
     <div>
@@ -26,7 +28,9 @@ export function ExportPage() {
             icon={<Download size={16} />}
             disabled={isLoading}
             onClick={() =>
-              modules && downloadHtml(`${project.slug}-gdd.html`, buildGddStandaloneHtml(project, modules))
+              modules &&
+              phases &&
+              downloadHtml(`${project.slug}-gdd.html`, buildGddStandaloneHtml(project, modules, phases))
             }
           >
             Baixar .html

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Plus, Search, Trash2 } from 'lucide-react'
+import { CornerDownRight, Plus, Search, Trash2 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { useOutletContext } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
@@ -11,18 +11,15 @@ import { Tabs } from '@/components/ui/Tabs'
 import { Badge } from '@/components/ui/Badge'
 import { StatusSelect } from '@/components/StatusSelect'
 import { RichTextEditor } from '@/components/RichTextEditor'
-import { PHASES, type ExtraField, type GddModule, type Phase, type Project } from '@/lib/types'
+import { ALL_PHASES, type ExtraField, type GddModule, type Phase, type Project } from '@/lib/types'
 import {
   useCreateModule,
   useDeleteModule,
   useGddModules,
   useUpdateModule,
 } from '@/features/gdd/useGddModules'
+import { useProjectPhases } from '@/features/settings/useProjectPhases'
 import { ExtraFieldsEditor } from '@/features/gdd/ExtraFieldsEditor'
-
-const PHASE_LABEL: Record<Phase, string> = Object.fromEntries(
-  PHASES.map((p) => [p.value, p.label]),
-) as Record<Phase, string>
 
 function sameExtraFields(a: ExtraField[], b: ExtraField[]) {
   return JSON.stringify(a) === JSON.stringify(b)
@@ -31,31 +28,56 @@ function sameExtraFields(a: ExtraField[], b: ExtraField[]) {
 export function GddPage() {
   const { project } = useOutletContext<{ project: Project }>()
   const { data: modules, isLoading } = useGddModules(project.id)
+  const { data: phases } = useProjectPhases(project.id)
   const createModule = useCreateModule(project.id)
   const updateModule = useUpdateModule(project.id)
   const deleteModule = useDeleteModule(project.id)
 
-  const [phaseFilter, setPhaseFilter] = useState<Phase>('all')
+  const phaseItems = useMemo(
+    () => [{ value: ALL_PHASES, label: 'Todas as fases' }, ...(phases ?? []).map((p) => ({ value: p.key, label: p.label }))],
+    [phases],
+  )
+  const phaseLabel = useMemo(() => {
+    const map: Record<string, string> = { [ALL_PHASES]: 'Todas as fases' }
+    for (const p of phases ?? []) map[p.key] = p.label
+    return map
+  }, [phases])
+
+  const [phaseFilter, setPhaseFilter] = useState<Phase>(ALL_PHASES)
   const [search, setSearch] = useState('')
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [draft, setDraft] = useState('')
   const [draftExtraFields, setDraftExtraFields] = useState<ExtraField[]>([])
   const [creating, setCreating] = useState(false)
+  const [creatingParentId, setCreatingParentId] = useState<string | null>(null)
   const [newTitle, setNewTitle] = useState('')
-  const [newPhase, setNewPhase] = useState<Phase>('all')
+  const [newPhase, setNewPhase] = useState<Phase>(ALL_PHASES)
   const [pendingDelete, setPendingDelete] = useState<string | null>(null)
 
-  const filtered = useMemo(
+  const topLevelFiltered = useMemo(
     () =>
-      (modules ?? []).filter((m) => {
-        const matchesPhase = phaseFilter === 'all' || m.phase === phaseFilter
-        const matchesSearch = m.title.toLowerCase().includes(search.trim().toLowerCase())
-        return matchesPhase && matchesSearch
-      }),
+      (modules ?? [])
+        .filter((m) => !m.parent_id)
+        .filter((m) => {
+          const matchesPhase = phaseFilter === ALL_PHASES || m.phase === phaseFilter
+          const matchesSearch = m.title.toLowerCase().includes(search.trim().toLowerCase())
+          return matchesPhase && matchesSearch
+        }),
     [modules, phaseFilter, search],
   )
 
-  const selected = modules?.find((m) => m.id === selectedId) ?? filtered[0] ?? null
+  const childrenByParent = useMemo(() => {
+    const map = new Map<string, GddModule[]>()
+    for (const m of modules ?? []) {
+      if (!m.parent_id) continue
+      const list = map.get(m.parent_id) ?? []
+      list.push(m)
+      map.set(m.parent_id, list)
+    }
+    return map
+  }, [modules])
+
+  const selected = modules?.find((m) => m.id === selectedId) ?? topLevelFiltered[0] ?? null
 
   useEffect(() => {
     setDraft(selected?.content ?? '')
@@ -93,13 +115,23 @@ export function GddPage() {
   flushRef.current = flush
   useEffect(() => () => flushRef.current(), [])
 
+  function openCreate(parentId: string | null) {
+    setCreatingParentId(parentId)
+    setNewTitle('')
+    setNewPhase(ALL_PHASES)
+    setCreating(true)
+  }
+
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault()
     if (!newTitle.trim()) return
-    const created = await createModule.mutateAsync({ title: newTitle.trim(), phase: newPhase })
+    const created = await createModule.mutateAsync({
+      title: newTitle.trim(),
+      phase: newPhase,
+      parentId: creatingParentId,
+    })
     selectModule(created.id)
     setNewTitle('')
-    setNewPhase('all')
     setCreating(false)
   }
 
@@ -107,7 +139,7 @@ export function GddPage() {
     <div className="flex h-full min-h-[70vh] flex-col">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-display text-2xl">Documento de Design</h1>
-        <Button size="sm" icon={<Plus size={16} />} onClick={() => setCreating(true)}>
+        <Button size="sm" icon={<Plus size={16} />} onClick={() => openCreate(null)}>
           Novo módulo
         </Button>
       </div>
@@ -122,11 +154,11 @@ export function GddPage() {
         />
       </div>
 
-      <Tabs items={PHASES} value={phaseFilter} onChange={setPhaseFilter} />
+      <Tabs items={phaseItems} value={phaseFilter} onChange={setPhaseFilter} />
 
       {isLoading && <p className="text-label mt-6 text-sm text-canvas-fg/50">Carregando…</p>}
 
-      {!isLoading && filtered.length === 0 && (
+      {!isLoading && topLevelFiltered.length === 0 && (
         <div className="mt-6">
           <EmptyState
             title="Nenhum módulo encontrado"
@@ -135,27 +167,59 @@ export function GddPage() {
         </div>
       )}
 
-      {!isLoading && filtered.length > 0 && (
-        <div className="mt-6 grid flex-1 grid-cols-1 gap-5 lg:grid-cols-[260px_1fr]">
+      {!isLoading && topLevelFiltered.length > 0 && (
+        <div className="mt-6 grid flex-1 grid-cols-1 gap-5 lg:grid-cols-[280px_1fr]">
           <ul className="space-y-1.5">
-            {filtered.map((m: GddModule) => (
+            {topLevelFiltered.map((m: GddModule) => (
               <li key={m.id}>
-                <button
-                  type="button"
-                  onClick={() => selectModule(m.id)}
-                  className={clsx(
-                    'w-full cursor-pointer border-2 px-3 py-2.5 text-left transition-colors',
-                    selected?.id === m.id
-                      ? 'border-line bg-accent-yellow text-ink shadow-brutal-sm'
-                      : 'border-line/40 bg-surface text-canvas-fg/80 hover:border-line',
-                  )}
-                >
-                  <div className="text-sm font-semibold">{m.title}</div>
-                  <div className="text-label mt-0.5 flex items-center gap-1.5 text-[10px] opacity-60">
-                    {PHASE_LABEL[m.phase]}
-                    {m.status && <span>· {m.status}</span>}
-                  </div>
-                </button>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => selectModule(m.id)}
+                    className={clsx(
+                      'min-w-0 flex-1 cursor-pointer border-2 px-3 py-2.5 text-left transition-colors',
+                      selected?.id === m.id
+                        ? 'border-line bg-accent-yellow text-ink shadow-brutal-sm'
+                        : 'border-line/40 bg-surface text-canvas-fg/80 hover:border-line',
+                    )}
+                  >
+                    <div className="truncate text-sm font-semibold">{m.title}</div>
+                    <div className="text-label mt-0.5 flex items-center gap-1.5 text-[10px] opacity-60">
+                      {phaseLabel[m.phase] ?? m.phase}
+                      {m.status && <span>· {m.status}</span>}
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => openCreate(m.id)}
+                    aria-label="Novo sub-módulo"
+                    title="Novo sub-módulo"
+                    className="shrink-0 cursor-pointer border-2 border-line/40 p-1.5 text-canvas-fg/40 hover:border-line hover:text-canvas-fg"
+                  >
+                    <Plus size={12} />
+                  </button>
+                </div>
+                {(childrenByParent.get(m.id) ?? []).length > 0 && (
+                  <ul className="mt-1 ml-4 space-y-1 border-l-2 border-line/30 pl-2">
+                    {(childrenByParent.get(m.id) ?? []).map((child) => (
+                      <li key={child.id}>
+                        <button
+                          type="button"
+                          onClick={() => selectModule(child.id)}
+                          className={clsx(
+                            'flex w-full cursor-pointer items-center gap-1.5 border-2 px-2.5 py-1.5 text-left text-xs transition-colors',
+                            selected?.id === child.id
+                              ? 'border-line bg-accent-yellow text-ink'
+                              : 'border-line/30 bg-surface text-canvas-fg/70 hover:border-line',
+                          )}
+                        >
+                          <CornerDownRight size={11} className="shrink-0 opacity-50" />
+                          <span className="truncate">{child.title}</span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </li>
             ))}
           </ul>
@@ -164,6 +228,7 @@ export function GddPage() {
             <div className="min-w-0 border-2 border-line bg-surface shadow-brutal">
               <div className="flex flex-wrap items-center justify-between gap-3 border-b-2 border-line p-4">
                 <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+                  {selected.parent_id && <CornerDownRight size={14} className="text-canvas-fg/40" />}
                   <TextInput
                     value={selected.title}
                     onChange={(e) => updateModule.mutate({ id: selected.id, title: e.target.value })}
@@ -171,10 +236,10 @@ export function GddPage() {
                   />
                   <Select
                     value={selected.phase}
-                    onChange={(e) => updateModule.mutate({ id: selected.id, phase: e.target.value as Phase })}
+                    onChange={(e) => updateModule.mutate({ id: selected.id, phase: e.target.value })}
                     className="max-w-[150px]"
                   >
-                    {PHASES.map((p) => (
+                    {phaseItems.map((p) => (
                       <option key={p.value} value={p.value}>
                         {p.label}
                       </option>
@@ -221,7 +286,7 @@ export function GddPage() {
       <Modal
         open={creating}
         onClose={() => setCreating(false)}
-        title="Novo módulo"
+        title={creatingParentId ? 'Novo sub-módulo' : 'Novo módulo'}
         isDirty={Boolean(newTitle.trim())}
       >
         <form onSubmit={handleCreate}>
@@ -235,8 +300,8 @@ export function GddPage() {
             />
           </Field>
           <Field label="Fase">
-            <Select value={newPhase} onChange={(e) => setNewPhase(e.target.value as Phase)}>
-              {PHASES.map((p) => (
+            <Select value={newPhase} onChange={(e) => setNewPhase(e.target.value)}>
+              {phaseItems.map((p) => (
                 <option key={p.value} value={p.value}>
                   {p.label}
                 </option>
@@ -262,7 +327,7 @@ export function GddPage() {
           setSelectedId(null)
         }}
         title="Excluir módulo"
-        description="O conteúdo desse módulo será apagado permanentemente."
+        description="O conteúdo desse módulo (e dos sub-módulos, se houver) será apagado permanentemente."
         confirmLabel="Excluir"
       />
     </div>

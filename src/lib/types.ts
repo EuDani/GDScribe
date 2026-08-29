@@ -1,10 +1,24 @@
-export type Phase = 'pre_production' | 'production' | 'post_production' | 'all'
+// Fases não são mais um enum fixo — cada projeto tem as suas próprias,
+// guardadas em project_phases e totalmente editáveis (ver Configurações).
+// 'all' continua sendo um pseudo-valor só de UI (nunca salvo no banco) que
+// significa "todas as fases" nos filtros do GDD.
+export type Phase = string
 
-export const PHASES: { value: Phase; label: string }[] = [
-  { value: 'all', label: 'Todas as fases' },
-  { value: 'pre_production', label: 'Pré-produção' },
-  { value: 'production', label: 'Produção' },
-  { value: 'post_production', label: 'Pós-produção' },
+export const ALL_PHASES = 'all'
+
+export interface ProjectPhase {
+  id: string
+  project_id: string
+  key: string
+  label: string
+  sort_order: number
+}
+
+/** Usado só para semear as 3 fases padrão de um projeto novo. */
+export const DEFAULT_PHASES: { key: string; label: string }[] = [
+  { key: 'pre_production', label: 'Pré-produção' },
+  { key: 'production', label: 'Produção' },
+  { key: 'post_production', label: 'Pós-produção' },
 ]
 
 export const STEAM_GENRES = [
@@ -77,6 +91,7 @@ export interface ExtraField {
 export interface GddModule {
   id: string
   project_id: string
+  parent_id: string | null
   key: string
   title: string
   icon: string
@@ -120,9 +135,18 @@ export interface InventoryItem {
   updated_at: string
 }
 
+export interface KanbanBoard {
+  id: string
+  project_id: string
+  name: string
+  sort_order: number
+  created_at: string
+}
+
 export interface KanbanColumn {
   id: string
   project_id: string
+  board_id: string
   name: string
   color: string
   sort_order: number
@@ -138,6 +162,7 @@ export interface KanbanCard {
   id: string
   column_id: string
   project_id: string
+  board_id: string
   title: string
   description: string | null
   tags: string[]
@@ -176,6 +201,7 @@ export type AppThemeMode = 'light' | 'dark' | 'auto'
 export interface MoodboardFolder {
   id: string
   project_id: string
+  parent_id: string | null
   name: string
   sort_order: number
   created_at: string

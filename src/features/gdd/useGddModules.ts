@@ -21,13 +21,22 @@ export function useGddModules(projectId: string | undefined) {
 export function useCreateModule(projectId: string) {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async ({ title, phase }: { title: string; phase: Phase }) => {
+    mutationFn: async ({
+      title,
+      phase,
+      parentId,
+    }: {
+      title: string
+      phase: Phase
+      parentId?: string | null
+    }) => {
       const modules = queryClient.getQueryData<GddModule[]>(['gdd_modules', projectId]) ?? []
       const key = `custom-${Date.now()}`
       const { data, error } = await supabase
         .from('gdd_modules')
         .insert({
           project_id: projectId,
+          parent_id: parentId ?? null,
           key,
           title,
           icon: 'FileText',

@@ -6,10 +6,11 @@ import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Select } from '@/components/ui/Input'
 import { MiniBarChart } from '@/components/MiniBarChart'
-import { PHASES, type Project } from '@/lib/types'
+import type { Project } from '@/lib/types'
+import { useProjectPhases } from '@/features/settings/useProjectPhases'
 import { useGddModules } from '@/features/gdd/useGddModules'
 import { useAllInventoryItems, useInventoryTypes } from '@/features/inventory/useInventory'
-import { useKanbanCards, useKanbanColumns } from '@/features/kanban/useKanban'
+import { useAllKanbanCards, useAllKanbanColumns } from '@/features/kanban/useKanban'
 import { IDEA_STATUSES } from '@/lib/types'
 import { useIdeas } from '@/features/ideas/useIdeas'
 import { useReminders } from '@/features/reminders/useReminders'
@@ -33,11 +34,12 @@ export function OverviewPage() {
   const { data: modules } = useGddModules(project.id)
   const { data: invTypes } = useInventoryTypes(project.id)
   const { data: invItems } = useAllInventoryItems(project.id)
-  const { data: columns } = useKanbanColumns(project.id)
-  const { data: cards } = useKanbanCards(project.id)
+  const { data: columns } = useAllKanbanColumns(project.id)
+  const { data: cards } = useAllKanbanCards(project.id)
   const { data: ideas } = useIdeas(project.id)
   const { data: reminders } = useReminders(project.id)
   const { data: theme } = useProjectThemeQuery(project.id)
+  const { data: phases } = useProjectPhases(project.id)
   const updateProject = useUpdateProject(project.id)
   const { user } = useAuth()
   const displayName = ((user?.user_metadata?.display_name as string | undefined) || user?.email?.split('@')[0]) ?? ''
@@ -45,12 +47,12 @@ export function OverviewPage() {
   const moduleStats = useMemo(() => {
     const total = modules?.length ?? 0
     const filled = modules?.filter((m) => !isHtmlEmpty(m.content)).length ?? 0
-    const byPhase = PHASES.filter((p) => p.value !== 'all').map((p) => ({
+    const byPhase = (phases ?? []).map((p) => ({
       label: p.label,
-      value: modules?.filter((m) => m.phase === p.value).length ?? 0,
+      value: modules?.filter((m) => m.phase === p.key).length ?? 0,
     }))
     return { total, filled, byPhase }
-  }, [modules])
+  }, [modules, phases])
 
   const inventoryByType = useMemo(
     () =>
@@ -191,8 +193,8 @@ export function OverviewPage() {
               onChange={(e) => updateProject.mutate({ status: e.target.value })}
               className="text-label h-auto w-auto border-2 border-line bg-accent-yellow px-2 py-0.5 text-[10px] font-semibold text-ink"
             >
-              {PHASES.filter((p) => p.value !== 'all').map((p) => (
-                <option key={p.value} value={p.value}>
+              {(phases ?? []).map((p) => (
+                <option key={p.key} value={p.key}>
                   {p.label}
                 </option>
               ))}

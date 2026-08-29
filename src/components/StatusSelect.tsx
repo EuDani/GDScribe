@@ -1,5 +1,5 @@
 import { Select } from '@/components/ui/Input'
-import { useKanbanColumns } from '@/features/kanban/useKanban'
+import { useAllKanbanColumns } from '@/features/kanban/useKanban'
 
 export function StatusSelect({
   projectId,
@@ -12,7 +12,8 @@ export function StatusSelect({
   onChange: (value: string | null) => void
   className?: string
 }) {
-  const { data: columns } = useKanbanColumns(projectId)
+  const { data: columns } = useAllKanbanColumns(projectId)
+  const names = Array.from(new Set((columns ?? []).map((c) => c.name)))
 
   return (
     <Select
@@ -21,9 +22,9 @@ export function StatusSelect({
       className={className}
     >
       <option value="">Sem status</option>
-      {columns?.map((c) => (
-        <option key={c.id} value={c.name}>
-          {c.name}
+      {names.map((name) => (
+        <option key={name} value={name}>
+          {name}
         </option>
       ))}
     </Select>
@@ -31,7 +32,7 @@ export function StatusSelect({
 }
 
 export function StatusBadge({ projectId, value }: { projectId: string; value: string | null }) {
-  const { data: columns } = useKanbanColumns(projectId)
+  const { data: columns } = useAllKanbanColumns(projectId)
   if (!value) return null
   const column = columns?.find((c) => c.name === value)
 

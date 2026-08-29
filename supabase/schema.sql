@@ -40,15 +40,32 @@ create table if not exists public.project_themes (
 );
 
 -- ============================================================
+-- project_phases — fases do projeto, totalmente editáveis (nome, ordem)
+-- ============================================================
+create table if not exists public.project_phases (
+  id uuid primary key default gen_random_uuid(),
+  project_id uuid not null references public.projects (id) on delete cascade,
+  key text not null,
+  label text not null,
+  sort_order integer not null default 0,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists project_phases_project_id_idx on public.project_phases (project_id);
+
+-- ============================================================
 -- gdd_modules
 -- ============================================================
 create table if not exists public.gdd_modules (
   id uuid primary key default gen_random_uuid(),
   project_id uuid not null references public.projects (id) on delete cascade,
+  parent_id uuid references public.gdd_modules (id) on delete cascade,
   key text not null,
   title text not null,
   icon text not null default 'FileText',
-  phase text not null default 'all' check (phase in ('pre_production', 'production', 'post_production', 'all')),
+  -- Guarda a *key* de uma fase de public.project_phases (ou 'all'). Sem FK
+  -- de propósito: fases são livremente editáveis/removíveis pelo usuário.
+  phase text not null default 'all',
   status text,
   sort_order integer not null default 0,
   is_custom boolean not null default false,
@@ -87,11 +104,23 @@ create index if not exists inventory_items_type_id_idx on public.inventory_items
 create index if not exists inventory_items_project_id_idx on public.inventory_items (project_id);
 
 -- ============================================================
--- kanban_columns + kanban_cards
+-- kanban_boards + kanban_columns + kanban_cards
+-- Um projeto pode ter vários quadros (Ações, MoSCoW, etc).
 -- ============================================================
+create table if not exists public.kanban_boards (
+  id uuid primary key default gen_random_uuid(),
+  project_id uuid not null references public.projects (id) on delete cascade,
+  name text not null default 'Ações',
+  sort_order integer not null default 0,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists kanban_boards_project_id_idx on public.kanban_boards (project_id);
+
 create table if not exists public.kanban_columns (
   id uuid primary key default gen_random_uuid(),
   project_id uuid not null references public.projects (id) on delete cascade,
+  board_id uuid references public.kanban_boards (id) on delete cascade,
   name text not null,
   color text not null default '#ffd60a',
   sort_order integer not null default 0
@@ -103,6 +132,7 @@ create table if not exists public.kanban_cards (
   id uuid primary key default gen_random_uuid(),
   column_id uuid not null references public.kanban_columns (id) on delete cascade,
   project_id uuid not null references public.projects (id) on delete cascade,
+  board_id uuid references public.kanban_boards (id) on delete cascade,
   title text not null,
   description text,
   tags text[] not null default '{}',
@@ -176,6 +206,7 @@ create index if not exists game_references_project_id_idx on public.game_referen
 create table if not exists public.moodboard_folders (
   id uuid primary key default gen_random_uuid(),
   project_id uuid not null references public.projects (id) on delete cascade,
+  parent_id uuid references public.moodboard_folders (id) on delete cascade,
   name text not null,
   sort_order integer not null default 0,
   created_at timestamptz not null default now()
@@ -240,6 +271,55 @@ alter table public.kanban_cards add column if not exists checklist jsonb not nul
 alter table public.kanban_cards add column if not exists start_date date;
 alter table public.kanban_cards add column if not exists due_date date;
 
+alter table public.gdd_modules drop constraint if exists gdd_modules_phase_check;
+alter table public.gdd_modules add column if not exists parent_id uuid references public.gdd_modules (id) on delete cascade;
+create index if not exists gdd_modules_parent_id_idx on public.gdd_modules (parent_id);
+
+alter table public.moodboard_folders add column if not exists parent_id uuid references public.moodboard_folders (id) on delete cascade;
+create index if not exists moodboard_folders_parent_id_idx on public.moodboard_folders (parent_id);
+
+alter table public.kanban_columns add column if not exists board_id uuid references public.kanban_boards (id) on delete cascade;
+alter table public.kanban_cards add column if not exists board_id uuid references public.kanban_boards (id) on delete cascade;
+create index if not exists kanban_columns_board_id_idx on public.kanban_columns (board_id);
+create index if not exists kanban_cards_board_id_idx on public.kanban_cards (board_id);
+
+-- Cria um quadro "Ações" para projetos que já tinham colunas/cards de uma
+-- versão anterior (sem o conceito de múltiplos quadros) e associa esse
+-- quadro a essas colunas/cards que ainda estão com board_id nulo.
+do $$
+declare
+  proj record;
+  new_board_id uuid;
+begin
+  for proj in
+    select distinct project_id from public.kanban_columns where board_id is null
+  loop
+    insert into public.kanban_boards (project_id, name, sort_order)
+    values (proj.project_id, 'Ações', 0)
+    returning id into new_board_id;
+
+    update public.kanban_columns set board_id = new_board_id
+      where project_id = proj.project_id and board_id is null;
+    update public.kanban_cards set board_id = new_board_id
+      where project_id = proj.project_id and board_id is null;
+  end loop;
+end $$;
+
+-- Cria as 3 fases padrão para projetos que ainda não têm nenhuma fase
+-- cadastrada em project_phases (todo projeto criado antes dessa versão).
+insert into public.project_phases (project_id, key, label, sort_order)
+select p.id, v.key, v.label, v.sort_order
+from public.projects p
+cross join (
+  values
+    ('pre_production', 'Pré-produção', 0),
+    ('production', 'Produção', 1),
+    ('post_production', 'Pós-produção', 2)
+) as v(key, label, sort_order)
+where not exists (
+  select 1 from public.project_phases pp where pp.project_id = p.id
+);
+
 -- ============================================================
 -- updated_at triggers
 -- ============================================================
@@ -286,9 +366,11 @@ create trigger set_updated_at before update on public.reminders
 -- ============================================================
 alter table public.projects enable row level security;
 alter table public.project_themes enable row level security;
+alter table public.project_phases enable row level security;
 alter table public.gdd_modules enable row level security;
 alter table public.inventory_types enable row level security;
 alter table public.inventory_items enable row level security;
+alter table public.kanban_boards enable row level security;
 alter table public.kanban_columns enable row level security;
 alter table public.kanban_cards enable row level security;
 alter table public.ideas enable row level security;
@@ -304,6 +386,15 @@ create policy "own projects" on public.projects
 
 drop policy if exists "own project_themes" on public.project_themes;
 create policy "own project_themes" on public.project_themes
+  for all using (
+    exists (select 1 from public.projects p where p.id = project_id and p.owner_id = auth.uid())
+  )
+  with check (
+    exists (select 1 from public.projects p where p.id = project_id and p.owner_id = auth.uid())
+  );
+
+drop policy if exists "own project_phases" on public.project_phases;
+create policy "own project_phases" on public.project_phases
   for all using (
     exists (select 1 from public.projects p where p.id = project_id and p.owner_id = auth.uid())
   )
@@ -331,6 +422,15 @@ create policy "own inventory_types" on public.inventory_types
 
 drop policy if exists "own inventory_items" on public.inventory_items;
 create policy "own inventory_items" on public.inventory_items
+  for all using (
+    exists (select 1 from public.projects p where p.id = project_id and p.owner_id = auth.uid())
+  )
+  with check (
+    exists (select 1 from public.projects p where p.id = project_id and p.owner_id = auth.uid())
+  );
+
+drop policy if exists "own kanban_boards" on public.kanban_boards;
+create policy "own kanban_boards" on public.kanban_boards
   for all using (
     exists (select 1 from public.projects p where p.id = project_id and p.owner_id = auth.uid())
   )

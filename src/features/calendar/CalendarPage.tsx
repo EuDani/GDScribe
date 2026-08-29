@@ -19,7 +19,7 @@ import { Tabs } from '@/components/ui/Tabs'
 import { Modal } from '@/components/ui/Modal'
 import { Badge, accentFromString } from '@/components/ui/Badge'
 import { REMINDER_IMPORTANCE, type KanbanCard, type Project, type Reminder, type ReminderImportance } from '@/lib/types'
-import { useKanbanCards, useKanbanColumns } from '@/features/kanban/useKanban'
+import { useAllKanbanCards, useAllKanbanColumns } from '@/features/kanban/useKanban'
 import { useReminders } from '@/features/reminders/useReminders'
 import { ReminderModal } from '@/features/reminders/ReminderModal'
 import {
@@ -43,8 +43,8 @@ const VIEW_ITEMS: { value: ViewMode; label: string }[] = [
 
 export function CalendarPage() {
   const { project } = useOutletContext<{ project: Project }>()
-  const { data: cards } = useKanbanCards(project.id)
-  const { data: columns } = useKanbanColumns(project.id)
+  const { data: cards } = useAllKanbanCards(project.id)
+  const { data: columns } = useAllKanbanColumns(project.id)
   const { data: reminders } = useReminders(project.id)
   const [view, setView] = useState<ViewMode>('month')
   const [anchor, setAnchor] = useState(new Date())

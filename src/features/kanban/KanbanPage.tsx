@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import {
   DndContext,
   DragOverlay,
@@ -9,7 +9,8 @@ import {
   useSensor,
   useSensors,
 } from '@dnd-kit/core'
-import { Plus, Upload } from 'lucide-react'
+import { Pencil, Plus, Trash2, Upload } from 'lucide-react'
+import { clsx } from 'clsx'
 import { useOutletContext } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
@@ -24,14 +25,19 @@ import type { ChecklistItem, ExtraField, KanbanCard, Project } from '@/lib/types
 import { KanbanColumnView } from '@/features/kanban/KanbanColumn'
 import { KanbanCardFace } from '@/features/kanban/KanbanCard'
 import {
+  useCreateBoard,
   useCreateCard,
   useCreateColumn,
+  useDeleteBoard,
   useDeleteCard,
   useDeleteColumn,
+  useKanbanBoards,
   useKanbanCards,
   useKanbanColumns,
   useMoveCards,
+  useRenameBoard,
   useUpdateCard,
+  useUpdateColumn,
 } from '@/features/kanban/useKanban'
 
 const COLUMN_COLORS = [
@@ -44,17 +50,140 @@ const COLUMN_COLORS = [
 
 export function KanbanPage() {
   const { project } = useOutletContext<{ project: Project }>()
-  const { data: columns, isLoading: columnsLoading } = useKanbanColumns(project.id)
-  const { data: cards } = useKanbanCards(project.id)
-  const createColumn = useCreateColumn(project.id)
-  const deleteColumn = useDeleteColumn(project.id)
-  const createCard = useCreateCard(project.id)
-  const updateCard = useUpdateCard(project.id)
-  const deleteCard = useDeleteCard(project.id)
-  const moveCards = useMoveCards(project.id)
+  const { data: boards, isLoading: boardsLoading } = useKanbanBoards(project.id)
+  const createBoard = useCreateBoard(project.id)
+  const renameBoard = useRenameBoard(project.id)
+  const deleteBoard = useDeleteBoard(project.id)
+
+  const [activeBoardId, setActiveBoardId] = useState<string | null>(null)
+  const activeBoard = boards?.find((b) => b.id === activeBoardId) ?? boards?.[0] ?? null
+
+  const [boardModalOpen, setBoardModalOpen] = useState(false)
+  const [editingBoardId, setEditingBoardId] = useState<string | null>(null)
+  const [boardName, setBoardName] = useState('')
+  const [pendingDeleteBoard, setPendingDeleteBoard] = useState<string | null>(null)
+
+  function openCreateBoard() {
+    setEditingBoardId(null)
+    setBoardName('')
+    setBoardModalOpen(true)
+  }
+
+  function openRenameBoard(id: string, name: string) {
+    setEditingBoardId(id)
+    setBoardName(name)
+    setBoardModalOpen(true)
+  }
+
+  async function handleSaveBoard(e: React.FormEvent) {
+    e.preventDefault()
+    if (!boardName.trim()) return
+    if (editingBoardId) await renameBoard.mutateAsync({ id: editingBoardId, name: boardName.trim() })
+    else {
+      const created = await createBoard.mutateAsync(boardName.trim())
+      setActiveBoardId(created.id)
+    }
+    setBoardModalOpen(false)
+  }
+
+  return (
+    <div>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-display text-2xl">Kanban</h1>
+      </div>
+
+      {boardsLoading && <p className="text-label text-sm text-canvas-fg/50">Carregando…</p>}
+
+      <div className="mb-6 flex flex-wrap items-center gap-1.5">
+        {boards?.map((board) => (
+          <div key={board.id} className="group flex items-center">
+            <button
+              type="button"
+              onClick={() => setActiveBoardId(board.id)}
+              className={clsx(
+                'text-label cursor-pointer border-2 px-3 py-1.5 text-xs font-semibold',
+                activeBoard?.id === board.id
+                  ? 'border-line bg-accent-yellow text-ink shadow-brutal-sm'
+                  : 'border-line/40 bg-surface text-canvas-fg/70 hover:border-line',
+              )}
+            >
+              {board.name}
+            </button>
+            <button
+              type="button"
+              onClick={() => openRenameBoard(board.id, board.name)}
+              aria-label="Renomear quadro"
+              className="ml-0.5 cursor-pointer p-1 text-canvas-fg/30 opacity-0 group-hover:opacity-100 hover:text-canvas-fg"
+            >
+              <Pencil size={11} />
+            </button>
+            {boards.length > 1 && (
+              <button
+                type="button"
+                onClick={() => setPendingDeleteBoard(board.id)}
+                aria-label="Excluir quadro"
+                className="cursor-pointer p-1 text-canvas-fg/30 opacity-0 group-hover:opacity-100 hover:text-accent-red"
+              >
+                <Trash2 size={11} />
+              </button>
+            )}
+          </div>
+        ))}
+        <Button size="sm" variant="ghost" icon={<Plus size={13} />} onClick={openCreateBoard}>
+          Novo quadro
+        </Button>
+      </div>
+
+      {activeBoard && <KanbanBoardView key={activeBoard.id} projectId={project.id} boardId={activeBoard.id} />}
+
+      <Modal
+        open={boardModalOpen}
+        onClose={() => setBoardModalOpen(false)}
+        title={editingBoardId ? 'Renomear quadro' : 'Novo quadro'}
+        isDirty={editingBoardId ? boardName !== boards?.find((b) => b.id === editingBoardId)?.name : Boolean(boardName.trim())}
+      >
+        <form onSubmit={handleSaveBoard}>
+          <Field label="Nome do quadro" hint="Ex: Ações, MoSCoW, Sprint 3…">
+            <TextInput required autoFocus value={boardName} onChange={(e) => setBoardName(e.target.value)} />
+          </Field>
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="ghost" onClick={() => setBoardModalOpen(false)}>
+              Cancelar
+            </Button>
+            <Button type="submit">Salvar</Button>
+          </div>
+        </form>
+      </Modal>
+
+      <ConfirmDialog
+        open={Boolean(pendingDeleteBoard)}
+        onClose={() => setPendingDeleteBoard(null)}
+        onConfirm={() => {
+          if (pendingDeleteBoard) deleteBoard.mutate(pendingDeleteBoard)
+          setActiveBoardId(null)
+        }}
+        title="Excluir quadro"
+        description="Todas as colunas e cards desse quadro serão apagados junto."
+        confirmLabel="Excluir"
+      />
+    </div>
+  )
+}
+
+function KanbanBoardView({ projectId, boardId }: { projectId: string; boardId: string }) {
+  const { data: columns, isLoading: columnsLoading } = useKanbanColumns(projectId, boardId)
+  const { data: cards } = useKanbanCards(projectId, boardId)
+  const createColumn = useCreateColumn(projectId, boardId)
+  const updateColumn = useUpdateColumn(projectId, boardId)
+  const deleteColumn = useDeleteColumn(projectId, boardId)
+  const createCard = useCreateCard(projectId, boardId)
+  const updateCard = useUpdateCard(projectId, boardId)
+  const deleteCard = useDeleteCard(projectId, boardId)
+  const moveCards = useMoveCards(projectId, boardId)
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
   const [activeCard, setActiveCard] = useState<KanbanCard | null>(null)
+  const [tagFilter, setTagFilter] = useState<Set<string>>(new Set())
 
   const [columnModalOpen, setColumnModalOpen] = useState(false)
   const [columnName, setColumnName] = useState('')
@@ -76,12 +205,24 @@ export function KanbanPage() {
   const [editDueDate, setEditDueDate] = useState('')
   const [pendingDeleteCard, setPendingDeleteCard] = useState<string | null>(null)
 
-  const { upload: uploadCover, uploading: uploadingCover } = useUploadImage(project.id)
+  const { upload: uploadCover, uploading: uploadingCover } = useUploadImage(projectId)
+
+  const allTags = useMemo(() => Array.from(new Set((cards ?? []).flatMap((c) => c.tags))).sort(), [cards])
 
   function cardsFor(columnId: string) {
     return (cards ?? [])
       .filter((c) => c.column_id === columnId)
+      .filter((c) => tagFilter.size === 0 || c.tags.some((t) => tagFilter.has(t)))
       .sort((a, b) => a.sort_order - b.sort_order)
+  }
+
+  function toggleTag(tag: string) {
+    setTagFilter((prev) => {
+      const next = new Set(prev)
+      if (next.has(tag)) next.delete(tag)
+      else next.add(tag)
+      return next
+    })
   }
 
   async function handleCreateColumn(e: React.FormEvent) {
@@ -186,8 +327,36 @@ export function KanbanPage() {
 
   return (
     <div>
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-display text-2xl">Kanban de Ações</h1>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        {allTags.length > 0 ? (
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-label text-[10px] text-canvas-fg/40">Tags:</span>
+            {allTags.map((tag) => (
+              <button
+                key={tag}
+                type="button"
+                onClick={() => toggleTag(tag)}
+                className={clsx(
+                  'text-label border-2 border-line px-1.5 py-0.5 text-[10px]',
+                  tagFilter.has(tag) ? 'bg-accent-blue text-ink' : 'bg-transparent text-canvas-fg/50 hover:text-canvas-fg',
+                )}
+              >
+                {tag}
+              </button>
+            ))}
+            {tagFilter.size > 0 && (
+              <button
+                type="button"
+                onClick={() => setTagFilter(new Set())}
+                className="text-label text-[10px] text-canvas-fg/40 underline"
+              >
+                limpar
+              </button>
+            )}
+          </div>
+        ) : (
+          <span />
+        )}
         <Button size="sm" icon={<Plus size={16} />} onClick={() => setColumnModalOpen(true)}>
           Nova coluna
         </Button>
@@ -196,7 +365,7 @@ export function KanbanPage() {
       {columnsLoading && <p className="text-label text-sm text-canvas-fg/50">Carregando…</p>}
 
       {!columnsLoading && columns?.length === 0 && (
-        <EmptyState title="Nenhuma coluna ainda" description="Crie a primeira coluna do seu quadro." />
+        <EmptyState title="Nenhuma coluna ainda" description="Crie a primeira coluna desse quadro." />
       )}
 
       {!columnsLoading && columns && columns.length > 0 && (
@@ -214,6 +383,7 @@ export function KanbanPage() {
                 cards={cardsFor(column.id)}
                 onAddCard={() => setCardModalColumnId(column.id)}
                 onDeleteColumn={() => setPendingDeleteColumn(column.id)}
+                onRenameColumn={(name) => updateColumn.mutate({ id: column.id, name })}
                 onCardClick={openEditCard}
               />
             ))}
@@ -241,7 +411,7 @@ export function KanbanPage() {
               autoFocus
               value={columnName}
               onChange={(e) => setColumnName(e.target.value)}
-              placeholder="Ex: Em revisão"
+              placeholder="Ex: Must have, Should have…"
             />
           </Field>
           <div className="flex justify-end gap-2">

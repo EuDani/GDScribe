@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
-import type { Project } from '@/lib/types'
+import { DEFAULT_PHASES, type Project } from '@/lib/types'
 import { useAuth } from '@/contexts/AuthContext'
 
 const DEFAULT_MODULES: { key: string; title: string; icon: string; phase: string }[] = [
@@ -94,7 +94,7 @@ export function useCreateProject() {
         .single()
       if (error) throw error
 
-      await Promise.all([
+      const [, , boardResult] = await Promise.all([
         supabase.from('project_themes').insert({ project_id: project.id }),
         supabase.from('gdd_modules').insert(
           DEFAULT_MODULES.map((m, i) => ({
@@ -108,15 +108,31 @@ export function useCreateProject() {
             content: '',
           })),
         ),
-        supabase.from('kanban_columns').insert(
-          DEFAULT_COLUMNS.map((c, i) => ({
+        supabase
+          .from('kanban_boards')
+          .insert({ project_id: project.id, name: 'Ações', sort_order: 0 })
+          .select('*')
+          .single(),
+        supabase.from('project_phases').insert(
+          DEFAULT_PHASES.map((p, i) => ({
             project_id: project.id,
-            name: c.name,
-            color: c.color,
+            key: p.key,
+            label: p.label,
             sort_order: i,
           })),
         ),
       ])
+      if (boardResult.error) throw boardResult.error
+
+      await supabase.from('kanban_columns').insert(
+        DEFAULT_COLUMNS.map((c, i) => ({
+          project_id: project.id,
+          board_id: boardResult.data.id,
+          name: c.name,
+          color: c.color,
+          sort_order: i,
+        })),
+      )
 
       return project as Project
     },
