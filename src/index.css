@@ -61,6 +61,30 @@
     color: var(--color-canvas-fg);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
+    position: relative;
+  }
+
+  /* Degradê em dithering (padrão de pontos, tipo Bayer) preenchendo o topo e
+     o fundo da tela, esmaecendo pro meio — só um detalhe visual atrás do
+     conteúdo, não interfere em cliques. */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background-image: radial-gradient(currentColor 1px, transparent 1px);
+    background-size: 4px 4px;
+    background-position: 0 0;
+    color: var(--color-canvas-fg);
+    opacity: 0.05;
+    mask-image: linear-gradient(to bottom, black 0%, transparent 18%, transparent 82%, black 100%);
+    -webkit-mask-image: linear-gradient(to bottom, black 0%, transparent 18%, transparent 82%, black 100%);
+  }
+
+  #root {
+    position: relative;
+    z-index: 1;
   }
 
   ::selection {

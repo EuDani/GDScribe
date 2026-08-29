@@ -14,6 +14,17 @@ export interface ProjectPhase {
   sort_order: number
 }
 
+/** Pseudo-valor de UI: "todos os setores", nunca salvo no banco. */
+export const ALL_SECTORS = 'all'
+
+export interface ProjectSector {
+  id: string
+  project_id: string
+  name: string
+  color: string
+  sort_order: number
+}
+
 /** Usado só para semear as 3 fases padrão de um projeto novo. */
 export const DEFAULT_PHASES: { key: string; label: string }[] = [
   { key: 'pre_production', label: 'Pré-produção' },
@@ -57,6 +68,7 @@ export interface Project {
   status: string
   primary_genre: string | null
   secondary_genre: string | null
+  cover_image_url: string | null
   created_at: string
   updated_at: string
 }
@@ -101,6 +113,7 @@ export interface GddModule {
   is_custom: boolean
   content: string
   extra_fields: ExtraField[]
+  sectors: string[]
   updated_at: string
 }
 
@@ -131,6 +144,8 @@ export interface InventoryItem {
   project_id: string
   status: string | null
   data: Record<string, InventoryValue>
+  tags: string[]
+  sectors: string[]
   created_at: string
   updated_at: string
 }
@@ -172,6 +187,7 @@ export interface KanbanCard {
   extra_fields: ExtraField[]
   start_date: string | null
   due_date: string | null
+  sectors: string[]
   sort_order: number
   created_at: string
 }
@@ -191,6 +207,7 @@ export interface Idea {
   title: string
   body: string | null
   tags: string[]
+  sectors: string[]
   status: IdeaStatus
   created_at: string
   updated_at: string
@@ -232,6 +249,7 @@ export interface GameReference {
   title: string
   source_url: string | null
   image_url: string | null
+  image_urls: string[]
   notes: string
   checklist: ChecklistItem[]
   created_at: string
@@ -269,13 +287,22 @@ export interface Reminder {
   id: string
   project_id: string
   title: string
-  event_date: string // YYYY-MM-DD
+  event_date: string // YYYY-MM-DD — início/data do evento
   event_time: string | null // HH:mm
+  end_date: string | null // YYYY-MM-DD — quando a tarefa precisa acabar
   notes: string | null
   notifications: NotificationRule[]
   tags: string[]
+  sectors: string[]
   image_url: string | null
   importance: ReminderImportance
   created_at: string
   updated_at: string
+}
+
+/** Atrasado = tem prazo (end_date ou event_date) já passado. */
+export function isReminderOverdue(r: Pick<Reminder, 'event_date' | 'end_date'>): boolean {
+  const deadline = r.end_date ?? r.event_date
+  const today = new Date().toISOString().slice(0, 10)
+  return deadline < today
 }

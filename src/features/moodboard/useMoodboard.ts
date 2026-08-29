@@ -59,6 +59,17 @@ export function useRenameMoodboardFolder(projectId: string) {
   })
 }
 
+export function useMoveMoodboardFolder(projectId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, parentId }: { id: string; parentId: string | null }) => {
+      const { error } = await supabase.from('moodboard_folders').update({ parent_id: parentId }).eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['moodboard_folders', projectId] }),
+  })
+}
+
 export function useDeleteMoodboardFolder(projectId: string) {
   const queryClient = useQueryClient()
   return useMutation({

@@ -6,7 +6,7 @@ import { useOutletContext } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { EmptyState } from '@/components/ui/EmptyState'
-import { Field, TextInput } from '@/components/ui/Input'
+import { Field, Select, TextInput } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
 import { useUploadImage } from '@/lib/useUploadImage'
 import type { MoodboardFolder, MoodboardImage, Project } from '@/lib/types'
@@ -17,6 +17,7 @@ import {
   useDeleteMoodboardImage,
   useMoodboardFolders,
   useMoodboardImages,
+  useMoveMoodboardFolder,
   useRenameMoodboardFolder,
   useReorderMoodboardFolders,
   useUpdateMoodboardImage,
@@ -33,6 +34,7 @@ export function MoodboardPage() {
   const renameFolder = useRenameMoodboardFolder(project.id)
   const deleteFolder = useDeleteMoodboardFolder(project.id)
   const reorderFolders = useReorderMoodboardFolders(project.id)
+  const moveFolderMutation = useMoveMoodboardFolder(project.id)
   const addImages = useAddMoodboardImages(project.id)
   const updateImage = useUpdateMoodboardImage(project.id)
   const deleteImage = useDeleteMoodboardImage(project.id)
@@ -43,6 +45,7 @@ export function MoodboardPage() {
   const [editingFolder, setEditingFolder] = useState<MoodboardFolder | null>(null)
   const [creatingParentId, setCreatingParentId] = useState<string | null>(null)
   const [folderName, setFolderName] = useState('')
+  const [editParentId, setEditParentId] = useState<string | null>(null)
   const [pendingDeleteFolder, setPendingDeleteFolder] = useState<string | null>(null)
   const [pendingDeleteImage, setPendingDeleteImage] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -78,14 +81,32 @@ export function MoodboardPage() {
   function openRenameFolder(folder: MoodboardFolder) {
     setEditingFolder(folder)
     setFolderName(folder.name)
+    setEditParentId(folder.parent_id)
     setFolderModalOpen(true)
+  }
+
+  function descendantIds(folderId: string): Set<string> {
+    const ids = new Set<string>()
+    const stack = [folderId]
+    while (stack.length > 0) {
+      const current = stack.pop()!
+      for (const f of childrenByParent.get(current) ?? []) {
+        ids.add(f.id)
+        stack.push(f.id)
+      }
+    }
+    return ids
   }
 
   async function handleSaveFolder(e: React.FormEvent) {
     e.preventDefault()
     if (!folderName.trim()) return
-    if (editingFolder) await renameFolder.mutateAsync({ id: editingFolder.id, name: folderName.trim() })
-    else {
+    if (editingFolder) {
+      await renameFolder.mutateAsync({ id: editingFolder.id, name: folderName.trim() })
+      if (editParentId !== editingFolder.parent_id) {
+        await moveFolderMutation.mutateAsync({ id: editingFolder.id, parentId: editParentId })
+      }
+    } else {
       const created = await createFolder.mutateAsync({ name: folderName.trim(), parentId: creatingParentId })
       setActiveFolder(created.id)
     }
@@ -295,7 +316,11 @@ export function MoodboardPage() {
         open={folderModalOpen}
         onClose={() => setFolderModalOpen(false)}
         title={editingFolder ? 'Renomear pasta' : creatingParentId ? 'Nova subpasta' : 'Nova pasta'}
-        isDirty={editingFolder ? folderName !== editingFolder.name : Boolean(folderName.trim())}
+        isDirty={
+          editingFolder
+            ? folderName !== editingFolder.name || editParentId !== editingFolder.parent_id
+            : Boolean(folderName.trim())
+        }
       >
         <form onSubmit={handleSaveFolder}>
           <Field label="Nome da pasta">
@@ -307,6 +332,23 @@ export function MoodboardPage() {
               placeholder="Ex: Paleta de cores, Personagens…"
             />
           </Field>
+          {editingFolder && (
+            <Field label="Pasta pai" hint="Mova essa pasta para dentro de outra, ou deixe na raiz">
+              <Select
+                value={editParentId ?? ''}
+                onChange={(e) => setEditParentId(e.target.value || null)}
+              >
+                <option value="">— (raiz)</option>
+                {(folders ?? [])
+                  .filter((f) => f.id !== editingFolder.id && !descendantIds(editingFolder.id).has(f.id))
+                  .map((f) => (
+                    <option key={f.id} value={f.id}>
+                      {f.name}
+                    </option>
+                  ))}
+              </Select>
+            </Field>
+          )}
           <div className="flex justify-end gap-2">
             <Button type="button" variant="ghost" onClick={() => setFolderModalOpen(false)}>
               Cancelar

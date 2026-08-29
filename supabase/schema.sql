@@ -54,6 +54,21 @@ create table if not exists public.project_phases (
 create index if not exists project_phases_project_id_idx on public.project_phases (project_id);
 
 -- ============================================================
+-- project_sectors — setores do projeto (marketing, programação, arte...),
+-- totalmente editáveis, usados como filtro/marcação em vários módulos.
+-- ============================================================
+create table if not exists public.project_sectors (
+  id uuid primary key default gen_random_uuid(),
+  project_id uuid not null references public.projects (id) on delete cascade,
+  name text not null,
+  color text not null default '#ffd60a',
+  sort_order integer not null default 0,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists project_sectors_project_id_idx on public.project_sectors (project_id);
+
+-- ============================================================
 -- gdd_modules
 -- ============================================================
 create table if not exists public.gdd_modules (
@@ -283,6 +298,25 @@ alter table public.kanban_cards add column if not exists board_id uuid reference
 create index if not exists kanban_columns_board_id_idx on public.kanban_columns (board_id);
 create index if not exists kanban_cards_board_id_idx on public.kanban_cards (board_id);
 
+-- Setores (marcação livre, tipo "todos" tratado no app como ausência de filtro)
+alter table public.reminders add column if not exists sectors text[] not null default '{}';
+alter table public.gdd_modules add column if not exists sectors text[] not null default '{}';
+alter table public.kanban_cards add column if not exists sectors text[] not null default '{}';
+alter table public.inventory_items add column if not exists sectors text[] not null default '{}';
+alter table public.ideas add column if not exists sectors text[] not null default '{}';
+
+-- Tags por item de inventário (filtráveis dentro de cada tipo)
+alter table public.inventory_items add column if not exists tags text[] not null default '{}';
+
+-- Duração de lembretes/tarefas no calendário
+alter table public.reminders add column if not exists end_date date;
+
+-- Múltiplas imagens por referência
+alter table public.game_references add column if not exists image_urls text[] not null default '{}';
+
+-- Imagem de capa do projeto, exibida no cartão da tela inicial
+alter table public.projects add column if not exists cover_image_url text;
+
 -- Cria um quadro "Ações" para projetos que já tinham colunas/cards de uma
 -- versão anterior (sem o conceito de múltiplos quadros) e associa esse
 -- quadro a essas colunas/cards que ainda estão com board_id nulo.
@@ -367,6 +401,7 @@ create trigger set_updated_at before update on public.reminders
 alter table public.projects enable row level security;
 alter table public.project_themes enable row level security;
 alter table public.project_phases enable row level security;
+alter table public.project_sectors enable row level security;
 alter table public.gdd_modules enable row level security;
 alter table public.inventory_types enable row level security;
 alter table public.inventory_items enable row level security;
@@ -395,6 +430,15 @@ create policy "own project_themes" on public.project_themes
 
 drop policy if exists "own project_phases" on public.project_phases;
 create policy "own project_phases" on public.project_phases
+  for all using (
+    exists (select 1 from public.projects p where p.id = project_id and p.owner_id = auth.uid())
+  )
+  with check (
+    exists (select 1 from public.projects p where p.id = project_id and p.owner_id = auth.uid())
+  );
+
+drop policy if exists "own project_sectors" on public.project_sectors;
+create policy "own project_sectors" on public.project_sectors
   for all using (
     exists (select 1 from public.projects p where p.id = project_id and p.owner_id = auth.uid())
   )

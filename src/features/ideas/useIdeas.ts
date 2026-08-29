@@ -21,12 +21,23 @@ export function useIdeas(projectId: string | undefined) {
 export function useCreateIdea(projectId: string) {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async ({ title, body, tags }: { title: string; body: string; tags: string[] }) => {
+    mutationFn: async ({
+      title,
+      body,
+      tags,
+      sectors,
+    }: {
+      title: string
+      body: string
+      tags: string[]
+      sectors?: string[]
+    }) => {
       const { error } = await supabase.from('ideas').insert({
         project_id: projectId,
         title,
         body: body || null,
         tags,
+        sectors: sectors ?? [],
         status: 'new' as IdeaStatus,
       })
       if (error) throw error

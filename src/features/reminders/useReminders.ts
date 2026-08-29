@@ -20,9 +20,33 @@ export function useReminders(projectId: string | undefined) {
   })
 }
 
+export function useAllReminders() {
+  return useQuery({
+    queryKey: ['reminders', 'all'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('reminders')
+        .select('*, projects(name)')
+        .order('event_date', { ascending: true })
+      if (error) throw error
+      return data as (Reminder & { projects: { name: string } | null })[]
+    },
+    refetchInterval: 60_000,
+  })
+}
+
 type ReminderInput = Pick<
   Reminder,
-  'title' | 'event_date' | 'event_time' | 'notes' | 'notifications' | 'tags' | 'image_url' | 'importance'
+  | 'title'
+  | 'event_date'
+  | 'event_time'
+  | 'end_date'
+  | 'notes'
+  | 'notifications'
+  | 'tags'
+  | 'sectors'
+  | 'image_url'
+  | 'importance'
 >
 
 export function useCreateReminder(projectId: string) {

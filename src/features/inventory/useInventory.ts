@@ -117,18 +117,25 @@ export function useUpsertInventoryItem(projectId: string, typeId: string) {
       id,
       data,
       status,
+      tags,
+      sectors,
     }: {
       id?: string
       data: Record<string, InventoryValue>
       status?: string | null
+      tags?: string[]
+      sectors?: string[]
     }) => {
       if (id) {
-        const { error } = await supabase.from('inventory_items').update({ data, status }).eq('id', id)
+        const { error } = await supabase
+          .from('inventory_items')
+          .update({ data, status, tags: tags ?? [], sectors: sectors ?? [] })
+          .eq('id', id)
         if (error) throw error
       } else {
         const { error } = await supabase
           .from('inventory_items')
-          .insert({ project_id: projectId, type_id: typeId, data, status })
+          .insert({ project_id: projectId, type_id: typeId, data, status, tags: tags ?? [], sectors: sectors ?? [] })
         if (error) throw error
       }
     },

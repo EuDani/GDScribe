@@ -81,6 +81,25 @@ export function OverviewPage() {
     [ideas],
   )
 
+  const inventoryByStatus = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const item of invItems ?? []) {
+      const key = item.status ?? 'Sem status'
+      counts.set(key, (counts.get(key) ?? 0) + 1)
+    }
+    return Array.from(counts.entries()).map(([label, value]) => ({ label, value }))
+  }, [invItems])
+
+  const topTags = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const c of cards ?? []) for (const t of c.tags) counts.set(t, (counts.get(t) ?? 0) + 1)
+    for (const i of ideas ?? []) for (const t of i.tags) counts.set(t, (counts.get(t) ?? 0) + 1)
+    return Array.from(counts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 6)
+      .map(([label, value]) => ({ label, value }))
+  }, [cards, ideas])
+
   const today = new Date().toISOString().slice(0, 10)
 
   const upcomingCards = useMemo(
@@ -227,6 +246,8 @@ export function OverviewPage() {
           { title: 'Inventário por tipo', points: inventoryByType, delay: 0.05 },
           { title: 'Cards por coluna', points: cardsByColumn, delay: 0.1 },
           { title: 'Ideias por status', points: ideasByStatus, delay: 0.15 },
+          { title: 'Itens de inventário por status', points: inventoryByStatus, delay: 0.2 },
+          { title: 'Tags mais usadas', points: topTags, delay: 0.25 },
         ].map(({ title, points, delay }) => (
           <motion.div
             key={title}

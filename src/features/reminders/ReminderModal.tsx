@@ -4,7 +4,9 @@ import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { Field, Select, TextInput, Textarea } from '@/components/ui/Input'
 import { TagInput } from '@/components/TagInput'
+import { SectorPicker } from '@/components/SectorPicker'
 import { NotificationRulesEditor } from '@/features/reminders/NotificationRulesEditor'
+import { useProjectSectors } from '@/features/settings/useProjectSectors'
 import { ensureNotificationPermission, isNotificationSupported } from '@/lib/notifications'
 import { useUploadImage } from '@/lib/useUploadImage'
 import { REMINDER_IMPORTANCE, type NotificationRule, type Reminder, type ReminderImportance } from '@/lib/types'
@@ -33,6 +35,7 @@ export function ReminderModal({
   const updateReminder = useUpdateReminder(projectId)
   const deleteReminder = useDeleteReminder(projectId)
   const { data: allReminders } = useReminders(projectId)
+  const { data: projectSectors } = useProjectSectors(projectId)
   const toast = useToast()
   const { upload, uploading } = useUploadImage(projectId)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -45,9 +48,11 @@ export function ReminderModal({
   const [title, setTitle] = useState('')
   const [eventDate, setEventDate] = useState('')
   const [eventTime, setEventTime] = useState('')
+  const [endDate, setEndDate] = useState('')
   const [notes, setNotes] = useState('')
   const [rules, setRules] = useState<NotificationRule[]>([])
   const [tags, setTags] = useState<string[]>([])
+  const [sectors, setSectors] = useState<string[]>([])
   const [imageUrl, setImageUrl] = useState<string | null>(null)
   const [importance, setImportance] = useState<ReminderImportance>('normal')
 
@@ -56,9 +61,11 @@ export function ReminderModal({
     setTitle(reminder?.title ?? '')
     setEventDate(reminder?.event_date ?? defaultDate ?? '')
     setEventTime(reminder?.event_time ?? '')
+    setEndDate(reminder?.end_date ?? '')
     setNotes(reminder?.notes ?? '')
     setRules(reminder?.notifications ?? [])
     setTags(reminder?.tags ?? [])
+    setSectors(reminder?.sectors ?? [])
     setImageUrl(reminder?.image_url ?? null)
     setImportance(reminder?.importance ?? 'normal')
   }, [open, reminder, defaultDate])
@@ -83,9 +90,11 @@ export function ReminderModal({
       title: title.trim(),
       event_date: eventDate,
       event_time: eventTime || null,
+      end_date: endDate || null,
       notes: notes.trim() || null,
       notifications: rules,
       tags,
+      sectors,
       image_url: imageUrl,
       importance,
     }
@@ -106,8 +115,10 @@ export function ReminderModal({
           ? title !== reminder.title ||
             eventDate !== reminder.event_date ||
             eventTime !== (reminder.event_time ?? '') ||
+            endDate !== (reminder.end_date ?? '') ||
             notes !== (reminder.notes ?? '') ||
             JSON.stringify(tags) !== JSON.stringify(reminder.tags) ||
+            JSON.stringify(sectors) !== JSON.stringify(reminder.sectors) ||
             imageUrl !== reminder.image_url ||
             importance !== reminder.importance ||
             JSON.stringify(rules) !== JSON.stringify(reminder.notifications)
@@ -119,9 +130,12 @@ export function ReminderModal({
           <TextInput required autoFocus value={title} onChange={(e) => setTitle(e.target.value)} />
         </Field>
 
-        <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <Field label="Data">
+        <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-4">
+          <Field label="Início">
             <TextInput type="date" required value={eventDate} onChange={(e) => setEventDate(e.target.value)} />
+          </Field>
+          <Field label="Prazo final" hint="Opcional">
+            <TextInput type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
           </Field>
           <Field label="Horário" hint="Opcional">
             <TextInput type="time" value={eventTime} onChange={(e) => setEventTime(e.target.value)} />
@@ -139,6 +153,10 @@ export function ReminderModal({
 
         <Field label="Tags">
           <TagInput value={tags} onChange={setTags} suggestions={allTags} placeholder="marketing, build, reunião…" />
+        </Field>
+
+        <Field label="Setores" hint="Opcional — 'Todos' se aplica a qualquer setor">
+          <SectorPicker value={sectors} onChange={setSectors} sectors={projectSectors ?? []} />
         </Field>
 
         <Field label="Imagem" hint="Opcional">

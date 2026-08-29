@@ -13,6 +13,7 @@ import { Logo } from '@/components/Logo'
 import { useAuth } from '@/contexts/AuthContext'
 import { STEAM_GENRES } from '@/lib/types'
 import { useCreateProject, useDeleteProject, useProjects } from '@/features/dashboard/useProjects'
+import { AllProjectsCalendarCard } from '@/features/dashboard/AllProjectsCalendarCard'
 
 export function DashboardPage() {
   const { data: projects, isLoading, isError, error, refetch } = useProjects()
@@ -72,6 +73,8 @@ export function DashboardPage() {
           </Button>
         </div>
 
+        <AllProjectsCalendarCard />
+
         {isLoading && <p className="text-label text-sm text-canvas-fg/50">Carregando…</p>}
 
         {isError && (
@@ -104,7 +107,19 @@ export function DashboardPage() {
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {projects?.map((project) => (
-            <Card key={project.id} className="flex flex-col justify-between">
+            <Card key={project.id} padded={false} className="flex flex-col justify-between overflow-hidden">
+              {project.cover_image_url ? (
+                <img
+                  src={project.cover_image_url}
+                  alt=""
+                  className="h-28 w-full border-b-2 border-line object-cover"
+                />
+              ) : (
+                <div className="flex h-28 w-full items-center justify-center border-b-2 border-line bg-canvas">
+                  <Logo />
+                </div>
+              )}
+              <div className="flex flex-1 flex-col justify-between p-4">
               <div>
                 <h2 className="text-display mb-1.5 text-lg">{project.name}</h2>
                 {(project.primary_genre || project.secondary_genre) && (
@@ -129,6 +144,7 @@ export function DashboardPage() {
                 >
                   <Trash2 size={14} />
                 </button>
+              </div>
               </div>
             </Card>
           ))}

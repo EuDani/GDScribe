@@ -11,6 +11,7 @@ import { Tabs } from '@/components/ui/Tabs'
 import { Badge } from '@/components/ui/Badge'
 import { StatusSelect } from '@/components/StatusSelect'
 import { RichTextEditor } from '@/components/RichTextEditor'
+import { SectorPicker, matchesSectorFilter } from '@/components/SectorPicker'
 import { ALL_PHASES, type ExtraField, type GddModule, type Phase, type Project } from '@/lib/types'
 import {
   useCreateModule,
@@ -19,6 +20,7 @@ import {
   useUpdateModule,
 } from '@/features/gdd/useGddModules'
 import { useProjectPhases } from '@/features/settings/useProjectPhases'
+import { useProjectSectors } from '@/features/settings/useProjectSectors'
 import { ExtraFieldsEditor } from '@/features/gdd/ExtraFieldsEditor'
 
 function sameExtraFields(a: ExtraField[], b: ExtraField[]) {
@@ -29,6 +31,7 @@ export function GddPage() {
   const { project } = useOutletContext<{ project: Project }>()
   const { data: modules, isLoading } = useGddModules(project.id)
   const { data: phases } = useProjectPhases(project.id)
+  const { data: sectors } = useProjectSectors(project.id)
   const createModule = useCreateModule(project.id)
   const updateModule = useUpdateModule(project.id)
   const deleteModule = useDeleteModule(project.id)
@@ -44,6 +47,7 @@ export function GddPage() {
   }, [phases])
 
   const [phaseFilter, setPhaseFilter] = useState<Phase>(ALL_PHASES)
+  const [sectorFilter, setSectorFilter] = useState<string[]>([])
   const [search, setSearch] = useState('')
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [draft, setDraft] = useState('')
@@ -61,9 +65,10 @@ export function GddPage() {
         .filter((m) => {
           const matchesPhase = phaseFilter === ALL_PHASES || m.phase === phaseFilter
           const matchesSearch = m.title.toLowerCase().includes(search.trim().toLowerCase())
-          return matchesPhase && matchesSearch
+          const matchesSector = matchesSectorFilter(m.sectors, sectorFilter)
+          return matchesPhase && matchesSearch && matchesSector
         }),
-    [modules, phaseFilter, search],
+    [modules, phaseFilter, search, sectorFilter],
   )
 
   const childrenByParent = useMemo(() => {
@@ -155,6 +160,13 @@ export function GddPage() {
       </div>
 
       <Tabs items={phaseItems} value={phaseFilter} onChange={setPhaseFilter} />
+
+      {(sectors ?? []).length > 0 && (
+        <div className="mt-3 flex flex-wrap items-center gap-1.5">
+          <span className="text-label text-[10px] text-canvas-fg/40">Setor:</span>
+          <SectorPicker value={sectorFilter} onChange={setSectorFilter} sectors={sectors ?? []} />
+        </div>
+      )}
 
       {isLoading && <p className="text-label mt-6 text-sm text-canvas-fg/50">Carregando…</p>}
 
@@ -272,6 +284,17 @@ export function GddPage() {
 
               <div className="p-4">
                 <RichTextEditor projectId={project.id} value={draft} onChange={setDraft} minHeight={300} />
+
+                {(sectors ?? []).length > 0 && (
+                  <div className="mt-5 border-t-2 border-line/30 pt-4">
+                    <h3 className="text-label mb-3 text-xs text-canvas-fg/60">Setores</h3>
+                    <SectorPicker
+                      value={selected.sectors}
+                      onChange={(value) => updateModule.mutate({ id: selected.id, sectors: value })}
+                      sectors={sectors ?? []}
+                    />
+                  </div>
+                )}
 
                 <div className="mt-5 border-t-2 border-line/30 pt-4">
                   <h3 className="text-label mb-3 text-xs text-canvas-fg/60">Campos extras</h3>

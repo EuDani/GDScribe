@@ -11,9 +11,11 @@ import { Badge, accentFromString } from '@/components/ui/Badge'
 import { Tabs } from '@/components/ui/Tabs'
 import { RichTextEditor } from '@/components/RichTextEditor'
 import { TagInput } from '@/components/TagInput'
+import { SectorPicker, matchesSectorFilter } from '@/components/SectorPicker'
 import { isHtmlEmpty, stripHtml } from '@/lib/html'
 import { IDEA_STATUSES, type Idea, type IdeaStatus, type Project } from '@/lib/types'
 import { useCreateIdea, useDeleteIdea, useIdeas, useUpdateIdea } from '@/features/ideas/useIdeas'
+import { useProjectSectors } from '@/features/settings/useProjectSectors'
 
 const FILTER_ITEMS = [{ value: 'all' as const, label: 'Todas' }, ...IDEA_STATUSES]
 
@@ -23,14 +25,17 @@ export function IdeasPage() {
   const createIdea = useCreateIdea(project.id)
   const updateIdea = useUpdateIdea(project.id)
   const deleteIdea = useDeleteIdea(project.id)
+  const { data: sectors } = useProjectSectors(project.id)
 
   const [statusFilter, setStatusFilter] = useState<IdeaStatus | 'all'>('all')
   const [tagFilter, setTagFilter] = useState<string[]>([])
+  const [sectorFilter, setSectorFilter] = useState<string[]>([])
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<Idea | null>(null)
   const [title, setTitle] = useState('')
   const [body, setBody] = useState('')
   const [tags, setTags] = useState<string[]>([])
+  const [ideaSectors, setIdeaSectors] = useState<string[]>([])
   const [pendingDelete, setPendingDelete] = useState<string | null>(null)
 
   const allTags = useMemo(
@@ -43,9 +48,10 @@ export function IdeasPage() {
       (ideas ?? []).filter((i) => {
         const matchesStatus = statusFilter === 'all' || i.status === statusFilter
         const matchesTags = tagFilter.length === 0 || tagFilter.some((t) => i.tags.includes(t))
-        return matchesStatus && matchesTags
+        const matchesSector = matchesSectorFilter(i.sectors, sectorFilter)
+        return matchesStatus && matchesTags && matchesSector
       }),
-    [ideas, statusFilter, tagFilter],
+    [ideas, statusFilter, tagFilter, sectorFilter],
   )
 
   function toggleTag(tag: string) {
@@ -57,6 +63,7 @@ export function IdeasPage() {
     setTitle('')
     setBody('')
     setTags([])
+    setIdeaSectors([])
     setModalOpen(true)
   }
 
@@ -65,6 +72,7 @@ export function IdeasPage() {
     setTitle(idea.title)
     setBody(idea.body ?? '')
     setTags(idea.tags)
+    setIdeaSectors(idea.sectors)
     setModalOpen(true)
   }
 
@@ -73,9 +81,15 @@ export function IdeasPage() {
     if (!title.trim()) return
 
     if (editing) {
-      await updateIdea.mutateAsync({ id: editing.id, title: title.trim(), body: body.trim() || null, tags })
+      await updateIdea.mutateAsync({
+        id: editing.id,
+        title: title.trim(),
+        body: body.trim() || null,
+        tags,
+        sectors: ideaSectors,
+      })
     } else {
-      await createIdea.mutateAsync({ title: title.trim(), body: body.trim(), tags })
+      await createIdea.mutateAsync({ title: title.trim(), body: body.trim(), tags, sectors: ideaSectors })
     }
     setModalOpen(false)
   }
@@ -118,6 +132,13 @@ export function IdeasPage() {
               limpar
             </button>
           )}
+        </div>
+      )}
+
+      {(sectors ?? []).length > 0 && (
+        <div className="mt-3 flex flex-wrap items-center gap-1.5">
+          <span className="text-label text-[10px] text-canvas-fg/40">Setor:</span>
+          <SectorPicker value={sectorFilter} onChange={setSectorFilter} sectors={sectors ?? []} />
         </div>
       )}
 
@@ -172,7 +193,8 @@ export function IdeasPage() {
           editing
             ? title !== editing.title ||
               body !== (editing.body ?? '') ||
-              JSON.stringify(tags) !== JSON.stringify(editing.tags)
+              JSON.stringify(tags) !== JSON.stringify(editing.tags) ||
+              JSON.stringify(ideaSectors) !== JSON.stringify(editing.sectors)
             : Boolean(title.trim() || body.trim() || tags.length > 0)
         }
       >
@@ -185,6 +207,9 @@ export function IdeasPage() {
           </Field>
           <Field label="Tags">
             <TagInput value={tags} onChange={setTags} suggestions={allTags} placeholder="combate, ui, som…" />
+          </Field>
+          <Field label="Setores">
+            <SectorPicker value={ideaSectors} onChange={setIdeaSectors} sectors={sectors ?? []} />
           </Field>
           {editing && (
             <Field label="Status">

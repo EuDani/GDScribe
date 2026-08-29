@@ -20,7 +20,7 @@ import {
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { AnimatePresence, motion } from 'motion/react'
-import { Link, NavLink, Outlet, useParams } from 'react-router-dom'
+import { Link, NavLink, Outlet, useLocation, useParams } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { useAuth } from '@/contexts/AuthContext'
 import { ProjectThemeProvider } from '@/contexts/ProjectThemeContext'
@@ -48,6 +48,7 @@ const COLLAPSE_KEY = 'gdscribe.sidebarCollapsed'
 
 export function ProjectLayout() {
   const { projectId } = useParams<{ projectId: string }>()
+  const location = useLocation()
   const { data: project, isLoading, isError, error, refetch } = useProject(projectId)
   const { data: theme } = useProjectThemeQuery(projectId)
   const { signOut } = useAuth()
@@ -259,7 +260,17 @@ export function ProjectLayout() {
           </button>
         </motion.aside>
         <main className="min-w-0 flex-1 p-4 pt-20 sm:p-8 lg:pt-8">
-          <Outlet context={{ project }} />
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={location.pathname}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.18, ease: 'easeOut' }}
+            >
+              <Outlet context={{ project }} />
+            </motion.div>
+          </AnimatePresence>
         </main>
         <UserMenu />
         <TodayReminderBanner projectId={project.id} />

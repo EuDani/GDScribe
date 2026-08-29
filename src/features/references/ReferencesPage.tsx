@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ExternalLink, Plus, Upload } from 'lucide-react'
+import { ExternalLink, Plus, Upload, X } from 'lucide-react'
 import { motion } from 'motion/react'
 import { useOutletContext } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
@@ -7,6 +7,7 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Field, TextInput } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
+import { SidePanel } from '@/components/ui/SidePanel'
 import { ChecklistEditor } from '@/components/ChecklistEditor'
 import { RichTextEditor } from '@/components/RichTextEditor'
 import { useUploadImage } from '@/lib/useUploadImage'
@@ -24,14 +25,14 @@ export function ReferencesPage() {
   const createReference = useCreateReference(project.id)
   const updateReference = useUpdateReference(project.id)
   const deleteReference = useDeleteReference(project.id)
-  const { upload, uploading } = useUploadImage(project.id)
+  const { uploadMany, uploading } = useUploadImage(project.id)
 
   const [creating, setCreating] = useState(false)
   const [newTitle, setNewTitle] = useState('')
   const [editing, setEditing] = useState<GameReference | null>(null)
   const [editTitle, setEditTitle] = useState('')
   const [editSourceUrl, setEditSourceUrl] = useState('')
-  const [editImage, setEditImage] = useState<string | null>(null)
+  const [editImages, setEditImages] = useState<string[]>([])
   const [editNotes, setEditNotes] = useState('')
   const [editChecklist, setEditChecklist] = useState<ChecklistItem[]>([])
   const [pendingDelete, setPendingDelete] = useState<string | null>(null)
@@ -49,7 +50,7 @@ export function ReferencesPage() {
     setEditing(ref)
     setEditTitle(ref.title)
     setEditSourceUrl(ref.source_url ?? '')
-    setEditImage(ref.image_url)
+    setEditImages(ref.image_urls.length > 0 ? ref.image_urls : ref.image_url ? [ref.image_url] : [])
     setEditNotes(ref.notes)
     setEditChecklist(ref.checklist)
   }
@@ -61,16 +62,22 @@ export function ReferencesPage() {
       id: editing.id,
       title: editTitle.trim(),
       source_url: editSourceUrl.trim() || null,
-      image_url: editImage,
+      image_url: editImages[0] ?? null,
+      image_urls: editImages,
       notes: editNotes,
       checklist: editChecklist,
     })
     setEditing(null)
   }
 
-  async function handleImageUpload(file: File) {
-    const url = await upload(file, 'reference-images')
-    if (url) setEditImage(url)
+  async function handleImageUpload(files: FileList | null) {
+    if (!files || files.length === 0) return
+    const urls = await uploadMany(Array.from(files), 'reference-images')
+    if (urls.length > 0) setEditImages((prev) => [...prev, ...urls])
+  }
+
+  function removeImage(url: string) {
+    setEditImages((prev) => prev.filter((u) => u !== url))
   }
 
   return (
@@ -110,8 +117,12 @@ export function ReferencesPage() {
               whileHover={{ x: -2, y: -2 }}
               className="cursor-pointer overflow-hidden border-2 border-line bg-surface text-left shadow-brutal-sm"
             >
-              {ref.image_url ? (
-                <img src={ref.image_url} alt="" className="h-28 w-full border-b-2 border-line object-cover" />
+              {(ref.image_urls[0] ?? ref.image_url) ? (
+                <img
+                  src={ref.image_urls[0] ?? ref.image_url ?? undefined}
+                  alt=""
+                  className="h-28 w-full border-b-2 border-line object-cover"
+                />
               ) : (
                 <div className="flex h-28 w-full items-center justify-center border-b-2 border-line bg-canvas text-canvas-fg/20">
                   <Upload size={22} />
@@ -157,16 +168,15 @@ export function ReferencesPage() {
         </form>
       </Modal>
 
-      <Modal
+      <SidePanel
         open={Boolean(editing)}
         onClose={() => setEditing(null)}
         title="Editar referência"
-        wide
         isDirty={Boolean(
           editing &&
             (editTitle !== editing.title ||
               editSourceUrl !== (editing.source_url ?? '') ||
-              editImage !== editing.image_url ||
+              JSON.stringify(editImages) !== JSON.stringify(editing.image_urls) ||
               editNotes !== editing.notes ||
               JSON.stringify(editChecklist) !== JSON.stringify(editing.checklist)),
         )}
@@ -192,23 +202,39 @@ export function ReferencesPage() {
             </div>
           </Field>
 
-          <Field label="Imagem">
-            <div className="flex items-center gap-3">
-              {editImage && <img src={editImage} alt="" className="h-16 w-28 border-2 border-line object-cover" />}
+          <Field label="Imagens" hint="Pode enviar várias de uma vez">
+            <div className="space-y-2">
+              {editImages.length > 0 && (
+                <div className="grid grid-cols-3 gap-2">
+                  {editImages.map((url) => (
+                    <div key={url} className="group relative">
+                      <img src={url} alt="" className="h-16 w-full border-2 border-line object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => removeImage(url)}
+                        aria-label="Remover imagem"
+                        className="absolute right-0.5 top-0.5 cursor-pointer border border-ink bg-accent-red p-0.5 text-canvas-fg opacity-0 group-hover:opacity-100"
+                      >
+                        <X size={10} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
               <label className="cursor-pointer">
                 <input
                   type="file"
                   accept="image/*"
+                  multiple
                   className="hidden"
                   onChange={(e) => {
-                    const file = e.target.files?.[0]
-                    if (file) handleImageUpload(file)
+                    handleImageUpload(e.target.files)
                     e.target.value = ''
                   }}
                 />
                 <span className="text-label inline-flex cursor-pointer items-center gap-1.5 border-2 border-line px-2.5 py-1.5 text-[11px] text-canvas-fg/70 hover:bg-accent-blue hover:text-ink">
                   <Upload size={12} />
-                  {uploading ? 'Enviando…' : 'Enviar imagem'}
+                  {uploading ? 'Enviando…' : 'Enviar imagens'}
                 </span>
               </label>
             </div>
@@ -240,7 +266,7 @@ export function ReferencesPage() {
             </div>
           </div>
         </form>
-      </Modal>
+      </SidePanel>
 
       <ConfirmDialog
         open={Boolean(pendingDelete)}

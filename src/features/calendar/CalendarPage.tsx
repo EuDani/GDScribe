@@ -18,10 +18,19 @@ import { Card } from '@/components/ui/Card'
 import { Tabs } from '@/components/ui/Tabs'
 import { Modal } from '@/components/ui/Modal'
 import { Badge, accentFromString } from '@/components/ui/Badge'
-import { REMINDER_IMPORTANCE, type KanbanCard, type Project, type Reminder, type ReminderImportance } from '@/lib/types'
+import { SectorPicker, matchesSectorFilter } from '@/components/SectorPicker'
+import {
+  REMINDER_IMPORTANCE,
+  isReminderOverdue,
+  type KanbanCard,
+  type Project,
+  type Reminder,
+  type ReminderImportance,
+} from '@/lib/types'
 import { useAllKanbanCards, useAllKanbanColumns } from '@/features/kanban/useKanban'
 import { useReminders } from '@/features/reminders/useReminders'
 import { ReminderModal } from '@/features/reminders/ReminderModal'
+import { useProjectSectors } from '@/features/settings/useProjectSectors'
 import {
   MONTH_LABELS,
   WEEKDAY_LABELS,
@@ -46,12 +55,14 @@ export function CalendarPage() {
   const { data: cards } = useAllKanbanCards(project.id)
   const { data: columns } = useAllKanbanColumns(project.id)
   const { data: reminders } = useReminders(project.id)
+  const { data: sectors } = useProjectSectors(project.id)
   const [view, setView] = useState<ViewMode>('month')
   const [anchor, setAnchor] = useState(new Date())
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [reminderModal, setReminderModal] = useState<{ reminder?: Reminder; date?: string } | null>(null)
   const [tagFilter, setTagFilter] = useState<Set<string>>(new Set())
   const [importanceFilter, setImportanceFilter] = useState<Set<ReminderImportance>>(new Set())
+  const [sectorFilter, setSectorFilter] = useState<string[]>([])
 
   const columnColor = useMemo(() => {
     const map = new Map<string, string>()
@@ -69,9 +80,10 @@ export function CalendarPage() {
       (reminders ?? []).filter((r) => {
         const tagOk = tagFilter.size === 0 || r.tags.some((t) => tagFilter.has(t))
         const importanceOk = importanceFilter.size === 0 || importanceFilter.has(r.importance)
-        return tagOk && importanceOk
+        const sectorOk = matchesSectorFilter(r.sectors, sectorFilter)
+        return tagOk && importanceOk && sectorOk
       }),
-    [reminders, tagFilter, importanceFilter],
+    [reminders, tagFilter, importanceFilter, sectorFilter],
   )
 
   const cardsByDate = useMemo(() => {
@@ -154,7 +166,7 @@ export function CalendarPage() {
 
   const selectedDayCards = selectedDate ? (cardsByDate.get(selectedDate) ?? []) : []
   const selectedDayReminders = selectedDate ? (remindersByDate.get(selectedDate) ?? []) : []
-  const hasActiveFilters = tagFilter.size > 0 || importanceFilter.size > 0
+  const hasActiveFilters = tagFilter.size > 0 || importanceFilter.size > 0 || sectorFilter.length > 0
 
   return (
     <div>
@@ -253,12 +265,20 @@ export function CalendarPage() {
             </div>
           )}
 
+          {(sectors ?? []).length > 0 && (
+            <div>
+              <p className="text-label mb-1.5 text-[10px] text-canvas-fg/50">Setor</p>
+              <SectorPicker value={sectorFilter} onChange={setSectorFilter} sectors={sectors ?? []} />
+            </div>
+          )}
+
           {hasActiveFilters && (
             <button
               type="button"
               onClick={() => {
                 setTagFilter(new Set())
                 setImportanceFilter(new Set())
+                setSectorFilter([])
               }}
               className="text-label text-[11px] text-canvas-fg/40 underline hover:text-canvas-fg"
             >
@@ -773,6 +793,14 @@ function RoadmapView({
                       {reminder.event_time && ` ${reminder.event_time}`}
                     </span>
                     <span className="min-w-0 flex-1 truncate text-sm font-semibold">{reminder.title}</span>
+                    {reminder.end_date && (
+                      <span className="text-label text-[10px] text-canvas-fg/40">
+                        até {reminder.end_date.split('-').reverse().join('/')}
+                      </span>
+                    )}
+                    {isReminderOverdue(reminder) && !isPast && (
+                      <Badge accent="red">atrasado</Badge>
+                    )}
                     <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: imp.color }} title={imp.label} />
                     {reminder.tags.slice(0, 2).map((tag) => (
                       <Badge key={tag} accent={accentFromString(tag)}>

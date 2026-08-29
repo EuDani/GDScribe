@@ -20,11 +20,13 @@ import { Modal } from '@/components/ui/Modal'
 import { ChecklistEditor } from '@/components/ChecklistEditor'
 import { IconPicker } from '@/components/IconPicker'
 import { TagInput } from '@/components/TagInput'
+import { SectorPicker, matchesSectorFilter } from '@/components/SectorPicker'
 import { ExtraFieldsEditor } from '@/features/gdd/ExtraFieldsEditor'
 import { useUploadImage } from '@/lib/useUploadImage'
 import type { ChecklistItem, ExtraField, KanbanCard, Project } from '@/lib/types'
 import { KanbanColumnView } from '@/features/kanban/KanbanColumn'
 import { KanbanCardFace } from '@/features/kanban/KanbanCard'
+import { useProjectSectors } from '@/features/settings/useProjectSectors'
 import {
   useCreateBoard,
   useCreateCard,
@@ -181,10 +183,12 @@ function KanbanBoardView({ projectId, boardId }: { projectId: string; boardId: s
   const updateCard = useUpdateCard(projectId, boardId)
   const deleteCard = useDeleteCard(projectId, boardId)
   const moveCards = useMoveCards(projectId, boardId)
+  const { data: sectors } = useProjectSectors(projectId)
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
   const [activeCard, setActiveCard] = useState<KanbanCard | null>(null)
   const [tagFilter, setTagFilter] = useState<Set<string>>(new Set())
+  const [sectorFilter, setSectorFilter] = useState<string[]>([])
 
   const [columnModalOpen, setColumnModalOpen] = useState(false)
   const [columnName, setColumnName] = useState('')
@@ -204,6 +208,7 @@ function KanbanBoardView({ projectId, boardId }: { projectId: string; boardId: s
   const [editExtraFields, setEditExtraFields] = useState<ExtraField[]>([])
   const [editStartDate, setEditStartDate] = useState('')
   const [editDueDate, setEditDueDate] = useState('')
+  const [editSectors, setEditSectors] = useState<string[]>([])
   const [pendingDeleteCard, setPendingDeleteCard] = useState<string | null>(null)
 
   const { upload: uploadCover, uploading: uploadingCover } = useUploadImage(projectId)
@@ -214,6 +219,7 @@ function KanbanBoardView({ projectId, boardId }: { projectId: string; boardId: s
     return (cards ?? [])
       .filter((c) => c.column_id === columnId)
       .filter((c) => tagFilter.size === 0 || c.tags.some((t) => tagFilter.has(t)))
+      .filter((c) => matchesSectorFilter(c.sectors, sectorFilter))
       .sort((a, b) => a.sort_order - b.sort_order)
   }
 
@@ -259,6 +265,7 @@ function KanbanBoardView({ projectId, boardId }: { projectId: string; boardId: s
     setEditExtraFields(card.extra_fields)
     setEditStartDate(card.start_date ?? '')
     setEditDueDate(card.due_date ?? '')
+    setEditSectors(card.sectors)
   }
 
   async function handleSaveCard(e: React.FormEvent) {
@@ -275,6 +282,7 @@ function KanbanBoardView({ projectId, boardId }: { projectId: string; boardId: s
       extra_fields: editExtraFields,
       start_date: editStartDate || null,
       due_date: editDueDate || null,
+      sectors: editSectors,
     })
     setEditingCard(null)
   }
@@ -326,35 +334,44 @@ function KanbanBoardView({ projectId, boardId }: { projectId: string; boardId: s
   return (
     <div>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        {allTags.length > 0 ? (
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-label text-[10px] text-canvas-fg/40">Tags:</span>
-            {allTags.map((tag) => (
-              <button
-                key={tag}
-                type="button"
-                onClick={() => toggleTag(tag)}
-                className={clsx(
-                  'text-label border-2 border-line px-1.5 py-0.5 text-[10px]',
-                  tagFilter.has(tag) ? 'bg-accent-blue text-ink' : 'bg-transparent text-canvas-fg/50 hover:text-canvas-fg',
-                )}
-              >
-                {tag}
-              </button>
-            ))}
-            {tagFilter.size > 0 && (
-              <button
-                type="button"
-                onClick={() => setTagFilter(new Set())}
-                className="text-label text-[10px] text-canvas-fg/40 underline"
-              >
-                limpar
-              </button>
-            )}
-          </div>
-        ) : (
-          <span />
-        )}
+        <div className="flex flex-wrap items-center gap-3">
+          {allTags.length > 0 && (
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-label text-[10px] text-canvas-fg/40">Tags:</span>
+              {allTags.map((tag) => (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() => toggleTag(tag)}
+                  className={clsx(
+                    'text-label border-2 border-line px-1.5 py-0.5 text-[10px]',
+                    tagFilter.has(tag) ? 'bg-accent-blue text-ink' : 'bg-transparent text-canvas-fg/50 hover:text-canvas-fg',
+                  )}
+                >
+                  {tag}
+                </button>
+              ))}
+            </div>
+          )}
+          {(sectors ?? []).length > 0 && (
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-label text-[10px] text-canvas-fg/40">Setor:</span>
+              <SectorPicker value={sectorFilter} onChange={setSectorFilter} sectors={sectors ?? []} />
+            </div>
+          )}
+          {(tagFilter.size > 0 || sectorFilter.length > 0) && (
+            <button
+              type="button"
+              onClick={() => {
+                setTagFilter(new Set())
+                setSectorFilter([])
+              }}
+              className="text-label text-[10px] text-canvas-fg/40 underline"
+            >
+              limpar
+            </button>
+          )}
+        </div>
         <Button size="sm" icon={<Plus size={16} />} onClick={() => setColumnModalOpen(true)}>
           Nova coluna
         </Button>
@@ -458,7 +475,8 @@ function KanbanBoardView({ projectId, boardId }: { projectId: string; boardId: s
               JSON.stringify(editChecklist) !== JSON.stringify(editingCard.checklist) ||
               JSON.stringify(editExtraFields) !== JSON.stringify(editingCard.extra_fields) ||
               editStartDate !== (editingCard.start_date ?? '') ||
-              editDueDate !== (editingCard.due_date ?? '')),
+              editDueDate !== (editingCard.due_date ?? '') ||
+              JSON.stringify(editSectors) !== JSON.stringify(editingCard.sectors)),
         )}
       >
         <form onSubmit={handleSaveCard}>
@@ -480,6 +498,10 @@ function KanbanBoardView({ projectId, boardId }: { projectId: string; boardId: s
 
           <Field label="Tags">
             <TagInput value={editTags} onChange={setEditTags} suggestions={allTags} placeholder="urgente, arte, bug…" />
+          </Field>
+
+          <Field label="Setores">
+            <SectorPicker value={editSectors} onChange={setEditSectors} sectors={sectors ?? []} />
           </Field>
 
           <Field label="Ícone">
