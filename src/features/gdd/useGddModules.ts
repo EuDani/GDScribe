@@ -69,6 +69,18 @@ export function useUpdateModule(projectId: string) {
   })
 }
 
+export function useReorderModules(projectId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (modules: { id: string; sort_order: number }[]) => {
+      await Promise.all(
+        modules.map((m) => supabase.from('gdd_modules').update({ sort_order: m.sort_order }).eq('id', m.id)),
+      )
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['gdd_modules', projectId] }),
+  })
+}
+
 export function useDeleteModule(projectId: string) {
   const queryClient = useQueryClient()
   return useMutation({

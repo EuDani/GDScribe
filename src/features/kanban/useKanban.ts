@@ -150,6 +150,18 @@ export function useUpdateColumn(projectId: string, boardId: string) {
   })
 }
 
+export function useReorderColumns(projectId: string, boardId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (columns: { id: string; sort_order: number }[]) => {
+      await Promise.all(
+        columns.map((c) => supabase.from('kanban_columns').update({ sort_order: c.sort_order }).eq('id', c.id)),
+      )
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['kanban_columns', projectId, boardId] }),
+  })
+}
+
 export function useDeleteColumn(projectId: string, boardId: string) {
   const queryClient = useQueryClient()
   return useMutation({

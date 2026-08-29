@@ -39,6 +39,7 @@ import {
   useKanbanColumns,
   useMoveCards,
   useRenameBoard,
+  useReorderColumns,
   useUpdateCard,
   useUpdateColumn,
 } from '@/features/kanban/useKanban'
@@ -183,6 +184,7 @@ function KanbanBoardView({ projectId, boardId }: { projectId: string; boardId: s
   const updateCard = useUpdateCard(projectId, boardId)
   const deleteCard = useDeleteCard(projectId, boardId)
   const moveCards = useMoveCards(projectId, boardId)
+  const reorderColumns = useReorderColumns(projectId, boardId)
   const { data: sectors } = useProjectSectors(projectId)
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
@@ -285,6 +287,16 @@ function KanbanBoardView({ projectId, boardId }: { projectId: string; boardId: s
       sectors: editSectors,
     })
     setEditingCard(null)
+  }
+
+  function moveColumn(index: number, dir: -1 | 1) {
+    if (!columns) return
+    const target = index + dir
+    if (target < 0 || target >= columns.length) return
+    const reordered = [...columns]
+    const [item] = reordered.splice(index, 1)
+    reordered.splice(target, 0, item)
+    reorderColumns.mutate(reordered.map((c, i) => ({ id: c.id, sort_order: i })))
   }
 
   async function handleCoverUpload(file: File) {
@@ -391,7 +403,7 @@ function KanbanBoardView({ projectId, boardId }: { projectId: string; boardId: s
           onDragEnd={handleDragEnd}
         >
           <div className="flex gap-4 overflow-x-auto pb-4">
-            {columns.map((column) => (
+            {columns.map((column, i) => (
               <KanbanColumnView
                 key={column.id}
                 column={column}
@@ -400,6 +412,10 @@ function KanbanBoardView({ projectId, boardId }: { projectId: string; boardId: s
                 onDeleteColumn={() => setPendingDeleteColumn(column.id)}
                 onRenameColumn={(name) => updateColumn.mutate({ id: column.id, name })}
                 onCardClick={openEditCard}
+                onMoveLeft={() => moveColumn(i, -1)}
+                onMoveRight={() => moveColumn(i, 1)}
+                canMoveLeft={i > 0}
+                canMoveRight={i < columns.length - 1}
               />
             ))}
           </div>

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ExternalLink, Plus, Upload, X } from 'lucide-react'
+import { ArrowLeft, ArrowRight, ExternalLink, Plus, Upload, X } from 'lucide-react'
 import { motion } from 'motion/react'
 import { useOutletContext } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
@@ -10,6 +10,7 @@ import { Modal } from '@/components/ui/Modal'
 import { SidePanel } from '@/components/ui/SidePanel'
 import { ChecklistEditor } from '@/components/ChecklistEditor'
 import { RichTextEditor } from '@/components/RichTextEditor'
+import { ImageLightbox } from '@/components/ImageLightbox'
 import { useUploadImage } from '@/lib/useUploadImage'
 import type { ChecklistItem, GameReference, Project } from '@/lib/types'
 import {
@@ -36,6 +37,7 @@ export function ReferencesPage() {
   const [editNotes, setEditNotes] = useState('')
   const [editChecklist, setEditChecklist] = useState<ChecklistItem[]>([])
   const [pendingDelete, setPendingDelete] = useState<string | null>(null)
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault()
@@ -78,6 +80,28 @@ export function ReferencesPage() {
 
   function removeImage(url: string) {
     setEditImages((prev) => prev.filter((u) => u !== url))
+    setLightboxIndex(null)
+  }
+
+  function moveImage(index: number, dir: -1 | 1) {
+    const target = index + dir
+    if (target < 0 || target >= editImages.length) return
+    setEditImages((prev) => {
+      const next = [...prev]
+      ;[next[index], next[target]] = [next[target], next[index]]
+      return next
+    })
+  }
+
+  async function handlePasteImage(e: React.ClipboardEvent) {
+    const files = Array.from(e.clipboardData?.items ?? [])
+      .filter((item) => item.type.startsWith('image/'))
+      .map((item) => item.getAsFile())
+      .filter((f): f is File => f !== null)
+    if (files.length === 0) return
+    e.preventDefault()
+    const urls = await uploadMany(files, 'reference-images')
+    if (urls.length > 0) setEditImages((prev) => [...prev, ...urls])
   }
 
   return (
@@ -181,7 +205,7 @@ export function ReferencesPage() {
               JSON.stringify(editChecklist) !== JSON.stringify(editing.checklist)),
         )}
       >
-        <form onSubmit={handleSave}>
+        <form onSubmit={handleSave} onPaste={handlePasteImage}>
           <Field label="Título">
             <TextInput required value={editTitle} onChange={(e) => setEditTitle(e.target.value)} />
           </Field>
@@ -202,13 +226,20 @@ export function ReferencesPage() {
             </div>
           </Field>
 
-          <Field label="Imagens" hint="Pode enviar várias de uma vez">
+          <Field label="Imagens" hint="Pode enviar várias de uma vez, colar com Ctrl+V, e clicar numa imagem pra ver em foco">
             <div className="space-y-2">
               {editImages.length > 0 && (
                 <div className="grid grid-cols-3 gap-2">
-                  {editImages.map((url) => (
+                  {editImages.map((url, i) => (
                     <div key={url} className="group relative">
-                      <img src={url} alt="" className="h-16 w-full border-2 border-line object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => setLightboxIndex(i)}
+                        className="block h-16 w-full cursor-pointer"
+                        aria-label="Ver imagem em foco"
+                      >
+                        <img src={url} alt="" className="h-16 w-full border-2 border-line object-cover" />
+                      </button>
                       <button
                         type="button"
                         onClick={() => removeImage(url)}
@@ -217,6 +248,26 @@ export function ReferencesPage() {
                       >
                         <X size={10} />
                       </button>
+                      <div className="absolute bottom-0.5 left-0.5 flex gap-0.5 opacity-0 group-hover:opacity-100">
+                        <button
+                          type="button"
+                          disabled={i === 0}
+                          onClick={() => moveImage(i, -1)}
+                          aria-label="Mover imagem para a esquerda"
+                          className="cursor-pointer border border-ink bg-paper p-0.5 text-ink disabled:opacity-30"
+                        >
+                          <ArrowLeft size={10} />
+                        </button>
+                        <button
+                          type="button"
+                          disabled={i === editImages.length - 1}
+                          onClick={() => moveImage(i, 1)}
+                          aria-label="Mover imagem para a direita"
+                          className="cursor-pointer border border-ink bg-paper p-0.5 text-ink disabled:opacity-30"
+                        >
+                          <ArrowRight size={10} />
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -267,6 +318,13 @@ export function ReferencesPage() {
           </div>
         </form>
       </SidePanel>
+
+      <ImageLightbox
+        images={editImages}
+        index={lightboxIndex}
+        onClose={() => setLightboxIndex(null)}
+        onIndexChange={setLightboxIndex}
+      />
 
       <ConfirmDialog
         open={Boolean(pendingDelete)}

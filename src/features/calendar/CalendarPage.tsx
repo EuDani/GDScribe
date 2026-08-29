@@ -9,6 +9,7 @@ import {
   Filter,
   ListChecks,
   Plus,
+  Search,
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { AnimatePresence, motion } from 'motion/react'
@@ -63,6 +64,7 @@ export function CalendarPage() {
   const [tagFilter, setTagFilter] = useState<Set<string>>(new Set())
   const [importanceFilter, setImportanceFilter] = useState<Set<ReminderImportance>>(new Set())
   const [sectorFilter, setSectorFilter] = useState<string[]>([])
+  const [search, setSearch] = useState('')
 
   const columnColor = useMemo(() => {
     const map = new Map<string, string>()
@@ -81,9 +83,10 @@ export function CalendarPage() {
         const tagOk = tagFilter.size === 0 || r.tags.some((t) => tagFilter.has(t))
         const importanceOk = importanceFilter.size === 0 || importanceFilter.has(r.importance)
         const sectorOk = matchesSectorFilter(r.sectors, sectorFilter)
-        return tagOk && importanceOk && sectorOk
+        const searchOk = search.trim() === '' || r.title.toLowerCase().includes(search.trim().toLowerCase())
+        return tagOk && importanceOk && sectorOk && searchOk
       }),
-    [reminders, tagFilter, importanceFilter, sectorFilter],
+    [reminders, tagFilter, importanceFilter, sectorFilter, search],
   )
 
   const cardsByDate = useMemo(() => {
@@ -166,7 +169,8 @@ export function CalendarPage() {
 
   const selectedDayCards = selectedDate ? (cardsByDate.get(selectedDate) ?? []) : []
   const selectedDayReminders = selectedDate ? (remindersByDate.get(selectedDate) ?? []) : []
-  const hasActiveFilters = tagFilter.size > 0 || importanceFilter.size > 0 || sectorFilter.length > 0
+  const hasActiveFilters =
+    tagFilter.size > 0 || importanceFilter.size > 0 || sectorFilter.length > 0 || search.trim() !== ''
 
   return (
     <div>
@@ -220,6 +224,16 @@ export function CalendarPage() {
           <div className="flex items-center gap-1.5 text-canvas-fg/70">
             <Filter size={13} />
             <span className="text-label text-[11px]">Filtrar lembretes</span>
+          </div>
+
+          <div className="flex items-center gap-1.5 border-2 border-line bg-paper px-2 py-1.5 text-ink">
+            <Search size={12} className="shrink-0 text-ink/50" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Buscar lembrete…"
+              className="w-full min-w-0 bg-transparent text-xs outline-none placeholder:text-ink/40"
+            />
           </div>
 
           <div>
@@ -279,6 +293,7 @@ export function CalendarPage() {
                 setTagFilter(new Set())
                 setImportanceFilter(new Set())
                 setSectorFilter([])
+                setSearch('')
               }}
               className="text-label text-[11px] text-canvas-fg/40 underline hover:text-canvas-fg"
             >

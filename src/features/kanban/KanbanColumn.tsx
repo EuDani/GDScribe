@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
-import { Plus, Trash2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, Trash2 } from 'lucide-react'
 import { clsx } from 'clsx'
 import type { KanbanCard, KanbanColumn as KanbanColumnType } from '@/lib/types'
 import { KanbanCardView } from '@/features/kanban/KanbanCard'
@@ -13,6 +13,10 @@ export function KanbanColumnView({
   onDeleteColumn,
   onRenameColumn,
   onCardClick,
+  onMoveLeft,
+  onMoveRight,
+  canMoveLeft,
+  canMoveRight,
 }: {
   column: KanbanColumnType
   cards: KanbanCard[]
@@ -20,6 +24,10 @@ export function KanbanColumnView({
   onDeleteColumn: () => void
   onRenameColumn: (name: string) => void
   onCardClick: (card: KanbanCard) => void
+  onMoveLeft: () => void
+  onMoveRight: () => void
+  canMoveLeft: boolean
+  canMoveRight: boolean
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: column.id, data: { type: 'column' } })
   const [editingName, setEditingName] = useState(false)
@@ -60,6 +68,24 @@ export function KanbanColumnView({
           </h3>
         )}
         <div className="flex shrink-0 items-center gap-1">
+          <button
+            type="button"
+            disabled={!canMoveLeft}
+            onClick={onMoveLeft}
+            aria-label="Mover coluna para a esquerda"
+            className="cursor-pointer border-2 border-line p-1 text-canvas-fg/60 hover:bg-accent-blue hover:text-ink disabled:cursor-default disabled:opacity-20"
+          >
+            <ChevronLeft size={13} />
+          </button>
+          <button
+            type="button"
+            disabled={!canMoveRight}
+            onClick={onMoveRight}
+            aria-label="Mover coluna para a direita"
+            className="cursor-pointer border-2 border-line p-1 text-canvas-fg/60 hover:bg-accent-blue hover:text-ink disabled:cursor-default disabled:opacity-20"
+          >
+            <ChevronRight size={13} />
+          </button>
           <button
             type="button"
             onClick={onAddCard}

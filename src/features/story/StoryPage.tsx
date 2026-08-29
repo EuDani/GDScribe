@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { DndContext, type DragEndEvent, PointerSensor, closestCenter, useSensor, useSensors } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
-import { CornerDownRight, Plus, Trash2 } from 'lucide-react'
+import { CornerDownRight, Plus, Search, Trash2 } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
 import { useOutletContext } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
@@ -10,6 +10,7 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { Field, TextInput } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
 import { RichTextEditor } from '@/components/RichTextEditor'
+import { stripHtml } from '@/lib/html'
 import type { Project, StoryBlock } from '@/lib/types'
 import { StoryBlockListItem } from '@/features/story/StoryBlockListItem'
 import {
@@ -36,8 +37,28 @@ export function StoryPage() {
   const [creatingParentId, setCreatingParentId] = useState<string | null>(null)
   const [newTitle, setNewTitle] = useState('')
   const [pendingDelete, setPendingDelete] = useState<string | null>(null)
+  const [search, setSearch] = useState('')
 
   const topLevel = useMemo(() => (blocks ?? []).filter((b) => !b.parent_id), [blocks])
+
+  const searchResults = useMemo(() => {
+    const query = search.trim().toLowerCase()
+    if (!query) return []
+    return (blocks ?? [])
+      .map((b) => {
+        const plain = stripHtml(b.content ?? '')
+        const titleMatch = b.title.toLowerCase().includes(query)
+        const idx = plain.toLowerCase().indexOf(query)
+        if (!titleMatch && idx < 0) return null
+        const snippetStart = Math.max(0, idx - 40)
+        const snippet =
+          idx >= 0
+            ? `${snippetStart > 0 ? '…' : ''}${plain.slice(snippetStart, idx + query.length + 40)}${idx + query.length + 40 < plain.length ? '…' : ''}`
+            : ''
+        return { block: b, snippet }
+      })
+      .filter((x): x is { block: StoryBlock; snippet: string } => x !== null)
+  }, [blocks, search])
   const childrenByParent = useMemo(() => {
     const map = new Map<string, StoryBlock[]>()
     for (const b of blocks ?? []) {
@@ -119,7 +140,43 @@ export function StoryPage() {
         </Button>
       </div>
 
+      <div className="mb-4 flex items-center gap-2 border-2 border-line bg-paper px-3 py-2 text-ink">
+        <Search size={15} className="shrink-0 text-ink/50" />
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Buscar uma palavra em toda a história…"
+          className="w-full bg-transparent text-sm outline-none placeholder:text-ink/40"
+        />
+      </div>
+
       {isLoading && <p className="text-label text-sm text-canvas-fg/50">Carregando…</p>}
+
+      {search.trim() !== '' && (
+        <div className="mb-5">
+          {searchResults.length === 0 ? (
+            <p className="text-sm text-canvas-fg/40">Nenhum resultado para "{search.trim()}".</p>
+          ) : (
+            <ul className="space-y-1.5">
+              {searchResults.map(({ block, snippet }) => (
+                <li key={block.id}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      selectBlock(block.id)
+                      setSearch('')
+                    }}
+                    className="w-full cursor-pointer border-2 border-line/40 bg-surface p-2.5 text-left hover:border-line"
+                  >
+                    <p className="text-sm font-semibold text-canvas-fg">{block.title}</p>
+                    {snippet && <p className="mt-0.5 truncate text-xs text-canvas-fg/50">{snippet}</p>}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
 
       {!isLoading && topLevel.length === 0 && (
         <EmptyState

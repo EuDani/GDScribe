@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { DndContext, type DragEndEvent, PointerSensor, closestCenter, useSensor, useSensors } from '@dnd-kit/core'
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CornerDownRight, Plus, Search, Trash2 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { useOutletContext } from 'react-router-dom'
@@ -17,8 +19,10 @@ import {
   useCreateModule,
   useDeleteModule,
   useGddModules,
+  useReorderModules,
   useUpdateModule,
 } from '@/features/gdd/useGddModules'
+import { GddModuleRow } from '@/features/gdd/GddModuleRow'
 import { useProjectPhases } from '@/features/settings/useProjectPhases'
 import { useProjectSectors } from '@/features/settings/useProjectSectors'
 import { ExtraFieldsEditor } from '@/features/gdd/ExtraFieldsEditor'
@@ -35,6 +39,8 @@ export function GddPage() {
   const createModule = useCreateModule(project.id)
   const updateModule = useUpdateModule(project.id)
   const deleteModule = useDeleteModule(project.id)
+  const reorderModules = useReorderModules(project.id)
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
 
   const phaseItems = useMemo(
     () => [{ value: ALL_PHASES, label: 'Todas as fases' }, ...(phases ?? []).map((p) => ({ value: p.key, label: p.label }))],
@@ -127,6 +133,19 @@ export function GddPage() {
     setCreating(true)
   }
 
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+    const oldIndex = topLevelFiltered.findIndex((m) => m.id === active.id)
+    const newIndex = topLevelFiltered.findIndex((m) => m.id === over.id)
+    if (oldIndex < 0 || newIndex < 0) return
+
+    const reordered = [...topLevelFiltered]
+    const [moved] = reordered.splice(oldIndex, 1)
+    reordered.splice(newIndex, 0, moved)
+    reorderModules.mutate(reordered.map((m, i) => ({ id: m.id, sort_order: i })))
+  }
+
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault()
     if (!newTitle.trim()) return
@@ -181,60 +200,54 @@ export function GddPage() {
 
       {!isLoading && topLevelFiltered.length > 0 && (
         <div className="mt-6 grid flex-1 grid-cols-1 gap-5 lg:grid-cols-[280px_1fr]">
-          <ul className="space-y-1.5">
-            {topLevelFiltered.map((m: GddModule) => (
-              <li key={m.id}>
-                <div className="flex items-center gap-1">
-                  <button
-                    type="button"
-                    onClick={() => selectModule(m.id)}
-                    className={clsx(
-                      'min-w-0 flex-1 cursor-pointer border-2 px-3 py-2.5 text-left transition-colors',
-                      selected?.id === m.id
-                        ? 'border-line bg-accent-yellow text-ink shadow-brutal-sm'
-                        : 'border-line/40 bg-surface text-canvas-fg/80 hover:border-line',
-                    )}
-                  >
-                    <div className="truncate text-sm font-semibold">{m.title}</div>
-                    <div className="text-label mt-0.5 flex items-center gap-1.5 text-[10px] opacity-60">
-                      {phaseLabel[m.phase] ?? m.phase}
-                      {m.status && <span>· {m.status}</span>}
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <SortableContext items={topLevelFiltered.map((m) => m.id)} strategy={verticalListSortingStrategy}>
+              <ul className="space-y-1.5">
+                {topLevelFiltered.map((m: GddModule) => (
+                  <li key={m.id}>
+                    <div className="flex items-center gap-1">
+                      <GddModuleRow
+                        module={m}
+                        active={selected?.id === m.id}
+                        phaseLabel={phaseLabel[m.phase] ?? m.phase}
+                        onClick={() => selectModule(m.id)}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => openCreate(m.id)}
+                        aria-label="Novo sub-módulo"
+                        title="Novo sub-módulo"
+                        className="shrink-0 cursor-pointer border-2 border-line/40 p-1.5 text-canvas-fg/40 hover:border-line hover:text-canvas-fg"
+                      >
+                        <Plus size={12} />
+                      </button>
                     </div>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => openCreate(m.id)}
-                    aria-label="Novo sub-módulo"
-                    title="Novo sub-módulo"
-                    className="shrink-0 cursor-pointer border-2 border-line/40 p-1.5 text-canvas-fg/40 hover:border-line hover:text-canvas-fg"
-                  >
-                    <Plus size={12} />
-                  </button>
-                </div>
-                {(childrenByParent.get(m.id) ?? []).length > 0 && (
-                  <ul className="mt-1 ml-4 space-y-1 border-l-2 border-line/30 pl-2">
-                    {(childrenByParent.get(m.id) ?? []).map((child) => (
-                      <li key={child.id}>
-                        <button
-                          type="button"
-                          onClick={() => selectModule(child.id)}
-                          className={clsx(
-                            'flex w-full cursor-pointer items-center gap-1.5 border-2 px-2.5 py-1.5 text-left text-xs transition-colors',
-                            selected?.id === child.id
-                              ? 'border-line bg-accent-yellow text-ink'
-                              : 'border-line/30 bg-surface text-canvas-fg/70 hover:border-line',
-                          )}
-                        >
-                          <CornerDownRight size={11} className="shrink-0 opacity-50" />
-                          <span className="truncate">{child.title}</span>
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </li>
-            ))}
-          </ul>
+                    {(childrenByParent.get(m.id) ?? []).length > 0 && (
+                      <ul className="mt-1 ml-4 space-y-1 border-l-2 border-line/30 pl-2">
+                        {(childrenByParent.get(m.id) ?? []).map((child) => (
+                          <li key={child.id}>
+                            <button
+                              type="button"
+                              onClick={() => selectModule(child.id)}
+                              className={clsx(
+                                'flex w-full cursor-pointer items-center gap-1.5 border-2 px-2.5 py-1.5 text-left text-xs transition-colors',
+                                selected?.id === child.id
+                                  ? 'border-line bg-accent-yellow text-ink'
+                                  : 'border-line/30 bg-surface text-canvas-fg/70 hover:border-line',
+                              )}
+                            >
+                              <CornerDownRight size={11} className="shrink-0 opacity-50" />
+                              <span className="truncate">{child.title}</span>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </SortableContext>
+          </DndContext>
 
           {selected && (
             <div className="min-w-0 border-2 border-line bg-surface shadow-brutal">
