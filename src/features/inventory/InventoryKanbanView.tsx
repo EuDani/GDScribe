@@ -22,7 +22,7 @@ const UNSORTED = '__unsorted__'
 function ItemCard({ item, type, onClick }: { item: InventoryItem; type: InventoryType; onClick: () => void }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: item.id })
   const primary = type.fields_schema[0]
-  const title = primary ? formatInventoryValue(item.data[primary.key]) || 'Sem título' : 'Item'
+  const title = primary ? formatInventoryValue(item.data[primary.key], primary.type) || 'Sem título' : 'Item'
 
   return (
     <div
@@ -38,7 +38,9 @@ function ItemCard({ item, type, onClick }: { item: InventoryItem; type: Inventor
     >
       <p className="truncate text-xs font-semibold">{title}</p>
       {type.fields_schema[1] && (
-        <p className="mt-0.5 truncate text-[11px] text-ink/60">{formatInventoryValue(item.data[type.fields_schema[1].key])}</p>
+        <p className="mt-0.5 truncate text-[11px] text-ink/60">
+          {formatInventoryValue(item.data[type.fields_schema[1].key], type.fields_schema[1].type)}
+        </p>
       )}
     </div>
   )
@@ -141,7 +143,9 @@ export function InventoryKanbanView({
         {activeItem && (
           <div className="w-64 rotate-1 border-2 border-line bg-paper p-2.5 text-ink shadow-brutal-lg">
             <p className="truncate text-xs font-semibold">
-              {type.fields_schema[0] ? formatInventoryValue(activeItem.data[type.fields_schema[0].key]) : 'Item'}
+              {type.fields_schema[0]
+                ? formatInventoryValue(activeItem.data[type.fields_schema[0].key], type.fields_schema[0].type)
+                : 'Item'}
             </p>
           </div>
         )}

@@ -360,7 +360,7 @@ function InventoryTypePanel({
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {filteredItems.map((item) => {
               const primary = type.fields_schema[0]
-              const title = primary ? formatInventoryValue(item.data[primary.key]) || 'Sem título' : 'Item'
+              const title = primary ? formatInventoryValue(item.data[primary.key], primary.type) || 'Sem título' : 'Item'
               return (
                 <button
                   key={item.id}
@@ -375,7 +375,7 @@ function InventoryTypePanel({
                   {type.fields_schema.slice(1, 4).map((f) => (
                     <p key={f.key} className="truncate text-xs text-canvas-fg/60">
                       <span className="text-canvas-fg/40">{f.label}: </span>
-                      {formatInventoryValue(item.data[f.key])}
+                      {formatInventoryValue(item.data[f.key], f.type)}
                     </p>
                   ))}
                   {item.tags.length > 0 && (
@@ -408,7 +408,13 @@ function InventoryTypePanel({
         }
       >
         <form onSubmit={handleSaveItem}>
-          <ItemForm fields={type.fields_schema} values={values} onChange={setValues} showErrors={showErrors} />
+          <ItemForm
+            fields={type.fields_schema}
+            values={values}
+            onChange={setValues}
+            showErrors={showErrors}
+            projectId={projectId}
+          />
           <Field label="Status">
             <StatusSelect projectId={projectId} value={itemStatus} onChange={setItemStatus} />
           </Field>

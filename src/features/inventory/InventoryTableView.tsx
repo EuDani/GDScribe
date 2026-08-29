@@ -145,7 +145,7 @@ export function InventoryTableView({
                         onClick={() => onEditItem(item)}
                         className="w-full min-w-[80px] cursor-pointer truncate px-1 py-1 text-left text-xs text-canvas-fg/70 underline decoration-dotted hover:text-canvas-fg"
                       >
-                        {formatInventoryValue(item.data[f.key])}
+                        {formatInventoryValue(item.data[f.key], f.type)}
                       </button>
                     )}
                   </td>

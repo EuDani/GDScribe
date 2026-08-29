@@ -24,7 +24,7 @@ export function ImageLightbox({
   const [pan, setPan] = useState({ x: 0, y: 0 })
   const [isPanning, setIsPanning] = useState(false)
   const dragRef = useRef<{ startX: number; startY: number; panX: number; panY: number } | null>(null)
-  const viewportRef = useRef<HTMLDivElement>(null)
+  const rootRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     setZoom(1)
@@ -47,14 +47,18 @@ export function ImageLightbox({
   }
 
   // React registra onWheel como passive por padrão, então e.preventDefault()
-  // ali dentro não faz nada — a página some rolando junto com o zoom. Um
-  // listener nativo não-passive é o jeito de garantir o preventDefault de verdade.
+  // ali dentro não faz nada — o scroll da página por trás continua rolando
+  // junto com o zoom. Um listener nativo não-passive, anexado direto no
+  // elemento raiz do modal (sem camadas no meio), é o jeito confiável de
+  // garantir que o preventDefault funcione de verdade em qualquer ponto do
+  // modal, independente de onde ele foi aberto (moodboard, referências…).
   useEffect(() => {
     if (!open) return
-    const el = viewportRef.current
+    const el = rootRef.current
     if (!el) return
     function handleWheel(e: WheelEvent) {
       e.preventDefault()
+      e.stopPropagation()
       setZoom((prev) => {
         const next = clampZoom(prev - e.deltaY * 0.0015 * prev)
         if (next === MIN_ZOOM) setPan({ x: 0, y: 0 })
@@ -67,8 +71,9 @@ export function ImageLightbox({
 
   function handlePointerDown(e: React.PointerEvent) {
     if (zoom <= MIN_ZOOM) return
+    e.preventDefault()
     e.stopPropagation()
-    e.currentTarget.setPointerCapture(e.pointerId)
+    ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
     dragRef.current = { startX: e.clientX, startY: e.clientY, panX: pan.x, panY: pan.y }
     setIsPanning(true)
   }
@@ -98,11 +103,19 @@ export function ImageLightbox({
     <AnimatePresence>
       {open && index !== null && (
         <motion.div
+          ref={rootRef}
           className="fixed inset-0 z-[60] flex items-center justify-center overflow-hidden bg-ink/95 p-6"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          onClick={onClose}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerUp}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) onClose()
+          }}
+          style={{ touchAction: 'none' }}
         >
           <button
             type="button"
@@ -138,6 +151,9 @@ export function ImageLightbox({
             >
               <ZoomIn size={16} />
             </button>
+            <span className="text-label flex items-center border-2 border-line bg-paper px-2 text-[11px] text-ink">
+              {Math.round(zoom * 100)}%
+            </span>
           </div>
 
           {images.length > 1 && (
@@ -154,29 +170,23 @@ export function ImageLightbox({
             </button>
           )}
 
-          <div
-            ref={viewportRef}
-            className="flex h-full w-full items-center justify-center"
-            onPointerDown={handlePointerDown}
-            onPointerMove={handlePointerMove}
-            onPointerUp={handlePointerUp}
-            onPointerLeave={handlePointerUp}
+          <motion.img
+            key={images[index]}
+            src={images[index]}
+            alt=""
+            draggable={false}
+            initial={{ opacity: 0, scale: 0.97 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
             onClick={(e) => e.stopPropagation()}
-            style={{ cursor: zoom > MIN_ZOOM ? (isPanning ? 'grabbing' : 'grab') : 'default', touchAction: 'none' }}
-          >
-            <motion.img
-              key={images[index]}
-              src={images[index]}
-              alt=""
-              draggable={false}
-              initial={{ opacity: 0, scale: 0.97 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.15 }}
-              className="max-h-[85vh] max-w-[85vw] border-2 border-line object-contain shadow-brutal-lg select-none"
-              style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`, transition: isPanning ? 'none' : 'transform 0.1s' }}
-            />
-          </div>
+            className="max-h-[85vh] max-w-[85vw] border-2 border-line object-contain shadow-brutal-lg select-none"
+            style={{
+              transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+              transition: isPanning ? 'none' : 'transform 0.1s',
+              cursor: zoom > MIN_ZOOM ? (isPanning ? 'grabbing' : 'grab') : 'default',
+            }}
+          />
 
           {images.length > 1 && (
             <>

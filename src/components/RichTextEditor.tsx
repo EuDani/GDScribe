@@ -134,6 +134,13 @@ export function RichTextEditor({
   return (
     <div className="border-2 border-line/40">
       <div className="flex flex-wrap items-center gap-1 border-b-2 border-line/40 bg-canvas/40 p-1.5">
+        <ToolbarButton
+          label="Texto normal"
+          active={editor.isActive('paragraph')}
+          onClick={() => editor.chain().focus().setParagraph().run()}
+        >
+          <span className="block w-[13px] text-center text-[13px] leading-none font-bold">N</span>
+        </ToolbarButton>
         <ToolbarButton label="Negrito" active={editor.isActive('bold')} onClick={() => editor.chain().focus().toggleBold().run()}>
           <Bold size={13} />
         </ToolbarButton>
