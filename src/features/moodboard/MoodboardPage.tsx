@@ -371,6 +371,8 @@ export function MoodboardPage() {
                 onOpen={() => setLightboxIndex(i)}
                 onMoveLeft={() => moveImage(i, -1)}
                 onMoveRight={() => moveImage(i, 1)}
+                folders={folders ?? []}
+                onMoveFolder={(folderId) => updateImage.mutate({ id: image.id, folder_id: folderId })}
               />
             ))}
           </div>
@@ -464,6 +466,8 @@ function MoodboardImageCard({
   onOpen,
   onMoveLeft,
   onMoveRight,
+  folders,
+  onMoveFolder,
 }: {
   image: MoodboardImage
   index: number
@@ -474,6 +478,8 @@ function MoodboardImageCard({
   onOpen: () => void
   onMoveLeft: () => void
   onMoveRight: () => void
+  folders: MoodboardFolder[]
+  onMoveFolder: (folderId: string | null) => void
 }) {
   const [caption, setCaption] = useState(image.caption ?? '')
 
@@ -522,6 +528,20 @@ function MoodboardImageCard({
         placeholder="Legenda…"
         className="w-full border-t-2 border-line bg-transparent px-2 py-1.5 text-xs text-canvas-fg placeholder:text-canvas-fg/30 focus:outline-none"
       />
+      {folders.length > 0 && (
+        <select
+          value={image.folder_id ?? ''}
+          onChange={(e) => onMoveFolder(e.target.value || null)}
+          className="w-full cursor-pointer border-t-2 border-line bg-transparent px-2 py-1.5 text-[11px] text-canvas-fg/70 focus:outline-none"
+        >
+          <option value="">Sem pasta</option>
+          {folders.map((f) => (
+            <option key={f.id} value={f.id}>
+              {f.name}
+            </option>
+          ))}
+        </select>
+      )}
     </motion.div>
   )
 }

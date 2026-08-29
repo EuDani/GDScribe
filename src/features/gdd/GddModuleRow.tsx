@@ -31,7 +31,7 @@ export function GddModuleRow({
         marginLeft: depth * 16,
       }}
       className={clsx(
-        'flex items-center border-2 transition-colors',
+        'flex flex-1 items-center border-2 transition-colors',
         isOver && 'border-accent-yellow',
         !isOver && active && 'border-line bg-accent-yellow text-ink shadow-brutal-sm',
         !isOver && !active && 'border-line/40 bg-surface text-canvas-fg/80 hover:border-line',
