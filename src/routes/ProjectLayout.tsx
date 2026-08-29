@@ -12,12 +12,14 @@ import {
   LayoutDashboard,
   Lightbulb,
   LogOut,
+  Menu,
   PanelLeftClose,
   PanelLeftOpen,
   Settings,
+  X,
 } from 'lucide-react'
 import { clsx } from 'clsx'
-import { motion } from 'motion/react'
+import { AnimatePresence, motion } from 'motion/react'
 import { Link, NavLink, Outlet, useParams } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { useAuth } from '@/contexts/AuthContext'
@@ -51,6 +53,7 @@ export function ProjectLayout() {
   const { signOut } = useAuth()
 
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem(COLLAPSE_KEY) === '1')
+  const [mobileNavOpen, setMobileNavOpen] = useState(false)
 
   useEffect(() => {
     localStorage.setItem(COLLAPSE_KEY, collapsed ? '1' : '0')
@@ -85,13 +88,114 @@ export function ProjectLayout() {
     )
   }
 
+  const logoBadge = theme?.logo_url ? (
+    <img src={theme.logo_url} alt="" className="h-8 w-8 shrink-0 border-2 border-line object-cover" />
+  ) : (
+    <span
+      className="flex h-8 w-8 shrink-0 items-center justify-center border-2 border-line text-sm font-bold text-ink"
+      style={{ backgroundColor: 'var(--project-accent)' }}
+    >
+      {project.name.charAt(0).toUpperCase()}
+    </span>
+  )
+
   return (
     <ProjectThemeProvider theme={theme}>
       <div className="flex min-h-screen bg-canvas text-canvas-fg">
+        {/* Barra mobile: some com o menu lateral fixo, vira um botão de menu */}
+        <div className="fixed inset-x-0 top-0 z-30 flex items-center justify-between border-b-2 border-line bg-surface px-4 py-3 lg:hidden">
+          <div className="flex min-w-0 items-center gap-2">
+            {logoBadge}
+            <h1 className="text-display truncate text-base" style={{ color: 'var(--project-primary)' }}>
+              {project.name}
+            </h1>
+          </div>
+          <button
+            type="button"
+            onClick={() => setMobileNavOpen(true)}
+            aria-label="Abrir menu"
+            className="shrink-0 cursor-pointer border-2 border-line p-2 text-canvas-fg/70 hover:bg-accent-yellow hover:text-ink"
+          >
+            <Menu size={18} />
+          </button>
+        </div>
+
+        <AnimatePresence>
+          {mobileNavOpen && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-40 bg-ink/80 lg:hidden"
+              onClick={() => setMobileNavOpen(false)}
+            >
+              <motion.div
+                initial={{ x: '-100%' }}
+                animate={{ x: 0 }}
+                exit={{ x: '-100%' }}
+                transition={{ duration: 0.2, ease: 'easeOut' }}
+                className="flex h-full w-72 max-w-[85vw] flex-col border-r-2 border-line bg-surface"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between border-b-2 border-line p-3">
+                  <div className="flex min-w-0 items-center gap-2">
+                    {logoBadge}
+                    <span className="text-display truncate text-base" style={{ color: 'var(--project-primary)' }}>
+                      {project.name}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setMobileNavOpen(false)}
+                    aria-label="Fechar menu"
+                    className="shrink-0 cursor-pointer border-2 border-line p-1.5 text-canvas-fg/70 hover:bg-accent-red hover:text-canvas-fg"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+                <NavLink
+                  to="/dashboard"
+                  className="text-label flex items-center gap-1.5 border-b-2 border-line p-3 text-xs text-canvas-fg/60 hover:text-canvas-fg"
+                >
+                  <ArrowLeft size={14} /> Projetos
+                </NavLink>
+                <nav className="flex-1 space-y-1 overflow-y-auto p-3">
+                  {NAV_ITEMS.map(({ to, label, icon: Icon }) => (
+                    <NavLink
+                      key={to}
+                      to={to}
+                      onClick={() => setMobileNavOpen(false)}
+                      className={({ isActive }) =>
+                        clsx(
+                          'text-label flex items-center gap-2.5 border-2 border-transparent px-3 py-2.5 text-xs font-semibold transition-colors',
+                          isActive
+                            ? 'border-line bg-accent-yellow text-ink shadow-brutal-sm'
+                            : 'text-canvas-fg/70 hover:border-line hover:text-canvas-fg',
+                        )
+                      }
+                    >
+                      <Icon size={16} className="shrink-0" />
+                      {label}
+                    </NavLink>
+                  ))}
+                </nav>
+                <button
+                  type="button"
+                  onClick={signOut}
+                  className="text-label m-3 flex cursor-pointer items-center gap-2.5 border-2 border-line px-3 py-2 text-xs font-semibold text-canvas-fg/70 hover:bg-accent-red hover:text-canvas-fg"
+                >
+                  <LogOut size={16} className="shrink-0" /> Sair
+                </button>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Sidebar fixa — só em telas lg e maiores */}
         <motion.aside
           animate={{ width: collapsed ? 60 : 256 }}
           transition={{ duration: 0.18, ease: 'easeInOut' }}
-          className="flex shrink-0 flex-col overflow-hidden border-r-2 border-line bg-surface"
+          className="hidden shrink-0 flex-col overflow-hidden border-r-2 border-line bg-surface lg:flex"
         >
           <div className="border-b-2 border-line p-3">
             <div className="mb-3 flex items-center justify-between gap-1">
@@ -113,20 +217,7 @@ export function ProjectLayout() {
               </button>
             </div>
             <div className="flex items-center gap-2">
-              {theme?.logo_url ? (
-                <img
-                  src={theme.logo_url}
-                  alt=""
-                  className="h-8 w-8 shrink-0 border-2 border-line object-cover"
-                />
-              ) : (
-                <span
-                  className="flex h-8 w-8 shrink-0 items-center justify-center border-2 border-line text-sm font-bold text-ink"
-                  style={{ backgroundColor: 'var(--project-accent)' }}
-                >
-                  {project.name.charAt(0).toUpperCase()}
-                </span>
-              )}
+              {logoBadge}
               {!collapsed && (
                 <h1
                   className="text-display truncate text-lg"
@@ -167,7 +258,7 @@ export function ProjectLayout() {
             {!collapsed && 'Sair'}
           </button>
         </motion.aside>
-        <main className="min-w-0 flex-1 p-6 sm:p-8">
+        <main className="min-w-0 flex-1 p-4 pt-20 sm:p-8 lg:pt-8">
           <Outlet context={{ project }} />
         </main>
         <UserMenu />
