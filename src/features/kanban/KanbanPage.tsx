@@ -19,6 +19,7 @@ import { Field, TextInput, Textarea } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
 import { ChecklistEditor } from '@/components/ChecklistEditor'
 import { IconPicker } from '@/components/IconPicker'
+import { TagInput } from '@/components/TagInput'
 import { ExtraFieldsEditor } from '@/features/gdd/ExtraFieldsEditor'
 import { useUploadImage } from '@/lib/useUploadImage'
 import type { ChecklistItem, ExtraField, KanbanCard, Project } from '@/lib/types'
@@ -196,7 +197,7 @@ function KanbanBoardView({ projectId, boardId }: { projectId: string; boardId: s
   const [editingCard, setEditingCard] = useState<KanbanCard | null>(null)
   const [editTitle, setEditTitle] = useState('')
   const [editDescription, setEditDescription] = useState('')
-  const [editTags, setEditTags] = useState('')
+  const [editTags, setEditTags] = useState<string[]>([])
   const [editIcon, setEditIcon] = useState<string | null>(null)
   const [editCover, setEditCover] = useState<string | null>(null)
   const [editChecklist, setEditChecklist] = useState<ChecklistItem[]>([])
@@ -251,7 +252,7 @@ function KanbanBoardView({ projectId, boardId }: { projectId: string; boardId: s
     setEditingCard(card)
     setEditTitle(card.title)
     setEditDescription(card.description ?? '')
-    setEditTags(card.tags.join(', '))
+    setEditTags(card.tags)
     setEditIcon(card.icon)
     setEditCover(card.cover_image_url)
     setEditChecklist(card.checklist)
@@ -267,10 +268,7 @@ function KanbanBoardView({ projectId, boardId }: { projectId: string; boardId: s
       id: editingCard.id,
       title: editTitle.trim(),
       description: editDescription.trim() || null,
-      tags: editTags
-        .split(',')
-        .map((t) => t.trim())
-        .filter(Boolean),
+      tags: editTags,
       icon: editIcon,
       cover_image_url: editCover,
       checklist: editChecklist,
@@ -454,7 +452,7 @@ function KanbanBoardView({ projectId, boardId }: { projectId: string; boardId: s
           editingCard &&
             (editTitle !== editingCard.title ||
               editDescription !== (editingCard.description ?? '') ||
-              editTags !== editingCard.tags.join(', ') ||
+              JSON.stringify(editTags) !== JSON.stringify(editingCard.tags) ||
               editIcon !== editingCard.icon ||
               editCover !== editingCard.cover_image_url ||
               JSON.stringify(editChecklist) !== JSON.stringify(editingCard.checklist) ||
@@ -480,8 +478,8 @@ function KanbanBoardView({ projectId, boardId }: { projectId: string; boardId: s
             </Field>
           </div>
 
-          <Field label="Tags" hint="Separadas por vírgula">
-            <TextInput value={editTags} onChange={(e) => setEditTags(e.target.value)} placeholder="urgente, arte, bug" />
+          <Field label="Tags">
+            <TagInput value={editTags} onChange={setEditTags} suggestions={allTags} placeholder="urgente, arte, bug…" />
           </Field>
 
           <Field label="Ícone">

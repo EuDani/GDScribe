@@ -10,6 +10,7 @@ import { Modal } from '@/components/ui/Modal'
 import { Badge, accentFromString } from '@/components/ui/Badge'
 import { Tabs } from '@/components/ui/Tabs'
 import { RichTextEditor } from '@/components/RichTextEditor'
+import { TagInput } from '@/components/TagInput'
 import { isHtmlEmpty, stripHtml } from '@/lib/html'
 import { IDEA_STATUSES, type Idea, type IdeaStatus, type Project } from '@/lib/types'
 import { useCreateIdea, useDeleteIdea, useIdeas, useUpdateIdea } from '@/features/ideas/useIdeas'
@@ -29,7 +30,7 @@ export function IdeasPage() {
   const [editing, setEditing] = useState<Idea | null>(null)
   const [title, setTitle] = useState('')
   const [body, setBody] = useState('')
-  const [tagsInput, setTagsInput] = useState('')
+  const [tags, setTags] = useState<string[]>([])
   const [pendingDelete, setPendingDelete] = useState<string | null>(null)
 
   const allTags = useMemo(
@@ -55,7 +56,7 @@ export function IdeasPage() {
     setEditing(null)
     setTitle('')
     setBody('')
-    setTagsInput('')
+    setTags([])
     setModalOpen(true)
   }
 
@@ -63,17 +64,13 @@ export function IdeasPage() {
     setEditing(idea)
     setTitle(idea.title)
     setBody(idea.body ?? '')
-    setTagsInput(idea.tags.join(', '))
+    setTags(idea.tags)
     setModalOpen(true)
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!title.trim()) return
-    const tags = tagsInput
-      .split(',')
-      .map((t) => t.trim())
-      .filter(Boolean)
 
     if (editing) {
       await updateIdea.mutateAsync({ id: editing.id, title: title.trim(), body: body.trim() || null, tags })
@@ -173,8 +170,10 @@ export function IdeasPage() {
         title={editing ? 'Editar ideia' : 'Nova ideia'}
         isDirty={
           editing
-            ? title !== editing.title || body !== (editing.body ?? '') || tagsInput !== editing.tags.join(', ')
-            : Boolean(title.trim() || body.trim() || tagsInput.trim())
+            ? title !== editing.title ||
+              body !== (editing.body ?? '') ||
+              JSON.stringify(tags) !== JSON.stringify(editing.tags)
+            : Boolean(title.trim() || body.trim() || tags.length > 0)
         }
       >
         <form onSubmit={handleSubmit}>
@@ -184,8 +183,8 @@ export function IdeasPage() {
           <Field label="Descrição" hint="Opcional — aceita Markdown e imagens">
             <RichTextEditor projectId={project.id} value={body} onChange={setBody} minHeight={140} />
           </Field>
-          <Field label="Tags" hint="Separadas por vírgula">
-            <TextInput value={tagsInput} onChange={(e) => setTagsInput(e.target.value)} placeholder="combate, ui, som" />
+          <Field label="Tags">
+            <TagInput value={tags} onChange={setTags} suggestions={allTags} placeholder="combate, ui, som…" />
           </Field>
           {editing && (
             <Field label="Status">

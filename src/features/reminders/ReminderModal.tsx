@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Bell, Upload } from 'lucide-react'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { Field, Select, TextInput, Textarea } from '@/components/ui/Input'
+import { TagInput } from '@/components/TagInput'
 import { NotificationRulesEditor } from '@/features/reminders/NotificationRulesEditor'
 import { ensureNotificationPermission, isNotificationSupported } from '@/lib/notifications'
 import { useUploadImage } from '@/lib/useUploadImage'
@@ -10,6 +11,7 @@ import { REMINDER_IMPORTANCE, type NotificationRule, type Reminder, type Reminde
 import {
   useCreateReminder,
   useDeleteReminder,
+  useReminders,
   useUpdateReminder,
 } from '@/features/reminders/useReminders'
 import { useToast } from '@/contexts/ToastContext'
@@ -30,16 +32,22 @@ export function ReminderModal({
   const createReminder = useCreateReminder(projectId)
   const updateReminder = useUpdateReminder(projectId)
   const deleteReminder = useDeleteReminder(projectId)
+  const { data: allReminders } = useReminders(projectId)
   const toast = useToast()
   const { upload, uploading } = useUploadImage(projectId)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const allTags = useMemo(
+    () => Array.from(new Set((allReminders ?? []).flatMap((r) => r.tags))).sort(),
+    [allReminders],
+  )
 
   const [title, setTitle] = useState('')
   const [eventDate, setEventDate] = useState('')
   const [eventTime, setEventTime] = useState('')
   const [notes, setNotes] = useState('')
   const [rules, setRules] = useState<NotificationRule[]>([])
-  const [tagsInput, setTagsInput] = useState('')
+  const [tags, setTags] = useState<string[]>([])
   const [imageUrl, setImageUrl] = useState<string | null>(null)
   const [importance, setImportance] = useState<ReminderImportance>('normal')
 
@@ -50,7 +58,7 @@ export function ReminderModal({
     setEventTime(reminder?.event_time ?? '')
     setNotes(reminder?.notes ?? '')
     setRules(reminder?.notifications ?? [])
-    setTagsInput(reminder?.tags.join(', ') ?? '')
+    setTags(reminder?.tags ?? [])
     setImageUrl(reminder?.image_url ?? null)
     setImportance(reminder?.importance ?? 'normal')
   }, [open, reminder, defaultDate])
@@ -70,11 +78,6 @@ export function ReminderModal({
         toast.error('Permissão de notificação negada — o lembrete será salvo, mas não vai poder avisar via notificação do sistema.')
       }
     }
-
-    const tags = tagsInput
-      .split(',')
-      .map((t) => t.trim())
-      .filter(Boolean)
 
     const input = {
       title: title.trim(),
@@ -104,11 +107,11 @@ export function ReminderModal({
             eventDate !== reminder.event_date ||
             eventTime !== (reminder.event_time ?? '') ||
             notes !== (reminder.notes ?? '') ||
-            tagsInput !== reminder.tags.join(', ') ||
+            JSON.stringify(tags) !== JSON.stringify(reminder.tags) ||
             imageUrl !== reminder.image_url ||
             importance !== reminder.importance ||
             JSON.stringify(rules) !== JSON.stringify(reminder.notifications)
-          : Boolean(title.trim() || notes.trim() || rules.length > 0 || tagsInput.trim() || imageUrl)
+          : Boolean(title.trim() || notes.trim() || rules.length > 0 || tags.length > 0 || imageUrl)
       }
     >
       <form onSubmit={handleSubmit}>
@@ -134,8 +137,8 @@ export function ReminderModal({
           </Field>
         </div>
 
-        <Field label="Tags" hint="Separadas por vírgula">
-          <TextInput value={tagsInput} onChange={(e) => setTagsInput(e.target.value)} placeholder="marketing, build, reunião" />
+        <Field label="Tags">
+          <TagInput value={tags} onChange={setTags} suggestions={allTags} placeholder="marketing, build, reunião…" />
         </Field>
 
         <Field label="Imagem" hint="Opcional">
