@@ -23,7 +23,9 @@ export function ImageLightbox({
   const [zoom, setZoom] = useState(1)
   const [pan, setPan] = useState({ x: 0, y: 0 })
   const [isPanning, setIsPanning] = useState(false)
-  const dragRef = useRef<{ startX: number; startY: number; panX: number; panY: number } | null>(null)
+  const pointerRef = useRef<{ startX: number; startY: number; panX: number; panY: number; moved: boolean } | null>(
+    null,
+  )
   const rootRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -70,25 +72,39 @@ export function ImageLightbox({
   }, [open])
 
   function handlePointerDown(e: React.PointerEvent) {
-    if (zoom <= MIN_ZOOM) return
-    e.preventDefault()
-    e.stopPropagation()
-    ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
-    dragRef.current = { startX: e.clientX, startY: e.clientY, panX: pan.x, panY: pan.y }
-    setIsPanning(true)
+    pointerRef.current = { startX: e.clientX, startY: e.clientY, panX: pan.x, panY: pan.y, moved: false }
+    if (zoom > MIN_ZOOM) {
+      e.preventDefault()
+      ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+      setIsPanning(true)
+    }
   }
 
   function handlePointerMove(e: React.PointerEvent) {
-    if (!dragRef.current) return
-    e.stopPropagation()
-    const dx = e.clientX - dragRef.current.startX
-    const dy = e.clientY - dragRef.current.startY
-    setPan({ x: dragRef.current.panX + dx, y: dragRef.current.panY + dy })
+    const drag = pointerRef.current
+    if (!drag) return
+    const dx = e.clientX - drag.startX
+    const dy = e.clientY - drag.startY
+    if (Math.abs(dx) > 4 || Math.abs(dy) > 4) drag.moved = true
+    if (zoom > MIN_ZOOM) {
+      e.stopPropagation()
+      setPan({ x: drag.panX + dx, y: drag.panY + dy })
+    }
   }
 
   function handlePointerUp() {
-    dragRef.current = null
     setIsPanning(false)
+  }
+
+  // Um drag pra dar pan (ou só o mouse tremendo um pouco no clique) pode
+  // terminar com o pointerup fora da imagem — o evento de click resultante
+  // então mira o próprio fundo, e sem essa checagem o modal fechava sozinho
+  // bem na hora que a pessoa estava interagindo com a imagem em foco.
+  function handleRootClick(e: React.MouseEvent) {
+    const moved = pointerRef.current?.moved ?? false
+    pointerRef.current = null
+    if (moved) return
+    if (e.target === e.currentTarget) onClose()
   }
 
   function zoomBy(amount: number) {
@@ -112,9 +128,7 @@ export function ImageLightbox({
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
           onPointerCancel={handlePointerUp}
-          onClick={(e) => {
-            if (e.target === e.currentTarget) onClose()
-          }}
+          onClick={handleRootClick}
           style={{ touchAction: 'none' }}
         >
           <button
@@ -183,6 +197,7 @@ export function ImageLightbox({
             exit={{ opacity: 0 }}
             transition={{ duration: 0.15 }}
             className="flex items-center justify-center"
+            onClick={(e) => e.stopPropagation()}
           >
             <img
               src={images[index]}
