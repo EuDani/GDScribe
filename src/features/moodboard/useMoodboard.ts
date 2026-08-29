@@ -92,7 +92,7 @@ export function useMoodboardImages(projectId: string | undefined) {
         .from('moodboard_images')
         .select('*')
         .eq('project_id', projectId)
-        .order('created_at', { ascending: false })
+        .order('sort_order', { ascending: true })
       if (error) throw error
       return data as MoodboardImage[]
     },
@@ -104,10 +104,28 @@ export function useAddMoodboardImages(projectId: string) {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async ({ urls, folderId }: { urls: string[]; folderId: string | null }) => {
-      const { error } = await supabase
-        .from('moodboard_images')
-        .insert(urls.map((url) => ({ project_id: projectId, folder_id: folderId, image_url: url })))
+      const existing = queryClient.getQueryData<MoodboardImage[]>(['moodboard_images', projectId]) ?? []
+      const { error } = await supabase.from('moodboard_images').insert(
+        urls.map((url, i) => ({
+          project_id: projectId,
+          folder_id: folderId,
+          image_url: url,
+          sort_order: existing.length + i,
+        })),
+      )
       if (error) throw error
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['moodboard_images', projectId] }),
+  })
+}
+
+export function useReorderMoodboardImages(projectId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (images: { id: string; sort_order: number }[]) => {
+      await Promise.all(
+        images.map((i) => supabase.from('moodboard_images').update({ sort_order: i.sort_order }).eq('id', i.id)),
+      )
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['moodboard_images', projectId] }),
   })

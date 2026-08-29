@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react'
-import { ArrowDown, ArrowUp, Folder, FolderPlus, Images, Pencil, Plus, Trash2, Upload } from 'lucide-react'
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Folder, FolderPlus, Images, Pencil, Plus, Trash2, Upload } from 'lucide-react'
 import { motion } from 'motion/react'
 import { clsx } from 'clsx'
 import { useOutletContext } from 'react-router-dom'
@@ -8,6 +8,7 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Field, Select, TextInput } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
+import { ImageLightbox } from '@/components/ImageLightbox'
 import { useUploadImage } from '@/lib/useUploadImage'
 import type { MoodboardFolder, MoodboardImage, Project } from '@/lib/types'
 import {
@@ -20,6 +21,7 @@ import {
   useMoveMoodboardFolder,
   useRenameMoodboardFolder,
   useReorderMoodboardFolders,
+  useReorderMoodboardImages,
   useUpdateMoodboardImage,
 } from '@/features/moodboard/useMoodboard'
 
@@ -38,6 +40,7 @@ export function MoodboardPage() {
   const addImages = useAddMoodboardImages(project.id)
   const updateImage = useUpdateMoodboardImage(project.id)
   const deleteImage = useDeleteMoodboardImage(project.id)
+  const reorderImages = useReorderMoodboardImages(project.id)
   const { uploadMany, uploading } = useUploadImage(project.id)
 
   const [activeFolder, setActiveFolder] = useState<string>(ALL)
@@ -48,6 +51,7 @@ export function MoodboardPage() {
   const [editParentId, setEditParentId] = useState<string | null>(null)
   const [pendingDeleteFolder, setPendingDeleteFolder] = useState<string | null>(null)
   const [pendingDeleteImage, setPendingDeleteImage] = useState<string | null>(null)
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const topFolders = useMemo(() => (folders ?? []).filter((f) => !f.parent_id), [folders])
@@ -122,11 +126,32 @@ export function MoodboardPage() {
     reorderFolders.mutate(reordered.map((f, i) => ({ id: f.id, sort_order: i })))
   }
 
-  async function handleFiles(files: FileList | null) {
+  async function handleFiles(files: FileList | File[] | null) {
     if (!files || files.length === 0) return
     const folderId = activeFolder === ALL || activeFolder === UNSORTED ? null : activeFolder
     const urls = await uploadMany(Array.from(files), 'moodboard')
     if (urls.length > 0) await addImages.mutateAsync({ urls, folderId })
+  }
+
+  async function handlePasteImage(e: React.ClipboardEvent) {
+    const files = Array.from(e.clipboardData?.items ?? [])
+      .filter((item) => item.type.startsWith('image/'))
+      .map((item) => item.getAsFile())
+      .filter((f): f is File => f !== null)
+    if (files.length === 0) return
+    e.preventDefault()
+    await handleFiles(files)
+  }
+
+  function moveImage(index: number, dir: -1 | 1) {
+    const target = index + dir
+    if (target < 0 || target >= visibleImages.length) return
+    const a = visibleImages[index]
+    const b = visibleImages[target]
+    reorderImages.mutate([
+      { id: a.id, sort_order: b.sort_order },
+      { id: b.id, sort_order: a.sort_order },
+    ])
   }
 
   function FolderRow({ folder, group, index }: { folder: MoodboardFolder; group: MoodboardFolder[]; index: number }) {
@@ -257,10 +282,10 @@ export function MoodboardPage() {
         </button>
       </aside>
 
-      <div className="min-w-0">
+      <div className="min-w-0" tabIndex={-1} onPaste={handlePasteImage}>
         <div className="mb-4 flex items-center justify-between gap-3">
           <p className="text-label text-xs text-canvas-fg/50">
-            {visibleImages.length} imagem(ns)
+            {visibleImages.length} imagem(ns) — clique numa imagem pra focar, cole com Ctrl+V pra adicionar
           </p>
           <input
             ref={fileInputRef}
@@ -304,8 +329,13 @@ export function MoodboardPage() {
                 key={image.id}
                 image={image}
                 index={i}
+                canMoveLeft={i > 0}
+                canMoveRight={i < visibleImages.length - 1}
                 onCaptionChange={(caption) => updateImage.mutate({ id: image.id, caption })}
                 onDelete={() => setPendingDeleteImage(image.id)}
+                onOpen={() => setLightboxIndex(i)}
+                onMoveLeft={() => moveImage(i, -1)}
+                onMoveRight={() => moveImage(i, 1)}
               />
             ))}
           </div>
@@ -378,6 +408,13 @@ export function MoodboardPage() {
         description="Essa ação não pode ser desfeita."
         confirmLabel="Excluir"
       />
+
+      <ImageLightbox
+        images={visibleImages.map((i) => i.image_url)}
+        index={lightboxIndex}
+        onClose={() => setLightboxIndex(null)}
+        onIndexChange={setLightboxIndex}
+      />
     </div>
   )
 }
@@ -385,13 +422,23 @@ export function MoodboardPage() {
 function MoodboardImageCard({
   image,
   index,
+  canMoveLeft,
+  canMoveRight,
   onCaptionChange,
   onDelete,
+  onOpen,
+  onMoveLeft,
+  onMoveRight,
 }: {
   image: MoodboardImage
   index: number
+  canMoveLeft: boolean
+  canMoveRight: boolean
   onCaptionChange: (caption: string) => void
   onDelete: () => void
+  onOpen: () => void
+  onMoveLeft: () => void
+  onMoveRight: () => void
 }) {
   const [caption, setCaption] = useState(image.caption ?? '')
 
@@ -402,7 +449,9 @@ function MoodboardImageCard({
       transition={{ duration: 0.2, delay: Math.min(index, 10) * 0.03 }}
       className="group relative mb-3 break-inside-avoid border-2 border-line bg-surface"
     >
-      <img src={image.image_url} alt={image.caption ?? ''} className="w-full object-cover" />
+      <button type="button" onClick={onOpen} className="block w-full cursor-pointer" aria-label="Ver imagem em foco">
+        <img src={image.image_url} alt={image.caption ?? ''} className="w-full object-cover" />
+      </button>
       <button
         type="button"
         onClick={onDelete}
@@ -411,6 +460,26 @@ function MoodboardImageCard({
       >
         <Trash2 size={12} />
       </button>
+      <div className="absolute left-1.5 top-1.5 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+        <button
+          type="button"
+          disabled={!canMoveLeft}
+          onClick={onMoveLeft}
+          aria-label="Mover imagem para trás"
+          className="cursor-pointer border-2 border-line bg-paper p-1 text-ink disabled:opacity-30"
+        >
+          <ArrowLeft size={12} />
+        </button>
+        <button
+          type="button"
+          disabled={!canMoveRight}
+          onClick={onMoveRight}
+          aria-label="Mover imagem para frente"
+          className="cursor-pointer border-2 border-line bg-paper p-1 text-ink disabled:opacity-30"
+        >
+          <ArrowRight size={12} />
+        </button>
+      </div>
       <input
         value={caption}
         onChange={(e) => setCaption(e.target.value)}

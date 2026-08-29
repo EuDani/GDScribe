@@ -230,6 +230,7 @@ export interface MoodboardImage {
   folder_id: string | null
   image_url: string
   caption: string | null
+  sort_order: number
   created_at: string
 }
 

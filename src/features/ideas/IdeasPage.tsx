@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Plus } from 'lucide-react'
+import { Filter, Plus } from 'lucide-react'
 import { clsx } from 'clsx'
 import { useOutletContext } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
@@ -8,7 +8,6 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { Field, Select, TextInput } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
 import { Badge, accentFromString } from '@/components/ui/Badge'
-import { Tabs } from '@/components/ui/Tabs'
 import { RichTextEditor } from '@/components/RichTextEditor'
 import { TagInput } from '@/components/TagInput'
 import { SectorPicker, matchesSectorFilter } from '@/components/SectorPicker'
@@ -103,86 +102,120 @@ export function IdeasPage() {
         </Button>
       </div>
 
-      <Tabs items={FILTER_ITEMS} value={statusFilter} onChange={setStatusFilter} />
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[200px_1fr]">
+        <aside className="space-y-4 border-2 border-line bg-surface p-3 lg:sticky lg:top-4 lg:self-start">
+          <div className="flex items-center gap-1.5 text-canvas-fg/70">
+            <Filter size={13} />
+            <span className="text-label text-[11px]">Filtrar ideias</span>
+          </div>
 
-      {allTags.length > 0 && (
-        <div className="mt-3 flex flex-wrap items-center gap-1.5">
-          <span className="text-label text-[10px] text-canvas-fg/40">Tags:</span>
-          {allTags.map((tag) => (
+          <div>
+            <p className="text-label mb-1.5 text-[10px] text-canvas-fg/50">Status</p>
+            <div className="space-y-1">
+              {FILTER_ITEMS.map((item) => (
+                <button
+                  key={item.value}
+                  type="button"
+                  onClick={() => setStatusFilter(item.value)}
+                  className={clsx(
+                    'flex w-full cursor-pointer items-center gap-1.5 border-2 px-2 py-1 text-left text-[11px]',
+                    statusFilter === item.value
+                      ? 'border-line bg-accent-yellow text-ink'
+                      : 'border-transparent text-canvas-fg/60 hover:text-canvas-fg',
+                  )}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {allTags.length > 0 && (
+            <div>
+              <p className="text-label mb-1.5 text-[10px] text-canvas-fg/50">Tags</p>
+              <div className="flex flex-wrap gap-1">
+                {allTags.map((tag) => (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => toggleTag(tag)}
+                    className={clsx(
+                      'text-label border-2 border-line px-1.5 py-0.5 text-[10px]',
+                      tagFilter.includes(tag)
+                        ? 'bg-accent-blue text-ink'
+                        : 'bg-transparent text-canvas-fg/50 hover:text-canvas-fg',
+                    )}
+                  >
+                    {tag}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {(sectors ?? []).length > 0 && (
+            <div>
+              <p className="text-label mb-1.5 text-[10px] text-canvas-fg/50">Setor</p>
+              <SectorPicker value={sectorFilter} onChange={setSectorFilter} sectors={sectors ?? []} />
+            </div>
+          )}
+
+          {(tagFilter.length > 0 || sectorFilter.length > 0) && (
             <button
-              key={tag}
               type="button"
-              onClick={() => toggleTag(tag)}
-              className={clsx(
-                'text-label border-2 border-line px-1.5 py-0.5 text-[10px]',
-                tagFilter.includes(tag)
-                  ? 'bg-accent-blue text-ink'
-                  : 'bg-transparent text-canvas-fg/50 hover:text-canvas-fg',
-              )}
+              onClick={() => {
+                setTagFilter([])
+                setSectorFilter([])
+              }}
+              className="text-label text-[11px] text-canvas-fg/40 underline hover:text-canvas-fg"
             >
-              {tag}
-            </button>
-          ))}
-          {tagFilter.length > 0 && (
-            <button
-              type="button"
-              onClick={() => setTagFilter([])}
-              className="text-label text-[10px] text-canvas-fg/40 underline hover:text-canvas-fg"
-            >
-              limpar
+              limpar filtros
             </button>
           )}
-        </div>
-      )}
+        </aside>
 
-      {(sectors ?? []).length > 0 && (
-        <div className="mt-3 flex flex-wrap items-center gap-1.5">
-          <span className="text-label text-[10px] text-canvas-fg/40">Setor:</span>
-          <SectorPicker value={sectorFilter} onChange={setSectorFilter} sectors={sectors ?? []} />
-        </div>
-      )}
+        <div className="min-w-0">
+          {isLoading && <p className="text-label text-sm text-canvas-fg/50">Carregando…</p>}
 
-      {isLoading && <p className="text-label mt-6 text-sm text-canvas-fg/50">Carregando…</p>}
+          {!isLoading && filtered.length === 0 && (
+            <EmptyState title="Nenhuma ideia por aqui" description="Jogue qualquer ideia solta antes que ela vire escopo." />
+          )}
 
-      {!isLoading && filtered.length === 0 && (
-        <div className="mt-6">
-          <EmptyState title="Nenhuma ideia por aqui" description="Jogue qualquer ideia solta antes que ela vire escopo." />
-        </div>
-      )}
-
-      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {filtered.map((idea) => {
-          const statusMeta = IDEA_STATUSES.find((s) => s.value === idea.status)!
-          return (
-            <div
-              key={idea.id}
-              onClick={() => openEdit(idea)}
-              className="cursor-pointer border-2 border-line bg-surface p-4 shadow-brutal-sm transition-transform hover:-translate-x-0.5 hover:-translate-y-0.5"
-            >
-              <div className="mb-2 flex items-center justify-between gap-2">
-                <span
-                  className="text-label border-2 border-line px-1.5 py-0.5 text-[10px] text-ink"
-                  style={{ backgroundColor: statusMeta.color }}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {filtered.map((idea) => {
+              const statusMeta = IDEA_STATUSES.find((s) => s.value === idea.status)!
+              return (
+                <div
+                  key={idea.id}
+                  onClick={() => openEdit(idea)}
+                  className="cursor-pointer border-2 border-line bg-surface p-4 shadow-brutal-sm transition-transform hover:-translate-x-0.5 hover:-translate-y-0.5"
                 >
-                  {statusMeta.label}
-                </span>
-              </div>
-              <h3 className="text-display mb-1 text-base">{idea.title}</h3>
-              {idea.body && !isHtmlEmpty(idea.body) && (
-                <p className="mb-2 line-clamp-3 text-sm text-canvas-fg/60">{stripHtml(idea.body)}</p>
-              )}
-              {idea.tags.length > 0 && (
-                <div className="flex flex-wrap gap-1">
-                  {idea.tags.map((tag) => (
-                    <Badge key={tag} accent={accentFromString(tag)}>
-                      {tag}
-                    </Badge>
-                  ))}
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <span
+                      className="text-label border-2 border-line px-1.5 py-0.5 text-[10px] text-ink"
+                      style={{ backgroundColor: statusMeta.color }}
+                    >
+                      {statusMeta.label}
+                    </span>
+                  </div>
+                  <h3 className="text-display mb-1 text-base">{idea.title}</h3>
+                  {idea.body && !isHtmlEmpty(idea.body) && (
+                    <p className="mb-2 line-clamp-3 text-sm text-canvas-fg/60">{stripHtml(idea.body)}</p>
+                  )}
+                  {idea.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {idea.tags.map((tag) => (
+                        <Badge key={tag} accent={accentFromString(tag)}>
+                          {tag}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-          )
-        })}
+              )
+            })}
+          </div>
+        </div>
       </div>
 
       <Modal

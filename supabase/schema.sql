@@ -235,6 +235,7 @@ create table if not exists public.moodboard_images (
   folder_id uuid references public.moodboard_folders (id) on delete cascade,
   image_url text not null,
   caption text,
+  sort_order integer not null default 0,
   created_at timestamptz not null default now()
 );
 
@@ -316,6 +317,9 @@ alter table public.game_references add column if not exists image_urls text[] no
 
 -- Imagem de capa do projeto, exibida no cartão da tela inicial
 alter table public.projects add column if not exists cover_image_url text;
+
+-- Ordem das imagens do moodboard (antes só ordenava por created_at)
+alter table public.moodboard_images add column if not exists sort_order integer not null default 0;
 
 -- Cria um quadro "Ações" para projetos que já tinham colunas/cards de uma
 -- versão anterior (sem o conceito de múltiplos quadros) e associa esse
