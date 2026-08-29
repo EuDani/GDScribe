@@ -136,8 +136,13 @@ export function RichTextEditor({
       <div className="flex flex-wrap items-center gap-1 border-b-2 border-line/40 bg-canvas/40 p-1.5">
         <ToolbarButton
           label="Texto normal"
-          active={editor.isActive('paragraph')}
-          onClick={() => editor.chain().focus().setParagraph().run()}
+          active={
+            editor.isActive('paragraph') &&
+            !editor.isActive('bold') &&
+            !editor.isActive('italic') &&
+            !editor.isActive('strike')
+          }
+          onClick={() => editor.chain().focus().setParagraph().unsetAllMarks().run()}
         >
           <span className="block w-[13px] text-center text-[13px] leading-none font-bold">N</span>
         </ToolbarButton>
