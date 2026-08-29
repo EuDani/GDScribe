@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
+import { useToast } from '@/contexts/ToastContext'
 import type { MoodboardFolder, MoodboardImage } from '@/lib/types'
 
 export function useMoodboardFolders(projectId: string | undefined) {
@@ -102,6 +103,7 @@ export function useMoodboardImages(projectId: string | undefined) {
 
 export function useAddMoodboardImages(projectId: string) {
   const queryClient = useQueryClient()
+  const toast = useToast()
   return useMutation({
     mutationFn: async ({ urls, folderId }: { urls: string[]; folderId: string | null }) => {
       const existing = queryClient.getQueryData<MoodboardImage[]>(['moodboard_images', projectId]) ?? []
@@ -114,6 +116,10 @@ export function useAddMoodboardImages(projectId: string) {
         })),
       )
       if (error) throw error
+    },
+    onError: (err) => {
+      const message = err instanceof Error ? err.message : 'Erro desconhecido'
+      toast.error(`Falha ao salvar imagem: ${message} — confira se rodou a versão mais recente de supabase/schema.sql.`)
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['moodboard_images', projectId] }),
   })

@@ -1,5 +1,6 @@
-import { useState } from 'react'
-import { ArrowLeft, ArrowRight, ExternalLink, Plus, Upload, X } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { ArrowLeft, ArrowRight, ExternalLink, Filter, Plus, Upload, X } from 'lucide-react'
+import { clsx } from 'clsx'
 import { motion } from 'motion/react'
 import { useOutletContext } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
@@ -8,9 +9,11 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { Field, TextInput } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
 import { SidePanel } from '@/components/ui/SidePanel'
+import { Badge, accentFromString } from '@/components/ui/Badge'
 import { ChecklistEditor } from '@/components/ChecklistEditor'
 import { RichTextEditor } from '@/components/RichTextEditor'
 import { ImageLightbox } from '@/components/ImageLightbox'
+import { TagInput } from '@/components/TagInput'
 import { useUploadImage } from '@/lib/useUploadImage'
 import type { ChecklistItem, GameReference, Project } from '@/lib/types'
 import {
@@ -34,10 +37,27 @@ export function ReferencesPage() {
   const [editTitle, setEditTitle] = useState('')
   const [editSourceUrl, setEditSourceUrl] = useState('')
   const [editImages, setEditImages] = useState<string[]>([])
+  const [editTags, setEditTags] = useState<string[]>([])
   const [editNotes, setEditNotes] = useState('')
   const [editChecklist, setEditChecklist] = useState<ChecklistItem[]>([])
   const [pendingDelete, setPendingDelete] = useState<string | null>(null)
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
+  const [tagFilter, setTagFilter] = useState<string[]>([])
+
+  const allTags = useMemo(
+    () => Array.from(new Set((references ?? []).flatMap((r) => r.tags))).sort(),
+    [references],
+  )
+
+  const filtered = useMemo(
+    () =>
+      (references ?? []).filter((r) => tagFilter.length === 0 || tagFilter.some((t) => r.tags.includes(t))),
+    [references, tagFilter],
+  )
+
+  function toggleTag(tag: string) {
+    setTagFilter((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]))
+  }
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault()
@@ -53,6 +73,7 @@ export function ReferencesPage() {
     setEditTitle(ref.title)
     setEditSourceUrl(ref.source_url ?? '')
     setEditImages(ref.image_urls.length > 0 ? ref.image_urls : ref.image_url ? [ref.image_url] : [])
+    setEditTags(ref.tags)
     setEditNotes(ref.notes)
     setEditChecklist(ref.checklist)
   }
@@ -66,6 +87,7 @@ export function ReferencesPage() {
       source_url: editSourceUrl.trim() || null,
       image_url: editImages[0] ?? null,
       image_urls: editImages,
+      tags: editTags,
       notes: editNotes,
       checklist: editChecklist,
     })
@@ -113,56 +135,111 @@ export function ReferencesPage() {
         </Button>
       </div>
 
-      {isLoading && <p className="text-label text-sm text-canvas-fg/50">Carregando…</p>}
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[200px_1fr]">
+        <aside className="space-y-4 border-2 border-line bg-surface p-3 lg:sticky lg:top-4 lg:self-start">
+          <div className="flex items-center gap-1.5 text-canvas-fg/70">
+            <Filter size={13} />
+            <span className="text-label text-[11px]">Filtrar referências</span>
+          </div>
 
-      {!isLoading && references?.length === 0 && (
-        <EmptyState
-          title="Nenhuma referência ainda"
-          description="Guarde jogos, filmes, artes — e marque o que você quer trazer pro seu jogo."
-          action={
-            <Button icon={<Plus size={16} />} onClick={() => setCreating(true)}>
-              Adicionar referência
-            </Button>
-          }
-        />
-      )}
-
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {references?.map((ref, i) => {
-          const done = ref.checklist.filter((c) => c.done).length
-          return (
-            <motion.button
-              key={ref.id}
-              type="button"
-              onClick={() => openEdit(ref)}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.25, delay: i * 0.04 }}
-              whileHover={{ x: -2, y: -2 }}
-              className="cursor-pointer overflow-hidden border-2 border-line bg-surface text-left shadow-brutal-sm"
-            >
-              {(ref.image_urls[0] ?? ref.image_url) ? (
-                <img
-                  src={ref.image_urls[0] ?? ref.image_url ?? undefined}
-                  alt=""
-                  className="h-28 w-full border-b-2 border-line object-cover"
-                />
-              ) : (
-                <div className="flex h-28 w-full items-center justify-center border-b-2 border-line bg-canvas text-canvas-fg/20">
-                  <Upload size={22} />
-                </div>
-              )}
-              <div className="p-3">
-                <h3 className="text-display truncate text-sm">{ref.title}</h3>
-                {ref.checklist.length > 0 && (
-                  <p className="text-label mt-1 text-[10px] text-canvas-fg/50">
-                    {done}/{ref.checklist.length} itens marcados
-                  </p>
-                )}
+          {allTags.length > 0 ? (
+            <div>
+              <p className="text-label mb-1.5 text-[10px] text-canvas-fg/50">Tags</p>
+              <div className="flex flex-wrap gap-1">
+                {allTags.map((tag) => (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => toggleTag(tag)}
+                    className={clsx(
+                      'text-label border-2 border-line px-1.5 py-0.5 text-[10px]',
+                      tagFilter.includes(tag)
+                        ? 'bg-accent-blue text-ink'
+                        : 'bg-transparent text-canvas-fg/50 hover:text-canvas-fg',
+                    )}
+                  >
+                    {tag}
+                  </button>
+                ))}
               </div>
-            </motion.button>
-          )
-        })}
+            </div>
+          ) : (
+            <p className="text-xs text-canvas-fg/40">Sem tags ainda.</p>
+          )}
+
+          {tagFilter.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setTagFilter([])}
+              className="text-label text-[11px] text-canvas-fg/40 underline hover:text-canvas-fg"
+            >
+              limpar filtros
+            </button>
+          )}
+        </aside>
+
+        <div className="min-w-0">
+          {isLoading && <p className="text-label text-sm text-canvas-fg/50">Carregando…</p>}
+
+          {!isLoading && filtered.length === 0 && (
+            <EmptyState
+              title="Nenhuma referência ainda"
+              description="Guarde jogos, filmes, artes — e marque o que você quer trazer pro seu jogo."
+              action={
+                <Button icon={<Plus size={16} />} onClick={() => setCreating(true)}>
+                  Adicionar referência
+                </Button>
+              }
+            />
+          )}
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {filtered.map((ref, i) => {
+              const done = ref.checklist.filter((c) => c.done).length
+              return (
+                <motion.button
+                  key={ref.id}
+                  type="button"
+                  onClick={() => openEdit(ref)}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.25, delay: i * 0.04 }}
+                  whileHover={{ x: -2, y: -2 }}
+                  className="cursor-pointer overflow-hidden border-2 border-line bg-surface text-left shadow-brutal-sm"
+                >
+                  {(ref.image_urls[0] ?? ref.image_url) ? (
+                    <img
+                      src={ref.image_urls[0] ?? ref.image_url ?? undefined}
+                      alt=""
+                      className="h-28 w-full border-b-2 border-line object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-28 w-full items-center justify-center border-b-2 border-line bg-canvas text-canvas-fg/20">
+                      <Upload size={22} />
+                    </div>
+                  )}
+                  <div className="p-3">
+                    <h3 className="text-display truncate text-sm">{ref.title}</h3>
+                    {ref.checklist.length > 0 && (
+                      <p className="text-label mt-1 text-[10px] text-canvas-fg/50">
+                        {done}/{ref.checklist.length} itens marcados
+                      </p>
+                    )}
+                    {ref.tags.length > 0 && (
+                      <div className="mt-1.5 flex flex-wrap gap-1">
+                        {ref.tags.map((tag) => (
+                          <Badge key={tag} accent={accentFromString(tag)}>
+                            {tag}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </motion.button>
+              )
+            })}
+          </div>
+        </div>
       </div>
 
       <Modal
@@ -201,6 +278,7 @@ export function ReferencesPage() {
             (editTitle !== editing.title ||
               editSourceUrl !== (editing.source_url ?? '') ||
               JSON.stringify(editImages) !== JSON.stringify(editing.image_urls) ||
+              JSON.stringify(editTags) !== JSON.stringify(editing.tags) ||
               editNotes !== editing.notes ||
               JSON.stringify(editChecklist) !== JSON.stringify(editing.checklist)),
         )}
@@ -289,6 +367,10 @@ export function ReferencesPage() {
                 </span>
               </label>
             </div>
+          </Field>
+
+          <Field label="Tags">
+            <TagInput value={editTags} onChange={setEditTags} suggestions={allTags} placeholder="arte, combate, som…" />
           </Field>
 
           <Field label="Observações" hint="Aceita Markdown e imagens">

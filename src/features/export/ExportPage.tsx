@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Download, ListChecks, Printer } from 'lucide-react'
+import { ArrowDown, ArrowUp, CornerDownRight, Download, ListChecks, Printer } from 'lucide-react'
 import { Link, useOutletContext } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
@@ -22,6 +22,16 @@ import { useAllInventoryItems, useInventoryTypes } from '@/features/inventory/us
 import { useAllKanbanCards, useAllKanbanColumns, useKanbanBoards } from '@/features/kanban/useKanban'
 import { useIdeas } from '@/features/ideas/useIdeas'
 import { useReferences } from '@/features/references/useReferences'
+
+const SECTION_DEFS = [
+  { key: 'gdd', label: 'GDD' },
+  { key: 'story', label: 'História' },
+  { key: 'inventory', label: 'Inventário' },
+  { key: 'kanban', label: 'Kanban' },
+  { key: 'ideas', label: 'Ideias' },
+  { key: 'references', label: 'Referências' },
+] as const
+type SectionKey = (typeof SECTION_DEFS)[number]['key']
 
 export function ExportPage() {
   const { project } = useOutletContext<{ project: Project }>()
@@ -47,13 +57,14 @@ export function ExportPage() {
   const [kanbanBoardIds, setKanbanBoardIds] = useState<Set<string>>(new Set())
   const [includeIdeas, setIncludeIdeas] = useState(true)
   const [includeReferences, setIncludeReferences] = useState(true)
+  const [sectionOrder, setSectionOrder] = useState<SectionKey[]>(SECTION_DEFS.map((s) => s.key))
 
-  // Sempre que os dados chegam, marca tudo como selecionado por padrão.
+  // Sempre que os dados chegam, marca tudo (incluindo sub-módulos/sub-blocos) como selecionado por padrão.
   useEffect(() => {
-    if (modules) setGddModuleIds(new Set(modules.filter((m) => !m.parent_id).map((m) => m.id)))
+    if (modules) setGddModuleIds(new Set(modules.map((m) => m.id)))
   }, [modules])
   useEffect(() => {
-    if (storyBlocks) setStoryBlockIds(new Set(storyBlocks.filter((b) => !b.parent_id).map((b) => b.id)))
+    if (storyBlocks) setStoryBlockIds(new Set(storyBlocks.map((b) => b.id)))
   }, [storyBlocks])
   useEffect(() => {
     if (invTypes) setInventoryTypeIds(new Set(invTypes.map((t) => t.id)))
@@ -67,6 +78,17 @@ export function ExportPage() {
     if (next.has(id)) next.delete(id)
     else next.add(id)
     setter(next)
+  }
+
+  function moveSection(index: number, dir: -1 | 1) {
+    const target = index + dir
+    if (target < 0 || target >= sectionOrder.length) return
+    setSectionOrder((prev) => {
+      const next = [...prev]
+      const [item] = next.splice(index, 1)
+      next.splice(target, 0, item)
+      return next
+    })
   }
 
   const gddChildrenByParent = useMemo(() => {
@@ -93,20 +115,28 @@ export function ExportPage() {
 
   function buildDocument() {
     if (!project || !modules || !phases) return ''
-    const sections: string[] = []
+    const fragmentsByKey: Partial<Record<SectionKey, string>> = {}
     if (includeGdd) {
-      const included = modules.filter((m) => (m.parent_id ? gddModuleIds.has(m.parent_id) : gddModuleIds.has(m.id)))
-      sections.push(buildGddModulesFragment(included, phases))
+      const included = modules.filter((m) => gddModuleIds.has(m.id))
+      fragmentsByKey.gdd = buildGddModulesFragment(included, phases)
     }
-    if (includeStory && storyBlocks) sections.push(buildStoryFragment(storyBlocks, storyBlockIds))
+    if (includeStory && storyBlocks) {
+      const included = new Set([...storyBlockIds])
+      fragmentsByKey.story = buildStoryFragment(
+        storyBlocks.filter((b) => included.has(b.id)),
+        'all',
+      )
+    }
     if (includeInventory && invTypes && invItems) {
-      sections.push(buildInventoryFragment(invTypes, invItems, inventoryTypeIds))
+      fragmentsByKey.inventory = buildInventoryFragment(invTypes, invItems, inventoryTypeIds)
     }
     if (includeKanban && kanbanBoards && kanbanColumns && kanbanCards) {
-      sections.push(buildKanbanFragment(kanbanBoards, kanbanColumns, kanbanCards, kanbanBoardIds))
+      fragmentsByKey.kanban = buildKanbanFragment(kanbanBoards, kanbanColumns, kanbanCards, kanbanBoardIds)
     }
-    if (includeIdeas && ideas) sections.push(buildIdeasFragment(ideas))
-    if (includeReferences && references) sections.push(buildReferencesFragment(references))
+    if (includeIdeas && ideas) fragmentsByKey.ideas = buildIdeasFragment(ideas)
+    if (includeReferences && references) fragmentsByKey.references = buildReferencesFragment(references)
+
+    const sections = sectionOrder.map((key) => fragmentsByKey[key]).filter((s): s is string => Boolean(s))
     return buildFullExportFragment(project, sections)
   }
 
@@ -148,12 +178,43 @@ export function ExportPage() {
       <Modal open={pickerOpen} onClose={() => setPickerOpen(false)} title="Escolher conteúdo do documento" wide>
         <div className="max-h-[65vh] space-y-5 overflow-y-auto pr-1">
           <section>
+            <p className="text-label mb-2 text-[10px] text-canvas-fg/50">Ordem das seções no documento</p>
+            <ul className="space-y-1">
+              {sectionOrder.map((key, i) => (
+                <li key={key} className="flex items-center gap-2 border-2 border-line/40 px-2 py-1">
+                  <div className="flex flex-col">
+                    <button
+                      type="button"
+                      disabled={i === 0}
+                      onClick={() => moveSection(i, -1)}
+                      aria-label="Mover para cima"
+                      className="cursor-pointer text-canvas-fg/50 hover:text-canvas-fg disabled:opacity-20"
+                    >
+                      <ArrowUp size={11} />
+                    </button>
+                    <button
+                      type="button"
+                      disabled={i === sectionOrder.length - 1}
+                      onClick={() => moveSection(i, 1)}
+                      aria-label="Mover para baixo"
+                      className="cursor-pointer text-canvas-fg/50 hover:text-canvas-fg disabled:opacity-20"
+                    >
+                      <ArrowDown size={11} />
+                    </button>
+                  </div>
+                  <span className="text-xs text-canvas-fg">{SECTION_DEFS.find((s) => s.key === key)?.label}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          <section>
             <label className="flex items-center gap-2 text-sm font-semibold text-canvas-fg">
               <input type="checkbox" checked={includeGdd} onChange={(e) => setIncludeGdd(e.target.checked)} />
               Documento de Design (GDD)
             </label>
             {includeGdd && (
-              <ul className="mt-2 ml-6 space-y-1">
+              <ul className="mt-2 ml-6 space-y-1.5">
                 {(modules ?? [])
                   .filter((m) => !m.parent_id)
                   .map((m) => (
@@ -165,12 +226,24 @@ export function ExportPage() {
                           onChange={() => toggleSet(gddModuleIds, setGddModuleIds, m.id)}
                         />
                         {m.title}
-                        {(gddChildrenByParent.get(m.id) ?? []).length > 0 && (
-                          <span className="text-canvas-fg/40">
-                            (+ {gddChildrenByParent.get(m.id)?.length} sub-módulo(s))
-                          </span>
-                        )}
                       </label>
+                      {gddModuleIds.has(m.id) && (gddChildrenByParent.get(m.id) ?? []).length > 0 && (
+                        <ul className="mt-1 ml-5 space-y-1">
+                          {(gddChildrenByParent.get(m.id) ?? []).map((child) => (
+                            <li key={child.id}>
+                              <label className="flex items-center gap-1.5 text-xs text-canvas-fg/60">
+                                <input
+                                  type="checkbox"
+                                  checked={gddModuleIds.has(child.id)}
+                                  onChange={() => toggleSet(gddModuleIds, setGddModuleIds, child.id)}
+                                />
+                                <CornerDownRight size={10} className="shrink-0 opacity-50" />
+                                {child.title}
+                              </label>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
                     </li>
                   ))}
               </ul>
@@ -183,7 +256,7 @@ export function ExportPage() {
               História
             </label>
             {includeStory && (
-              <ul className="mt-2 ml-6 space-y-1">
+              <ul className="mt-2 ml-6 space-y-1.5">
                 {(storyBlocks ?? [])
                   .filter((b) => !b.parent_id)
                   .map((b) => (
@@ -195,12 +268,24 @@ export function ExportPage() {
                           onChange={() => toggleSet(storyBlockIds, setStoryBlockIds, b.id)}
                         />
                         {b.title}
-                        {(storyChildrenByParent.get(b.id) ?? []).length > 0 && (
-                          <span className="text-canvas-fg/40">
-                            (+ {storyChildrenByParent.get(b.id)?.length} sub-bloco(s))
-                          </span>
-                        )}
                       </label>
+                      {storyBlockIds.has(b.id) && (storyChildrenByParent.get(b.id) ?? []).length > 0 && (
+                        <ul className="mt-1 ml-5 space-y-1">
+                          {(storyChildrenByParent.get(b.id) ?? []).map((child) => (
+                            <li key={child.id}>
+                              <label className="flex items-center gap-1.5 text-xs text-canvas-fg/60">
+                                <input
+                                  type="checkbox"
+                                  checked={storyBlockIds.has(child.id)}
+                                  onChange={() => toggleSet(storyBlockIds, setStoryBlockIds, child.id)}
+                                />
+                                <CornerDownRight size={10} className="shrink-0 opacity-50" />
+                                {child.title}
+                              </label>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
                     </li>
                   ))}
               </ul>

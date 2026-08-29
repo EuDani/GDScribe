@@ -16,6 +16,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Settings,
+  Workflow,
   X,
 } from 'lucide-react'
 import { clsx } from 'clsx'
@@ -38,6 +39,7 @@ const NAV_ITEMS = [
   { to: 'references', label: 'Referências', icon: BookMarked },
   { to: 'kanban', label: 'Kanban', icon: KanbanSquare },
   { to: 'moodboard', label: 'Moodboard', icon: Images },
+  { to: 'flowchart', label: 'Fluxograma', icon: Workflow },
   { to: 'calendar', label: 'Calendário', icon: CalendarDays },
   { to: 'ideas', label: 'Hub de Ideias', icon: Lightbulb },
   { to: 'export', label: 'Exportar', icon: Download },

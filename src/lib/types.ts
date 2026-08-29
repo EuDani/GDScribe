@@ -251,8 +251,37 @@ export interface GameReference {
   source_url: string | null
   image_url: string | null
   image_urls: string[]
+  tags: string[]
   notes: string
   checklist: ChecklistItem[]
+  created_at: string
+  updated_at: string
+}
+
+export interface FlowchartNode {
+  id: string
+  x: number
+  y: number
+  width: number
+  height: number
+  text: string
+  color: string
+}
+
+export interface FlowchartEdge {
+  id: string
+  from: string
+  to: string
+  label?: string
+}
+
+export interface Flowchart {
+  id: string
+  project_id: string
+  name: string
+  nodes: FlowchartNode[]
+  edges: FlowchartEdge[]
+  sort_order: number
   created_at: string
   updated_at: string
 }

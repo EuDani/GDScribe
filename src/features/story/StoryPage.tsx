@@ -12,11 +12,12 @@ import { Modal } from '@/components/ui/Modal'
 import { RichTextEditor } from '@/components/RichTextEditor'
 import { stripHtml } from '@/lib/html'
 import type { Project, StoryBlock } from '@/lib/types'
+import { computeNestedDragUpdate } from '@/lib/nestedReorder'
 import { StoryBlockListItem } from '@/features/story/StoryBlockListItem'
 import {
   useCreateStoryBlock,
   useDeleteStoryBlock,
-  useReorderStoryBlocks,
+  useReparentStoryBlocks,
   useStoryBlocks,
   useUpdateStoryBlock,
 } from '@/features/story/useStoryBlocks'
@@ -27,7 +28,7 @@ export function StoryPage() {
   const createBlock = useCreateStoryBlock(project.id)
   const updateBlock = useUpdateStoryBlock(project.id)
   const deleteBlock = useDeleteStoryBlock(project.id)
-  const reorderBlocks = useReorderStoryBlocks(project.id)
+  const reparentBlocks = useReparentStoryBlocks(project.id)
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
 
@@ -69,6 +70,17 @@ export function StoryPage() {
     }
     return map
   }, [blocks])
+
+  const flatRows = useMemo(() => {
+    const rows: { block: StoryBlock; depth: number }[] = []
+    for (const b of topLevel) {
+      rows.push({ block: b, depth: 0 })
+      for (const child of (childrenByParent.get(b.id) ?? []).sort((a, c) => a.sort_order - c.sort_order)) {
+        rows.push({ block: child, depth: 1 })
+      }
+    }
+    return rows
+  }, [topLevel, childrenByParent])
 
   const selected = blocks?.find((b) => b.id === selectedId) ?? topLevel[0] ?? null
 
@@ -119,16 +131,10 @@ export function StoryPage() {
   }
 
   function handleDragEnd(event: DragEndEvent) {
-    const { active, over } = event
-    if (!over || active.id === over.id) return
-    const oldIndex = topLevel.findIndex((b) => b.id === active.id)
-    const newIndex = topLevel.findIndex((b) => b.id === over.id)
-    if (oldIndex < 0 || newIndex < 0) return
-
-    const reordered = [...topLevel]
-    const [moved] = reordered.splice(oldIndex, 1)
-    reordered.splice(newIndex, 0, moved)
-    reorderBlocks.mutate(reordered.map((b, i) => ({ id: b.id, sort_order: i })))
+    const { active, over, delta } = event
+    if (!over || !blocks) return
+    const updates = computeNestedDragUpdate(blocks, active.id as string, over.id as string, delta.x)
+    if (updates) reparentBlocks.mutate(updates)
   }
 
   return (
@@ -192,52 +198,40 @@ export function StoryPage() {
 
       {!isLoading && topLevel.length > 0 && (
         <div className="grid flex-1 grid-cols-1 gap-5 lg:grid-cols-[280px_1fr]">
-          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-            <SortableContext items={topLevel.map((b) => b.id)} strategy={verticalListSortingStrategy}>
-              <ul className="space-y-1.5">
-                {topLevel.map((block) => (
-                  <li key={block.id}>
-                    <div className="flex items-center gap-1">
-                      <StoryBlockListItem
-                        block={block}
-                        active={selected?.id === block.id}
-                        onClick={() => selectBlock(block.id)}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => openCreate(block.id)}
-                        aria-label="Novo sub-bloco"
-                        title="Novo sub-bloco"
-                        className="shrink-0 cursor-pointer border-2 border-line/40 p-1.5 text-canvas-fg/40 hover:border-line hover:text-canvas-fg"
-                      >
-                        <Plus size={12} />
-                      </button>
-                    </div>
-                    {(childrenByParent.get(block.id) ?? []).length > 0 && (
-                      <ul className="mt-1 ml-4 space-y-1 border-l-2 border-line/30 pl-2">
-                        {(childrenByParent.get(block.id) ?? []).map((child) => (
-                          <li key={child.id}>
-                            <button
-                              type="button"
-                              onClick={() => selectBlock(child.id)}
-                              className={`flex w-full cursor-pointer items-center gap-1.5 border-2 px-2.5 py-1.5 text-left text-xs transition-colors ${
-                                selected?.id === child.id
-                                  ? 'border-line bg-accent-yellow text-ink'
-                                  : 'border-line/30 bg-surface text-canvas-fg/70 hover:border-line'
-                              }`}
-                            >
-                              <CornerDownRight size={11} className="shrink-0 opacity-50" />
-                              <span className="truncate">{child.title}</span>
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </SortableContext>
-          </DndContext>
+          <div>
+            <p className="text-label mb-2 text-[10px] text-canvas-fg/40">
+              Arraste pra direita pra aninhar como sub-bloco, pra esquerda pra tornar principal de novo.
+            </p>
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+              <SortableContext items={flatRows.map((r) => r.block.id)} strategy={verticalListSortingStrategy}>
+                <ul className="space-y-1.5">
+                  {flatRows.map(({ block, depth }) => (
+                    <li key={block.id}>
+                      <div className="flex items-center gap-1">
+                        <StoryBlockListItem
+                          block={block}
+                          active={selected?.id === block.id}
+                          depth={depth}
+                          onClick={() => selectBlock(block.id)}
+                        />
+                        {depth === 0 && (
+                          <button
+                            type="button"
+                            onClick={() => openCreate(block.id)}
+                            aria-label="Novo sub-bloco"
+                            title="Novo sub-bloco"
+                            className="shrink-0 cursor-pointer border-2 border-line/40 p-1.5 text-canvas-fg/40 hover:border-line hover:text-canvas-fg"
+                          >
+                            <Plus size={12} />
+                          </button>
+                        )}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </SortableContext>
+            </DndContext>
+          </div>
 
           <AnimatePresence mode="wait">
             {selected && (

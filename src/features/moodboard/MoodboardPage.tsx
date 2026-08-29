@@ -1,5 +1,18 @@
 import { useMemo, useRef, useState } from 'react'
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Folder, FolderPlus, Images, Pencil, Plus, Trash2, Upload } from 'lucide-react'
+import {
+  AlertTriangle,
+  ArrowDown,
+  ArrowLeft,
+  ArrowRight,
+  ArrowUp,
+  Folder,
+  FolderPlus,
+  Images,
+  Pencil,
+  Plus,
+  Trash2,
+  Upload,
+} from 'lucide-react'
 import { motion } from 'motion/react'
 import { clsx } from 'clsx'
 import { useOutletContext } from 'react-router-dom'
@@ -31,7 +44,13 @@ const UNSORTED = 'unsorted'
 export function MoodboardPage() {
   const { project } = useOutletContext<{ project: Project }>()
   const { data: folders, isLoading: foldersLoading } = useMoodboardFolders(project.id)
-  const { data: images, isLoading: imagesLoading } = useMoodboardImages(project.id)
+  const {
+    data: images,
+    isLoading: imagesLoading,
+    isError: imagesError,
+    error: imagesErrorObj,
+    refetch: refetchImages,
+  } = useMoodboardImages(project.id)
   const createFolder = useCreateMoodboardFolder(project.id)
   const renameFolder = useRenameMoodboardFolder(project.id)
   const deleteFolder = useDeleteMoodboardFolder(project.id)
@@ -310,7 +329,23 @@ export function MoodboardPage() {
 
         {imagesLoading && <p className="text-label text-sm text-canvas-fg/50">Carregando…</p>}
 
-        {!imagesLoading && visibleImages.length === 0 && (
+        {imagesError && (
+          <div className="mb-4 flex items-start gap-3 border-2 border-accent-red bg-accent-red/10 p-4">
+            <AlertTriangle size={18} className="mt-0.5 shrink-0 text-accent-red" />
+            <div>
+              <p className="text-sm font-semibold text-accent-red">Não deu para carregar as imagens</p>
+              <p className="mt-1 text-xs text-canvas-fg/60">
+                {imagesErrorObj instanceof Error ? imagesErrorObj.message : 'Erro desconhecido.'} — confira se rodou a
+                versão mais recente de <code>supabase/schema.sql</code> no seu projeto Supabase.
+              </p>
+              <Button size="sm" variant="ghost" className="mt-2" onClick={() => refetchImages()}>
+                Tentar de novo
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {!imagesLoading && !imagesError && visibleImages.length === 0 && (
           <EmptyState
             title="Nenhuma imagem aqui"
             description="Envie fotos, prints e referências visuais para o seu jogo — pode selecionar várias de uma vez."

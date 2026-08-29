@@ -91,3 +91,17 @@ export function useReorderStoryBlocks(projectId: string) {
     onSettled: () => queryClient.invalidateQueries({ queryKey: ['story_blocks', projectId] }),
   })
 }
+
+export function useReparentStoryBlocks(projectId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (updates: { id: string; parent_id: string | null; sort_order: number }[]) => {
+      await Promise.all(
+        updates.map((b) =>
+          supabase.from('story_blocks').update({ parent_id: b.parent_id, sort_order: b.sort_order }).eq('id', b.id),
+        ),
+      )
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['story_blocks', projectId] }),
+  })
+}
