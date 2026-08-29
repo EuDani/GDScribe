@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Circle,
   Diamond,
+  Maximize,
   MessageSquareDashed,
   Pencil,
   Plus,
@@ -9,6 +10,8 @@ import {
   Square,
   Trash2,
   Workflow,
+  ZoomIn,
+  ZoomOut,
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { useOutletContext } from 'react-router-dom'
@@ -41,7 +44,12 @@ const NODE_COLORS = [
   'var(--color-accent-red)',
   'var(--color-accent-green)',
   'var(--color-accent-purple)',
+  '#ff9f0a',
+  '#00c2c7',
+  '#ff375f',
 ]
+
+const COMMENT_COLOR = '#d8d3c4'
 
 const LINE_STYLES: { value: FlowchartLineStyle; label: string }[] = [
   { value: 'solid', label: 'Sólida' },
@@ -76,7 +84,7 @@ function newNode(x: number, y: number, shape: FlowchartNodeShape): FlowchartNode
     width: isRound ? 96 : NODE_WIDTH,
     height: isRound ? 96 : NODE_HEIGHT,
     text: shape === 'comment' ? 'Comentário…' : 'Novo passo',
-    color: NODE_COLORS[Math.floor(Math.random() * NODE_COLORS.length)],
+    color: shape === 'comment' ? COMMENT_COLOR : NODE_COLORS[Math.floor(Math.random() * NODE_COLORS.length)],
     shape,
     comment: '',
     tags: [],
@@ -226,7 +234,11 @@ export function FlowchartPage() {
 type DragState =
   | { kind: 'node'; nodeId: string; offsetX: number; offsetY: number }
   | { kind: 'connect'; fromId: string; x: number; y: number }
+  | { kind: 'pan'; startX: number; startY: number; panX: number; panY: number }
   | null
+
+const MIN_VIEW_ZOOM = 0.3
+const MAX_VIEW_ZOOM = 2.5
 
 function clipToRect(cx: number, cy: number, node: FlowchartNode, towardX: number, towardY: number) {
   const dx = towardX - cx
@@ -259,6 +271,125 @@ function normalizeEdge(e: Partial<FlowchartEdge>): FlowchartEdge {
   return { color: 'var(--color-line)', lineStyle: 'solid', arrowEnds: 'end', ...e } as FlowchartEdge
 }
 
+function FlowchartNodeView({
+  node,
+  selected,
+  editing,
+  onPointerDown,
+  onDoubleClick,
+  onTextBlur,
+  onEscape,
+  onHandlePointerDown,
+  onHeightChange,
+}: {
+  node: FlowchartNode
+  selected: boolean
+  editing: boolean
+  onPointerDown: (e: React.PointerEvent) => void
+  onDoubleClick: () => void
+  onTextBlur: (text: string) => void
+  onEscape: () => void
+  onHandlePointerDown: (e: React.PointerEvent) => void
+  onHeightChange: (height: number) => void
+}) {
+  const boxRef = useRef<HTMLDivElement>(null)
+  const autoHeight = node.shape !== 'circle' && node.shape !== 'diamond'
+
+  useEffect(() => {
+    if (!autoHeight) return
+    const el = boxRef.current
+    if (!el) return
+    const observer = new ResizeObserver(() => {
+      const measured = Math.max(NODE_HEIGHT, Math.ceil(el.offsetHeight))
+      if (Math.abs(measured - node.height) > 1) onHeightChange(measured)
+    })
+    observer.observe(el)
+    return () => observer.disconnect()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoHeight, node.text, node.tags])
+
+  return (
+    <div
+      ref={boxRef}
+      onPointerDown={onPointerDown}
+      onClick={(e) => e.stopPropagation()}
+      onDoubleClick={(e) => {
+        e.stopPropagation()
+        onDoubleClick()
+      }}
+      className={clsx(
+        'absolute flex cursor-grab touch-none items-center justify-center border-2 p-2 text-center text-xs font-semibold text-ink shadow-brutal-sm active:cursor-grabbing',
+        shapeClassName(node.shape),
+        selected ? 'border-accent-red' : 'border-line',
+      )}
+      style={{
+        left: node.x - node.width / 2,
+        top: node.y - node.height / 2,
+        width: node.width,
+        height: autoHeight ? undefined : node.height,
+        minHeight: autoHeight ? NODE_HEIGHT : undefined,
+        backgroundColor: node.shape === 'comment' ? COMMENT_COLOR : node.color,
+        clipPath: node.shape === 'diamond' ? 'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)' : undefined,
+      }}
+    >
+      {editing ? (
+        <textarea
+          autoFocus
+          defaultValue={node.text}
+          onPointerDown={(e) => e.stopPropagation()}
+          onBlur={(e) => onTextBlur(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault()
+              e.currentTarget.blur()
+            }
+            if (e.key === 'Escape') onEscape()
+          }}
+          className="h-full min-h-[2.5em] w-full resize-none bg-transparent text-center text-xs outline-none"
+          style={{ padding: node.shape === 'diamond' ? '22%' : 0 }}
+        />
+      ) : (
+        <span
+          className="pointer-events-none flex flex-col items-center gap-1"
+          style={{ padding: node.shape === 'diamond' ? '0 12%' : 0, whiteSpace: 'pre-wrap' }}
+        >
+          {node.text}
+          {node.tags.length > 0 && (
+            <span className="flex flex-wrap justify-center gap-1">
+              {node.tags.map((tag) => (
+                <span
+                  key={tag}
+                  className="text-label rounded-full border border-ink/40 bg-ink/10 px-1.5 py-0.5 text-[8px] font-normal normal-case"
+                >
+                  {tag}
+                </span>
+              ))}
+            </span>
+          )}
+        </span>
+      )}
+
+      {selected && !editing && (
+        <>
+          {[
+            { x: node.width / 2, y: 0 },
+            { x: node.width / 2, y: node.height },
+            { x: 0, y: node.height / 2 },
+            { x: node.width, y: node.height / 2 },
+          ].map((h, i) => (
+            <div
+              key={i}
+              onPointerDown={onHandlePointerDown}
+              className="absolute h-2.5 w-2.5 cursor-crosshair rounded-full border border-line bg-canvas"
+              style={{ left: h.x - 5, top: h.y - 5 }}
+            />
+          ))}
+        </>
+      )}
+    </div>
+  )
+}
+
 function FlowchartCanvas({ projectId, flowchart }: { projectId: string; flowchart: Flowchart }) {
   const updateContent = useUpdateFlowchartContent(projectId)
   const [nodes, setNodes] = useState<FlowchartNode[]>(() => flowchart.nodes.map(normalizeNode))
@@ -267,8 +398,32 @@ function FlowchartCanvas({ projectId, flowchart }: { projectId: string; flowchar
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null)
   const [editingNodeId, setEditingNodeId] = useState<string | null>(null)
   const [drag, setDrag] = useState<DragState>(null)
+  const [view, setView] = useState({ zoom: 1, panX: 0, panY: 0 })
   const canvasRef = useRef<HTMLDivElement>(null)
   const dirtyRef = useRef(false)
+
+  // React registra onWheel como passive por padrão, o que faz o
+  // preventDefault() não surtir efeito e a página rolar junto com o zoom —
+  // um listener nativo não-passive evita isso (mesma causa do bug do
+  // lightbox de imagem).
+  useEffect(() => {
+    const el = canvasRef.current
+    if (!el) return
+    function handleWheel(e: WheelEvent) {
+      e.preventDefault()
+      const rect = el!.getBoundingClientRect()
+      const mouseX = e.clientX - rect.left
+      const mouseY = e.clientY - rect.top
+      setView((prev) => {
+        const nextZoom = Math.min(MAX_VIEW_ZOOM, Math.max(MIN_VIEW_ZOOM, prev.zoom - e.deltaY * 0.001 * prev.zoom))
+        const canvasX = (mouseX - prev.panX) / prev.zoom
+        const canvasY = (mouseY - prev.panY) / prev.zoom
+        return { zoom: nextZoom, panX: mouseX - canvasX * nextZoom, panY: mouseY - canvasY * nextZoom }
+      })
+    }
+    el.addEventListener('wheel', handleWheel, { passive: false })
+    return () => el.removeEventListener('wheel', handleWheel)
+  }, [])
 
   useEffect(() => {
     if (!dirtyRef.current) return
@@ -288,9 +443,21 @@ function FlowchartCanvas({ projectId, flowchart }: { projectId: string; flowchar
     const rect = canvasRef.current?.getBoundingClientRect()
     if (!rect) return { x: 0, y: 0 }
     return {
-      x: e.clientX - rect.left + (canvasRef.current?.scrollLeft ?? 0),
-      y: e.clientY - rect.top + (canvasRef.current?.scrollTop ?? 0),
+      x: (e.clientX - rect.left - view.panX) / view.zoom,
+      y: (e.clientY - rect.top - view.panY) / view.zoom,
     }
+  }
+
+  function handleBackgroundPointerDown(e: React.PointerEvent) {
+    setDrag({ kind: 'pan', startX: e.clientX, startY: e.clientY, panX: view.panX, panY: view.panY })
+  }
+
+  function resetView() {
+    setView({ zoom: 1, panX: 0, panY: 0 })
+  }
+
+  function zoomBy(amount: number) {
+    setView((prev) => ({ ...prev, zoom: Math.min(MAX_VIEW_ZOOM, Math.max(MIN_VIEW_ZOOM, prev.zoom + amount)) }))
   }
 
   function addNodeAt(x: number, y: number, shape: FlowchartNodeShape) {
@@ -341,6 +508,14 @@ function FlowchartCanvas({ projectId, flowchart }: { projectId: string; flowchar
 
   function handleCanvasPointerMove(e: React.PointerEvent) {
     if (!drag) return
+    if (drag.kind === 'pan') {
+      setView((prev) => ({
+        ...prev,
+        panX: drag.panX + (e.clientX - drag.startX),
+        panY: drag.panY + (e.clientY - drag.startY),
+      }))
+      return
+    }
     const point = getCanvasPoint(e)
     if (drag.kind === 'node') {
       setNodes((prev) =>
@@ -353,6 +528,10 @@ function FlowchartCanvas({ projectId, flowchart }: { projectId: string; flowchar
 
   function handleCanvasPointerUp(e: React.PointerEvent) {
     if (!drag) return
+    if (drag.kind === 'pan') {
+      setDrag(null)
+      return
+    }
     if (drag.kind === 'node') {
       markDirty()
     } else if (drag.kind === 'connect') {
@@ -451,14 +630,63 @@ function FlowchartCanvas({ projectId, flowchart }: { projectId: string; flowchar
 
       <div
         ref={canvasRef}
+        onPointerDown={handleBackgroundPointerDown}
         onPointerMove={handleCanvasPointerMove}
         onPointerUp={handleCanvasPointerUp}
+        onPointerLeave={handleCanvasPointerUp}
         onClick={handleCanvasClick}
         onDragOver={handleCanvasDragOver}
         onDrop={handleCanvasDrop}
-        className="relative max-h-[70vh] overflow-auto border-2 border-line bg-surface"
+        className="relative h-[70vh] touch-none overflow-hidden border-2 border-line bg-surface"
+        style={{ cursor: drag?.kind === 'pan' ? 'grabbing' : 'grab' }}
       >
-        <div style={{ width: bounds.width, height: bounds.height, position: 'relative' }}>
+        <div className="pointer-events-none absolute right-2 top-2 z-10 flex gap-1.5">
+          <button
+            type="button"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation()
+              zoomBy(-0.2)
+            }}
+            aria-label="Diminuir zoom"
+            className="pointer-events-auto cursor-pointer border-2 border-line bg-paper p-1.5 text-ink hover:bg-accent-yellow"
+          >
+            <ZoomOut size={14} />
+          </button>
+          <button
+            type="button"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation()
+              zoomBy(0.2)
+            }}
+            aria-label="Aumentar zoom"
+            className="pointer-events-auto cursor-pointer border-2 border-line bg-paper p-1.5 text-ink hover:bg-accent-yellow"
+          >
+            <ZoomIn size={14} />
+          </button>
+          <button
+            type="button"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation()
+              resetView()
+            }}
+            aria-label="Redefinir zoom e posição"
+            className="pointer-events-auto cursor-pointer border-2 border-line bg-paper p-1.5 text-ink hover:bg-accent-yellow"
+          >
+            <Maximize size={14} />
+          </button>
+        </div>
+        <div
+          style={{
+            width: bounds.width,
+            height: bounds.height,
+            position: 'relative',
+            transform: `translate(${view.panX}px, ${view.panY}px) scale(${view.zoom})`,
+            transformOrigin: '0 0',
+          }}
+        >
           <div
             className="pointer-events-none absolute inset-0"
             style={{
@@ -555,86 +783,21 @@ function FlowchartCanvas({ projectId, flowchart }: { projectId: string; flowchar
           </svg>
 
           {nodes.map((node) => (
-            <div
+            <FlowchartNodeView
               key={node.id}
+              node={node}
+              selected={selectedNodeId === node.id}
+              editing={editingNodeId === node.id}
               onPointerDown={(e) => handleNodePointerDown(e, node)}
-              onClick={(e) => e.stopPropagation()}
-              onDoubleClick={(e) => {
-                e.stopPropagation()
-                setEditingNodeId(node.id)
+              onDoubleClick={() => setEditingNodeId(node.id)}
+              onTextBlur={(text) => {
+                updateNode(node.id, { text: text.trim() || 'Sem texto' })
+                setEditingNodeId(null)
               }}
-              className={clsx(
-                'absolute flex cursor-grab touch-none items-center justify-center border-2 p-2 text-center text-xs font-semibold text-ink shadow-brutal-sm active:cursor-grabbing',
-                shapeClassName(node.shape),
-                selectedNodeId === node.id ? 'border-accent-red' : 'border-line',
-              )}
-              style={{
-                left: node.x - node.width / 2,
-                top: node.y - node.height / 2,
-                width: node.width,
-                height: node.height,
-                backgroundColor: node.color,
-                clipPath: node.shape === 'diamond' ? 'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)' : undefined,
-              }}
-            >
-              {editingNodeId === node.id ? (
-                <textarea
-                  autoFocus
-                  defaultValue={node.text}
-                  onPointerDown={(e) => e.stopPropagation()}
-                  onBlur={(e) => {
-                    updateNode(node.id, { text: e.target.value.trim() || 'Sem texto' })
-                    setEditingNodeId(null)
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault()
-                      e.currentTarget.blur()
-                    }
-                    if (e.key === 'Escape') setEditingNodeId(null)
-                  }}
-                  className="h-full w-full resize-none bg-transparent text-center text-xs outline-none"
-                  style={{ padding: node.shape === 'diamond' ? '22%' : 0 }}
-                />
-              ) : (
-                <span
-                  className="pointer-events-none flex flex-col items-center gap-1"
-                  style={{ padding: node.shape === 'diamond' ? '0 12%' : 0 }}
-                >
-                  {node.text}
-                  {node.tags.length > 0 && (
-                    <span className="flex flex-wrap justify-center gap-1">
-                      {node.tags.map((tag) => (
-                        <span
-                          key={tag}
-                          className="text-label rounded-full border border-ink/40 bg-ink/10 px-1.5 py-0.5 text-[8px] font-normal normal-case"
-                        >
-                          {tag}
-                        </span>
-                      ))}
-                    </span>
-                  )}
-                </span>
-              )}
-
-              {selectedNodeId === node.id && editingNodeId !== node.id && (
-                <>
-                  {[
-                    { x: node.width / 2, y: 0 },
-                    { x: node.width / 2, y: node.height },
-                    { x: 0, y: node.height / 2 },
-                    { x: node.width, y: node.height / 2 },
-                  ].map((h, i) => (
-                    <div
-                      key={i}
-                      onPointerDown={(e) => handleHandlePointerDown(e, node)}
-                      className="absolute h-2.5 w-2.5 cursor-crosshair rounded-full border border-line bg-canvas"
-                      style={{ left: h.x - 5, top: h.y - 5 }}
-                    />
-                  ))}
-                </>
-              )}
-            </div>
+              onEscape={() => setEditingNodeId(null)}
+              onHandlePointerDown={(e) => handleHandlePointerDown(e, node)}
+              onHeightChange={(height) => updateNode(node.id, { height })}
+            />
           ))}
         </div>
       </div>
@@ -669,7 +832,13 @@ function FlowchartCanvas({ projectId, flowchart }: { projectId: string; flowchar
             <Field label="Formato">
               <Select
                 value={selectedNode.shape}
-                onChange={(e) => updateNode(selectedNode.id, { shape: e.target.value as FlowchartNodeShape })}
+                onChange={(e) => {
+                  const shape = e.target.value as FlowchartNodeShape
+                  updateNode(selectedNode.id, {
+                    shape,
+                    color: shape === 'comment' ? COMMENT_COLOR : selectedNode.color,
+                  })
+                }}
               >
                 {SHAPE_DEFS.map((s) => (
                   <option key={s.value} value={s.value}>
@@ -679,23 +848,27 @@ function FlowchartCanvas({ projectId, flowchart }: { projectId: string; flowchar
               </Select>
             </Field>
 
-            <Field label="Cor">
-              <div className="flex flex-wrap gap-1.5">
-                {NODE_COLORS.map((color) => (
-                  <button
-                    key={color}
-                    type="button"
-                    onClick={() => updateNode(selectedNode.id, { color })}
-                    aria-label="Mudar cor"
-                    className={clsx(
-                      'h-6 w-6 cursor-pointer border-2',
-                      selectedNode.color === color ? 'border-accent-red' : 'border-line',
-                    )}
-                    style={{ backgroundColor: color }}
-                  />
-                ))}
-              </div>
-            </Field>
+            {selectedNode.shape === 'comment' ? (
+              <p className="text-xs text-canvas-fg/40">Nós de comentário são sempre cinza claro.</p>
+            ) : (
+              <Field label="Cor">
+                <div className="flex flex-wrap gap-1.5">
+                  {NODE_COLORS.map((color) => (
+                    <button
+                      key={color}
+                      type="button"
+                      onClick={() => updateNode(selectedNode.id, { color })}
+                      aria-label="Mudar cor"
+                      className={clsx(
+                        'h-6 w-6 cursor-pointer border-2',
+                        selectedNode.color === color ? 'border-accent-red' : 'border-line',
+                      )}
+                      style={{ backgroundColor: color }}
+                    />
+                  ))}
+                </div>
+              </Field>
+            )}
 
             <Field label="Tags">
               <TagInput
