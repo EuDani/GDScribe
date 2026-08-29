@@ -170,23 +170,33 @@ export function ImageLightbox({
             </button>
           )}
 
-          <motion.img
+          {/* motion.img anima seu próprio `scale` via animate={{scale:1}}, e isso
+              controla a propriedade CSS transform por baixo dos panos — um
+              style.transform manual no mesmo elemento fica sem efeito (a
+              imagem "não expande" com o zoom). Por isso a animação de entrada
+              fica num wrapper (só opacity) e quem recebe nosso transform de
+              zoom/pan é uma <img> comum, fora do controle do framer-motion. */}
+          <motion.div
             key={images[index]}
-            src={images[index]}
-            alt=""
-            draggable={false}
-            initial={{ opacity: 0, scale: 0.97 }}
-            animate={{ opacity: 1, scale: 1 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.15 }}
-            onClick={(e) => e.stopPropagation()}
-            className="max-h-[85vh] max-w-[85vw] border-2 border-line object-contain shadow-brutal-lg select-none"
-            style={{
-              transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
-              transition: isPanning ? 'none' : 'transform 0.1s',
-              cursor: zoom > MIN_ZOOM ? (isPanning ? 'grabbing' : 'grab') : 'default',
-            }}
-          />
+            className="flex items-center justify-center"
+          >
+            <img
+              src={images[index]}
+              alt=""
+              draggable={false}
+              onClick={(e) => e.stopPropagation()}
+              className="max-h-[85vh] max-w-[85vw] border-2 border-line object-contain shadow-brutal-lg select-none"
+              style={{
+                transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+                transition: isPanning ? 'none' : 'transform 0.1s',
+                cursor: zoom > MIN_ZOOM ? (isPanning ? 'grabbing' : 'grab') : 'default',
+              }}
+            />
+          </motion.div>
 
           {images.length > 1 && (
             <>
