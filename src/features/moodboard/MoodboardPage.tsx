@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react'
-import { Folder, FolderPlus, Images, Pencil, Plus, Trash2, Upload } from 'lucide-react'
+import { ArrowDown, ArrowUp, Folder, FolderPlus, Images, Pencil, Plus, Trash2, Upload } from 'lucide-react'
 import { motion } from 'motion/react'
 import { clsx } from 'clsx'
 import { useOutletContext } from 'react-router-dom'
@@ -18,6 +18,7 @@ import {
   useMoodboardFolders,
   useMoodboardImages,
   useRenameMoodboardFolder,
+  useReorderMoodboardFolders,
   useUpdateMoodboardImage,
 } from '@/features/moodboard/useMoodboard'
 
@@ -31,6 +32,7 @@ export function MoodboardPage() {
   const createFolder = useCreateMoodboardFolder(project.id)
   const renameFolder = useRenameMoodboardFolder(project.id)
   const deleteFolder = useDeleteMoodboardFolder(project.id)
+  const reorderFolders = useReorderMoodboardFolders(project.id)
   const addImages = useAddMoodboardImages(project.id)
   const updateImage = useUpdateMoodboardImage(project.id)
   const deleteImage = useDeleteMoodboardImage(project.id)
@@ -39,10 +41,23 @@ export function MoodboardPage() {
   const [activeFolder, setActiveFolder] = useState<string>(ALL)
   const [folderModalOpen, setFolderModalOpen] = useState(false)
   const [editingFolder, setEditingFolder] = useState<MoodboardFolder | null>(null)
+  const [creatingParentId, setCreatingParentId] = useState<string | null>(null)
   const [folderName, setFolderName] = useState('')
   const [pendingDeleteFolder, setPendingDeleteFolder] = useState<string | null>(null)
   const [pendingDeleteImage, setPendingDeleteImage] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const topFolders = useMemo(() => (folders ?? []).filter((f) => !f.parent_id), [folders])
+  const childrenByParent = useMemo(() => {
+    const map = new Map<string, MoodboardFolder[]>()
+    for (const f of folders ?? []) {
+      if (!f.parent_id) continue
+      const list = map.get(f.parent_id) ?? []
+      list.push(f)
+      map.set(f.parent_id, list)
+    }
+    return map
+  }, [folders])
 
   const visibleImages = useMemo(() => {
     if (!images) return []
@@ -53,8 +68,9 @@ export function MoodboardPage() {
 
   const countFor = (folderId: string | null) => (images ?? []).filter((i) => i.folder_id === folderId).length
 
-  function openCreateFolder() {
+  function openCreateFolder(parentId: string | null) {
     setEditingFolder(null)
+    setCreatingParentId(parentId)
     setFolderName('')
     setFolderModalOpen(true)
   }
@@ -70,10 +86,19 @@ export function MoodboardPage() {
     if (!folderName.trim()) return
     if (editingFolder) await renameFolder.mutateAsync({ id: editingFolder.id, name: folderName.trim() })
     else {
-      const created = await createFolder.mutateAsync(folderName.trim())
+      const created = await createFolder.mutateAsync({ name: folderName.trim(), parentId: creatingParentId })
       setActiveFolder(created.id)
     }
     setFolderModalOpen(false)
+  }
+
+  function moveFolder(group: MoodboardFolder[], index: number, dir: -1 | 1) {
+    const target = index + dir
+    if (target < 0 || target >= group.length) return
+    const reordered = [...group]
+    const [item] = reordered.splice(index, 1)
+    reordered.splice(target, 0, item)
+    reorderFolders.mutate(reordered.map((f, i) => ({ id: f.id, sort_order: i })))
   }
 
   async function handleFiles(files: FileList | null) {
@@ -83,14 +108,80 @@ export function MoodboardPage() {
     if (urls.length > 0) await addImages.mutateAsync({ urls, folderId })
   }
 
+  function FolderRow({ folder, group, index }: { folder: MoodboardFolder; group: MoodboardFolder[]; index: number }) {
+    return (
+      <div className="group flex items-center gap-0.5">
+        <div className="flex shrink-0 flex-col">
+          <button
+            type="button"
+            disabled={index === 0}
+            onClick={() => moveFolder(group, index, -1)}
+            aria-label="Mover para cima"
+            className="cursor-pointer text-canvas-fg/30 opacity-0 hover:text-canvas-fg group-hover:opacity-100 disabled:opacity-0"
+          >
+            <ArrowUp size={9} />
+          </button>
+          <button
+            type="button"
+            disabled={index === group.length - 1}
+            onClick={() => moveFolder(group, index, 1)}
+            aria-label="Mover para baixo"
+            className="cursor-pointer text-canvas-fg/30 opacity-0 hover:text-canvas-fg group-hover:opacity-100 disabled:opacity-0"
+          >
+            <ArrowDown size={9} />
+          </button>
+        </div>
+        <button
+          type="button"
+          onClick={() => setActiveFolder(folder.id)}
+          className={clsx(
+            'flex min-w-0 flex-1 cursor-pointer items-center gap-2 border-2 px-2.5 py-2 text-left text-xs font-semibold',
+            activeFolder === folder.id
+              ? 'border-line bg-accent-yellow text-ink'
+              : 'border-line/40 bg-surface text-canvas-fg/80 hover:border-line',
+          )}
+        >
+          <Folder size={14} className="shrink-0" />
+          <span className="truncate">{folder.name}</span>
+          <span className="ml-auto shrink-0 text-canvas-fg/40">{countFor(folder.id)}</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => openCreateFolder(folder.id)}
+          aria-label="Nova subpasta"
+          title="Nova subpasta"
+          className="shrink-0 cursor-pointer border-2 border-line/40 p-1.5 text-canvas-fg/40 opacity-0 group-hover:opacity-100 hover:border-line hover:text-canvas-fg"
+        >
+          <Plus size={11} />
+        </button>
+        <button
+          type="button"
+          onClick={() => openRenameFolder(folder)}
+          aria-label="Renomear pasta"
+          className="shrink-0 cursor-pointer border-2 border-line/40 p-1.5 text-canvas-fg/40 opacity-0 group-hover:opacity-100 hover:border-line hover:text-canvas-fg"
+        >
+          <Pencil size={11} />
+        </button>
+        <button
+          type="button"
+          onClick={() => setPendingDeleteFolder(folder.id)}
+          aria-label="Excluir pasta"
+          className="shrink-0 cursor-pointer border-2 border-line/40 p-1.5 text-canvas-fg/40 opacity-0 group-hover:opacity-100 hover:border-accent-red hover:text-accent-red"
+        >
+          <Trash2 size={11} />
+        </button>
+      </div>
+    )
+  }
+
   return (
-    <div className="grid grid-cols-1 gap-5 lg:grid-cols-[220px_1fr]">
+    <div className="grid grid-cols-1 gap-5 lg:grid-cols-[240px_1fr]">
       <aside className="space-y-1.5">
         <div className="mb-2 flex items-center justify-between">
           <h1 className="text-display text-xl">Moodboard</h1>
           <button
             type="button"
-            onClick={openCreateFolder}
+            onClick={() => openCreateFolder(null)}
             aria-label="Nova pasta"
             title="Nova pasta"
             className="cursor-pointer border-2 border-line p-1.5 text-canvas-fg/60 hover:bg-accent-yellow hover:text-ink"
@@ -116,38 +207,16 @@ export function MoodboardPage() {
 
         {foldersLoading && <p className="text-label px-2 text-xs text-canvas-fg/40">Carregando…</p>}
 
-        {folders?.map((folder) => (
-          <div key={folder.id} className="group flex items-center gap-1">
-            <button
-              type="button"
-              onClick={() => setActiveFolder(folder.id)}
-              className={clsx(
-                'flex min-w-0 flex-1 cursor-pointer items-center gap-2 border-2 px-2.5 py-2 text-left text-xs font-semibold',
-                activeFolder === folder.id
-                  ? 'border-line bg-accent-yellow text-ink'
-                  : 'border-line/40 bg-surface text-canvas-fg/80 hover:border-line',
-              )}
-            >
-              <Folder size={14} className="shrink-0" />
-              <span className="truncate">{folder.name}</span>
-              <span className="ml-auto shrink-0 text-canvas-fg/40">{countFor(folder.id)}</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => openRenameFolder(folder)}
-              aria-label="Renomear pasta"
-              className="shrink-0 cursor-pointer border-2 border-line/40 p-1.5 text-canvas-fg/40 opacity-0 group-hover:opacity-100 hover:border-line hover:text-canvas-fg"
-            >
-              <Pencil size={11} />
-            </button>
-            <button
-              type="button"
-              onClick={() => setPendingDeleteFolder(folder.id)}
-              aria-label="Excluir pasta"
-              className="shrink-0 cursor-pointer border-2 border-line/40 p-1.5 text-canvas-fg/40 opacity-0 group-hover:opacity-100 hover:border-accent-red hover:text-accent-red"
-            >
-              <Trash2 size={11} />
-            </button>
+        {topFolders.map((folder, i) => (
+          <div key={folder.id}>
+            <FolderRow folder={folder} group={topFolders} index={i} />
+            {(childrenByParent.get(folder.id) ?? []).length > 0 && (
+              <div className="mt-1 ml-4 space-y-1 border-l-2 border-line/30 pl-1.5">
+                {(childrenByParent.get(folder.id) ?? []).map((child, ci) => (
+                  <FolderRow key={child.id} folder={child} group={childrenByParent.get(folder.id) ?? []} index={ci} />
+                ))}
+              </div>
+            )}
           </div>
         ))}
 
@@ -225,7 +294,7 @@ export function MoodboardPage() {
       <Modal
         open={folderModalOpen}
         onClose={() => setFolderModalOpen(false)}
-        title={editingFolder ? 'Renomear pasta' : 'Nova pasta'}
+        title={editingFolder ? 'Renomear pasta' : creatingParentId ? 'Nova subpasta' : 'Nova pasta'}
         isDirty={editingFolder ? folderName !== editingFolder.name : Boolean(folderName.trim())}
       >
         <form onSubmit={handleSaveFolder}>
@@ -255,7 +324,7 @@ export function MoodboardPage() {
           setActiveFolder(ALL)
         }}
         title="Excluir pasta"
-        description="As imagens dessa pasta serão apagadas junto."
+        description="As imagens e subpastas dessa pasta serão apagadas junto."
         confirmLabel="Excluir"
       />
 

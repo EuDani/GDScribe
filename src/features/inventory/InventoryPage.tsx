@@ -14,6 +14,7 @@ import type { InventoryField, InventoryItem, InventoryType, InventoryValue, Proj
 import { FieldBuilder } from '@/features/inventory/FieldBuilder'
 import { formatInventoryValue, getMissingRequiredFields, ItemForm } from '@/features/inventory/ItemForm'
 import { InventoryTableView } from '@/features/inventory/InventoryTableView'
+import { InventoryKanbanView } from '@/features/inventory/InventoryKanbanView'
 import {
   useCreateInventoryType,
   useDeleteInventoryItem,
@@ -26,7 +27,7 @@ import {
 
 const DEFAULT_FIELDS: InventoryField[] = [{ key: 'descricao', label: 'Descrição', type: 'textarea' }]
 
-type ViewMode = 'cards' | 'table'
+type ViewMode = 'cards' | 'kanban' | 'table'
 
 export function InventoryPage() {
   const { project } = useOutletContext<{ project: Project }>()
@@ -80,6 +81,7 @@ export function InventoryPage() {
           <Tabs
             items={[
               { value: 'cards', label: 'Cards' },
+              { value: 'kanban', label: 'Cards (Kanban)' },
               { value: 'table', label: 'Tabela' },
             ]}
             value={view}
@@ -282,6 +284,9 @@ function InventoryTypePanel({
         )}
         {!isLoading && items && items.length > 0 && view === 'table' && (
           <InventoryTableView projectId={projectId} type={type} items={items} onEditItem={openEditItem} />
+        )}
+        {!isLoading && items && items.length > 0 && view === 'kanban' && (
+          <InventoryKanbanView projectId={projectId} type={type} items={items} onItemClick={openEditItem} />
         )}
         {!isLoading && items && items.length > 0 && view === 'cards' && (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">

@@ -76,6 +76,27 @@ export function RichTextEditor({
     ],
     content: value,
     onUpdate: ({ editor }) => onChange(editor.getHTML()),
+    editorProps: {
+      handlePaste: (view, event) => {
+        const items = Array.from(event.clipboardData?.items ?? [])
+        const files = items
+          .filter((item) => item.type.startsWith('image/'))
+          .map((item) => item.getAsFile())
+          .filter((f): f is File => f !== null)
+        if (files.length === 0) return false
+
+        event.preventDefault()
+        uploadMany(files, 'content-images').then((urls) => {
+          const { schema, tr } = view.state
+          let transaction = tr
+          for (const url of urls) {
+            transaction = transaction.replaceSelectionWith(schema.nodes.image.create({ src: url }))
+          }
+          view.dispatch(transaction)
+        })
+        return true
+      },
+    },
   })
 
   // sincroniza quando o valor muda por fora (ex: trocou de módulo selecionado)

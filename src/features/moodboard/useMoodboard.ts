@@ -21,15 +21,28 @@ export function useMoodboardFolders(projectId: string | undefined) {
 export function useCreateMoodboardFolder(projectId: string) {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async (name: string) => {
+    mutationFn: async ({ name, parentId }: { name: string; parentId?: string | null }) => {
       const existing = queryClient.getQueryData<MoodboardFolder[]>(['moodboard_folders', projectId]) ?? []
+      const siblings = existing.filter((f) => (f.parent_id ?? null) === (parentId ?? null))
       const { data, error } = await supabase
         .from('moodboard_folders')
-        .insert({ project_id: projectId, name, sort_order: existing.length })
+        .insert({ project_id: projectId, parent_id: parentId ?? null, name, sort_order: siblings.length })
         .select('*')
         .single()
       if (error) throw error
       return data as MoodboardFolder
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['moodboard_folders', projectId] }),
+  })
+}
+
+export function useReorderMoodboardFolders(projectId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (folders: { id: string; sort_order: number }[]) => {
+      await Promise.all(
+        folders.map((f) => supabase.from('moodboard_folders').update({ sort_order: f.sort_order }).eq('id', f.id)),
+      )
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['moodboard_folders', projectId] }),
   })
