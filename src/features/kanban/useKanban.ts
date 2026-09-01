@@ -230,12 +230,18 @@ export function useUpdateCard(projectId: string, boardId: string) {
 export function useMoveCards(projectId: string, boardId: string) {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async (updates: { id: string; column_id: string; sort_order: number }[]) => {
+    mutationFn: async (
+      updates: { id: string; column_id: string; sort_order: number; completed_at?: string | null }[],
+    ) => {
       await Promise.all(
         updates.map((u) =>
           supabase
             .from('kanban_cards')
-            .update({ column_id: u.column_id, sort_order: u.sort_order })
+            .update({
+              column_id: u.column_id,
+              sort_order: u.sort_order,
+              ...(u.completed_at !== undefined ? { completed_at: u.completed_at } : {}),
+            })
             .eq('id', u.id),
         ),
       )
@@ -246,7 +252,13 @@ export function useMoveCards(projectId: string, boardId: string) {
       queryClient.setQueryData<KanbanCard[]>(['kanban_cards', projectId, boardId], (old) =>
         old?.map((c) => {
           const update = updates.find((u) => u.id === c.id)
-          return update ? { ...c, column_id: update.column_id, sort_order: update.sort_order } : c
+          if (!update) return c
+          return {
+            ...c,
+            column_id: update.column_id,
+            sort_order: update.sort_order,
+            completed_at: update.completed_at !== undefined ? update.completed_at : c.completed_at,
+          }
         }),
       )
       return { previous }

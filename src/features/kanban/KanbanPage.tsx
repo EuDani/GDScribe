@@ -211,6 +211,7 @@ function KanbanBoardView({ projectId, boardId }: { projectId: string; boardId: s
   const [editStartDate, setEditStartDate] = useState('')
   const [editDueDate, setEditDueDate] = useState('')
   const [editSectors, setEditSectors] = useState<string[]>([])
+  const [editEstimatedHours, setEditEstimatedHours] = useState('')
   const [pendingDeleteCard, setPendingDeleteCard] = useState<string | null>(null)
 
   const { upload: uploadCover, uploading: uploadingCover } = useUploadImage(projectId)
@@ -268,6 +269,7 @@ function KanbanBoardView({ projectId, boardId }: { projectId: string; boardId: s
     setEditStartDate(card.start_date ?? '')
     setEditDueDate(card.due_date ?? '')
     setEditSectors(card.sectors)
+    setEditEstimatedHours(card.estimated_hours !== null ? String(card.estimated_hours) : '')
   }
 
   async function handleSaveCard(e: React.FormEvent) {
@@ -285,6 +287,7 @@ function KanbanBoardView({ projectId, boardId }: { projectId: string; boardId: s
       start_date: editStartDate || null,
       due_date: editDueDate || null,
       sectors: editSectors,
+      estimated_hours: editEstimatedHours.trim() === '' ? null : Number(editEstimatedHours),
     })
     setEditingCard(null)
   }
@@ -333,10 +336,29 @@ function KanbanBoardView({ projectId, boardId }: { projectId: string; boardId: s
     }
     targetList.splice(insertIndex, 0, activeCard)
 
+    // A última coluna (por ordem) do quadro é tratada como "concluído" pra
+    // fins de estimativa de ritmo/roadmap — mesma convenção já usada pra
+    // calcular tarefas pendentes na Visão Geral e no Calendário.
+    const doneColumnId = columns && columns.length > 0 ? [...columns].sort((a, b) => a.sort_order - b.sort_order).at(-1)?.id : undefined
+    function completedAtFor(columnId: string, previous: string | null) {
+      if (columnId === doneColumnId) return previous ?? new Date().toISOString()
+      return null
+    }
+
     const updates = [
-      ...targetList.map((c, i) => ({ id: c.id, column_id: targetColumnId, sort_order: i })),
+      ...targetList.map((c, i) => ({
+        id: c.id,
+        column_id: targetColumnId,
+        sort_order: i,
+        completed_at: completedAtFor(targetColumnId, c.completed_at),
+      })),
       ...(sourceColumnId !== targetColumnId
-        ? sourceList.map((c, i) => ({ id: c.id, column_id: sourceColumnId, sort_order: i }))
+        ? sourceList.map((c, i) => ({
+            id: c.id,
+            column_id: sourceColumnId,
+            sort_order: i,
+            completed_at: completedAtFor(sourceColumnId, c.completed_at),
+          }))
         : []),
     ]
 
@@ -492,7 +514,8 @@ function KanbanBoardView({ projectId, boardId }: { projectId: string; boardId: s
               JSON.stringify(editExtraFields) !== JSON.stringify(editingCard.extra_fields) ||
               editStartDate !== (editingCard.start_date ?? '') ||
               editDueDate !== (editingCard.due_date ?? '') ||
-              JSON.stringify(editSectors) !== JSON.stringify(editingCard.sectors)),
+              JSON.stringify(editSectors) !== JSON.stringify(editingCard.sectors) ||
+              editEstimatedHours !== (editingCard.estimated_hours !== null ? String(editingCard.estimated_hours) : '')),
         )}
       >
         <form onSubmit={handleSaveCard}>
@@ -503,12 +526,22 @@ function KanbanBoardView({ projectId, boardId }: { projectId: string; boardId: s
             <Textarea rows={3} value={editDescription} onChange={(e) => setEditDescription(e.target.value)} />
           </Field>
 
-          <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
             <Field label="Início">
               <TextInput type="date" value={editStartDate} onChange={(e) => setEditStartDate(e.target.value)} />
             </Field>
             <Field label="Conclusão">
               <TextInput type="date" value={editDueDate} onChange={(e) => setEditDueDate(e.target.value)} />
+            </Field>
+            <Field label="Horas estimadas" hint="Usado no roadmap de conclusão">
+              <TextInput
+                type="number"
+                min="0"
+                step="0.5"
+                value={editEstimatedHours}
+                onChange={(e) => setEditEstimatedHours(e.target.value)}
+                placeholder="Ex: 4"
+              />
             </Field>
           </div>
 

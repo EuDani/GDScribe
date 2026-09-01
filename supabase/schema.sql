@@ -17,6 +17,7 @@ create table if not exists public.projects (
   status text not null default 'pre_production',
   primary_genre text,
   secondary_genre text,
+  target_release_date date,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -341,6 +342,15 @@ alter table public.moodboard_images add column if not exists sort_order integer 
 
 -- Tags nas referências
 alter table public.game_references add column if not exists tags text[] not null default '{}';
+
+-- Estimativa de horas por card + quando ele entrou na coluna "concluído"
+-- (usado pra estimar a tendência de conclusão do projeto)
+alter table public.kanban_cards add column if not exists estimated_hours numeric;
+alter table public.kanban_cards add column if not exists completed_at timestamptz;
+
+-- Data prevista de lançamento do projeto, comparada com a previsão de
+-- conclusão do desenvolvimento (baseada no ritmo de conclusão de cards)
+alter table public.projects add column if not exists target_release_date date;
 
 -- Cria um quadro "Ações" para projetos que já tinham colunas/cards de uma
 -- versão anterior (sem o conceito de múltiplos quadros) e associa esse

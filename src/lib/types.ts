@@ -69,6 +69,7 @@ export interface Project {
   primary_genre: string | null
   secondary_genre: string | null
   cover_image_url: string | null
+  target_release_date: string | null
   created_at: string
   updated_at: string
 }
@@ -188,6 +189,8 @@ export interface KanbanCard {
   start_date: string | null
   due_date: string | null
   sectors: string[]
+  estimated_hours: number | null
+  completed_at: string | null
   sort_order: number
   created_at: string
 }

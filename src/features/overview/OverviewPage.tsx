@@ -11,6 +11,7 @@ import { useProjectPhases } from '@/features/settings/useProjectPhases'
 import { useGddModules } from '@/features/gdd/useGddModules'
 import { useAllInventoryItems, useInventoryTypes } from '@/features/inventory/useInventory'
 import { useAllKanbanCards, useAllKanbanColumns } from '@/features/kanban/useKanban'
+import { RoadmapForecast } from '@/features/overview/RoadmapForecast'
 import { IDEA_STATUSES } from '@/lib/types'
 import { useIdeas } from '@/features/ideas/useIdeas'
 import { useReminders } from '@/features/reminders/useReminders'
@@ -266,6 +267,15 @@ export function OverviewPage() {
           </motion.div>
         ))}
       </div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.25, delay: 0.35 }}
+        className="mt-5"
+      >
+        <RoadmapForecast project={project} cards={cards ?? []} columns={columns ?? []} />
+      </motion.div>
 
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, delay: 0.4 }}>
         <Card className="mt-5">

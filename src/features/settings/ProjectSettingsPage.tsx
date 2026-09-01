@@ -43,6 +43,7 @@ export function ProjectSettingsPage() {
   const [primaryGenre, setPrimaryGenre] = useState(project.primary_genre ?? '')
   const [secondaryGenre, setSecondaryGenre] = useState(project.secondary_genre ?? '')
   const [coverImageUrl, setCoverImageUrl] = useState(project.cover_image_url ?? '')
+  const [targetReleaseDate, setTargetReleaseDate] = useState(project.target_release_date ?? '')
 
   useEffect(() => {
     setName(project.name)
@@ -51,6 +52,7 @@ export function ProjectSettingsPage() {
     setPrimaryGenre(project.primary_genre ?? '')
     setSecondaryGenre(project.secondary_genre ?? '')
     setCoverImageUrl(project.cover_image_url ?? '')
+    setTargetReleaseDate(project.target_release_date ?? '')
   }, [project])
 
   async function handleSave(e: React.FormEvent) {
@@ -62,6 +64,7 @@ export function ProjectSettingsPage() {
       primary_genre: primaryGenre || null,
       secondary_genre: secondaryGenre || null,
       cover_image_url: coverImageUrl || null,
+      target_release_date: targetReleaseDate || null,
     })
     toast.success('Projeto atualizado.')
   }
@@ -114,6 +117,13 @@ export function ProjectSettingsPage() {
                     </option>
                   ))}
                 </Select>
+              </Field>
+              <Field label="Data prevista de lançamento" hint="Comparada com a previsão de conclusão no roadmap">
+                <TextInput
+                  type="date"
+                  value={targetReleaseDate}
+                  onChange={(e) => setTargetReleaseDate(e.target.value)}
+                />
               </Field>
               <Field label="Gênero secundário">
                 <Select value={secondaryGenre} onChange={(e) => setSecondaryGenre(e.target.value)}>
