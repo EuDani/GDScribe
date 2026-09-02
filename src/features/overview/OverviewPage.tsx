@@ -11,10 +11,11 @@ import { useProjectPhases } from '@/features/settings/useProjectPhases'
 import { useGddModules } from '@/features/gdd/useGddModules'
 import { useAllInventoryItems, useInventoryTypes } from '@/features/inventory/useInventory'
 import { useAllKanbanCards, useAllKanbanColumns } from '@/features/kanban/useKanban'
-import { RoadmapForecast } from '@/features/overview/RoadmapForecast'
+import { ReleaseTimelineChart, RoadmapForecast } from '@/features/overview/RoadmapForecast'
 import { IDEA_STATUSES } from '@/lib/types'
 import { useIdeas } from '@/features/ideas/useIdeas'
 import { useReminders } from '@/features/reminders/useReminders'
+import { useProjectReleases } from '@/features/settings/useProjectReleases'
 import { useProjectThemeQuery } from '@/features/theme-settings/useProjectTheme'
 import { useUpdateProject } from '@/features/dashboard/useProjects'
 import { useAuth } from '@/contexts/AuthContext'
@@ -39,6 +40,7 @@ export function OverviewPage() {
   const { data: cards } = useAllKanbanCards(project.id)
   const { data: ideas } = useIdeas(project.id)
   const { data: reminders } = useReminders(project.id)
+  const { data: releases } = useProjectReleases(project.id)
   const { data: theme } = useProjectThemeQuery(project.id)
   const { data: phases } = useProjectPhases(project.id)
   const updateProject = useUpdateProject(project.id)
@@ -274,7 +276,16 @@ export function OverviewPage() {
         transition={{ duration: 0.25, delay: 0.35 }}
         className="mt-5"
       >
-        <RoadmapForecast project={project} cards={cards ?? []} columns={columns ?? []} />
+        <RoadmapForecast cards={cards ?? []} columns={columns ?? []} releases={releases ?? []} />
+      </motion.div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.25, delay: 0.37 }}
+        className="mt-5"
+      >
+        <ReleaseTimelineChart releases={releases ?? []} />
       </motion.div>
 
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, delay: 0.4 }}>

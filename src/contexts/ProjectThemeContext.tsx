@@ -26,6 +26,12 @@ export function ProjectThemeProvider({
 }) {
   const resolved = theme ?? { project_id: '', font_choice: 'default', ...DEFAULT_THEME }
 
+  // Além das variáveis --project-* (usadas em alguns lugares pontuais, tipo
+  // o título do projeto e o selo do logo), sobrescreve as variáveis que as
+  // classes utilitárias do Tailwind realmente consomem (bg-accent-yellow,
+  // bg-canvas, etc.) — sem isso o tema só mudava esses dois lugares
+  // pontuais e o resto do app (botões, badges, fundo) ficava sempre com a
+  // cor padrão fixa, dando a impressão de que o menu de tema "não funciona".
   const style = useMemo(
     () =>
       ({
@@ -34,6 +40,11 @@ export function ProjectThemeProvider({
         '--project-bg': resolved.background_color,
         '--project-surface': resolved.surface_color,
         '--project-fg': resolved.text_color,
+        '--color-accent-red': resolved.primary_color,
+        '--color-accent-yellow': resolved.accent_color,
+        '--color-canvas': resolved.background_color,
+        '--color-surface': resolved.surface_color,
+        '--color-canvas-fg': resolved.text_color,
       }) as React.CSSProperties,
     [resolved.primary_color, resolved.accent_color, resolved.background_color, resolved.surface_color, resolved.text_color],
   )

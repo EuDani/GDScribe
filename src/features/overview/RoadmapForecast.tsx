@@ -1,8 +1,9 @@
 import { useMemo } from 'react'
-import { AlertTriangle, CalendarCheck, TrendingUp } from 'lucide-react'
-import type { KanbanCard, KanbanColumn, Project } from '@/lib/types'
+import { AlertTriangle, CalendarCheck, Rocket, TrendingUp } from 'lucide-react'
+import type { KanbanCard, KanbanColumn, ProjectRelease } from '@/lib/types'
 
 const DAY_MS = 86_400_000
+const LAUNCH_NAME_PATTERN = /lan[cç]amento|launch|release|1\.0/i
 
 function formatDate(d: Date) {
   return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
@@ -26,15 +27,27 @@ function computeDoneColumnIds(columns: KanbanColumn[]): Set<string> {
   return doneIds
 }
 
+/** Qual lançamento da lista representa "o lançamento" pra comparar com a
+ * previsão de conclusão: o primeiro cujo nome parece ser a versão de
+ * lançamento (ex: "Lançamento", "v1.0"), senão o mais tardio da lista. */
+function pickTargetRelease(releases: ProjectRelease[]): ProjectRelease | null {
+  if (releases.length === 0) return null
+  const named = releases.find((r) => LAUNCH_NAME_PATTERN.test(r.name))
+  if (named) return named
+  return [...releases].sort((a, b) => (a.release_date < b.release_date ? -1 : 1)).at(-1)!
+}
+
 export function RoadmapForecast({
-  project,
   cards,
   columns,
+  releases,
 }: {
-  project: Project
   cards: KanbanCard[]
   columns: KanbanColumn[]
+  releases: ProjectRelease[]
 }) {
+  const targetRelease = useMemo(() => pickTargetRelease(releases), [releases])
+
   const forecast = useMemo(() => {
     const doneColumnIds = computeDoneColumnIds(columns)
     const withHours = cards.filter((c) => c.estimated_hours !== null)
@@ -49,11 +62,7 @@ export function RoadmapForecast({
     const cardsWithoutHours = cards.length - withHours.length
 
     if (doneCards.length < 2 || completedHours <= 0) {
-      return {
-        ready: false as const,
-        cardsWithoutHours,
-        totalCards: cards.length,
-      }
+      return { ready: false as const, cardsWithoutHours, totalCards: cards.length }
     }
 
     const firstDate = new Date(doneCards[0].completed_at!)
@@ -68,7 +77,7 @@ export function RoadmapForecast({
       projectedDate = new Date(today.getTime() + projectedDays * DAY_MS)
     }
 
-    const targetDate = project.target_release_date ? new Date(project.target_release_date) : null
+    const targetDate = targetRelease ? new Date(targetRelease.release_date) : null
     const diffDays =
       projectedDate && targetDate ? Math.round((projectedDate.getTime() - targetDate.getTime()) / DAY_MS) : null
 
@@ -94,7 +103,7 @@ export function RoadmapForecast({
       cardsWithoutHours,
       totalCards: cards.length,
     }
-  }, [project.target_release_date, cards, columns])
+  }, [targetRelease, cards, columns])
 
   if (cards.filter((c) => c.estimated_hours !== null).length === 0) {
     return (
@@ -166,17 +175,17 @@ export function RoadmapForecast({
               Seguindo o ritmo atual (~{velocityPerDay.toFixed(1)}h/dia), você termina em{' '}
               <span className="font-semibold">{projectedDate ? formatDate(projectedDate) : '—'}</span>.
             </p>
-            {targetDate && diffDays !== null && (
+            {targetDate && diffDays !== null && targetRelease && (
               <p className={`mt-1 flex items-center gap-1.5 text-xs font-semibold ${onTrack ? 'text-accent-green' : 'text-accent-red'}`}>
                 {!onTrack && <AlertTriangle size={12} />}
                 {onTrack
-                  ? `${Math.abs(diffDays)} dia(s) antes da data de lançamento prevista (${formatDate(targetDate)})`
-                  : `${diffDays} dia(s) depois da data de lançamento prevista (${formatDate(targetDate)})`}
+                  ? `${Math.abs(diffDays)} dia(s) antes de "${targetRelease.name}" (${formatDate(targetDate)})`
+                  : `${diffDays} dia(s) depois de "${targetRelease.name}" (${formatDate(targetDate)})`}
               </p>
             )}
             {!targetDate && (
               <p className="mt-1 text-xs text-canvas-fg/40">
-                Defina a "Data prevista de lançamento" em Configurações pra comparar.
+                Cadastre um lançamento em Configurações → Lançamentos pra comparar.
               </p>
             )}
           </div>
@@ -232,7 +241,7 @@ export function RoadmapForecast({
           strokeDasharray="2 3"
         />
 
-        {/* marcador de lançamento previsto */}
+        {/* marcador do lançamento usado como referência */}
         {targetDate && (
           <>
             <line
@@ -244,7 +253,7 @@ export function RoadmapForecast({
               strokeWidth={1.5}
             />
             <text x={xFor(targetDate)} y={height - 6} textAnchor="middle" className="text-[9px]" fill="var(--color-accent-red)">
-              Lançamento
+              {targetRelease?.name}
             </text>
           </>
         )}
@@ -264,6 +273,86 @@ export function RoadmapForecast({
             </text>
           </>
         )}
+      </svg>
+    </div>
+  )
+}
+
+/** Gráfico separado, só com os lançamentos cadastrados (alfa, beta,
+ * lançamento, patches, DLCs…) numa linha do tempo. */
+export function ReleaseTimelineChart({ releases }: { releases: ProjectRelease[] }) {
+  if (releases.length === 0) {
+    return (
+      <div className="border-2 border-line bg-surface p-4">
+        <h2 className="text-display mb-2 flex items-center gap-2 text-sm">
+          <Rocket size={16} /> Linha do tempo de lançamentos
+        </h2>
+        <p className="text-xs text-canvas-fg/40">
+          Cadastre lançamentos em Configurações → Lançamentos pra ver a linha do tempo aqui.
+        </p>
+      </div>
+    )
+  }
+
+  const sorted = [...releases].sort((a, b) => (a.release_date < b.release_date ? -1 : 1))
+  const today = new Date()
+  const todayIso = today.toISOString().slice(0, 10)
+
+  const width = 640
+  const height = 110
+  const padding = { top: 30, right: 24, bottom: 30, left: 24 }
+  const trackY = height / 2
+
+  const dates = [...sorted.map((r) => new Date(r.release_date)), today]
+  const minTime = Math.min(...dates.map((d) => d.getTime()))
+  const maxTime = Math.max(...dates.map((d) => d.getTime()))
+  const timeSpan = Math.max(1, maxTime - minTime)
+
+  function xFor(iso: string) {
+    return padding.left + ((new Date(iso).getTime() - minTime) / timeSpan) * (width - padding.left - padding.right)
+  }
+
+  return (
+    <div className="border-2 border-line bg-surface p-4">
+      <h2 className="text-display mb-3 flex items-center gap-2 text-sm">
+        <Rocket size={16} /> Linha do tempo de lançamentos
+      </h2>
+      <svg viewBox={`0 0 ${width} ${height}`} className="w-full">
+        <line x1={padding.left} y1={trackY} x2={width - padding.right} y2={trackY} stroke="var(--color-line)" strokeOpacity={0.3} />
+
+        <line
+          x1={xFor(todayIso)}
+          y1={padding.top - 10}
+          x2={xFor(todayIso)}
+          y2={height - padding.bottom + 10}
+          stroke="var(--color-canvas-fg)"
+          strokeOpacity={0.2}
+          strokeDasharray="2 3"
+        />
+        <text x={xFor(todayIso)} y={height - 6} textAnchor="middle" className="text-[9px]" fill="var(--color-canvas-fg)" opacity={0.5}>
+          hoje
+        </text>
+
+        {sorted.map((release, i) => {
+          const past = release.release_date < todayIso
+          const x = xFor(release.release_date)
+          const up = i % 2 === 0
+          const labelY = up ? trackY - 16 : trackY + 26
+          const color = past ? 'var(--color-canvas-fg)' : 'var(--color-accent-blue)'
+          return (
+            <g key={release.id} opacity={past ? 0.45 : 1}>
+              <line x1={x} y1={trackY} x2={x} y2={up ? trackY - 10 : trackY + 10} stroke={color} strokeWidth={1.5} />
+              <circle cx={x} cy={trackY} r={4} fill={color} stroke="var(--color-line)" strokeWidth={1} />
+              <text x={x} y={labelY} textAnchor="middle" className="text-[9px] font-semibold" fill={color}>
+                {release.name}
+              </text>
+              <text x={x} y={labelY + (up ? -10 : 10)} textAnchor="middle" className="text-[8px]" fill={color} opacity={0.7}>
+                {release.release_date.split('-').reverse().join('/')}
+                {release.version ? ` · ${release.version}` : ''}
+              </text>
+            </g>
+          )
+        })}
       </svg>
     </div>
   )

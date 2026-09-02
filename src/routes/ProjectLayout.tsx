@@ -198,7 +198,7 @@ export function ProjectLayout() {
         <motion.aside
           animate={{ width: collapsed ? 60 : 256 }}
           transition={{ duration: 0.18, ease: 'easeInOut' }}
-          className="hidden shrink-0 flex-col overflow-hidden border-r-2 border-line bg-surface lg:flex"
+          className="sticky top-0 hidden h-screen shrink-0 flex-col overflow-hidden border-r-2 border-line bg-surface lg:flex"
         >
           <div className="border-b-2 border-line p-3">
             <div className="mb-3 flex items-center justify-between gap-1">
