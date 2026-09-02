@@ -1,7 +1,7 @@
 import { createContext, type ReactNode, use, useMemo } from 'react'
 import type { ProjectTheme } from '@/lib/types'
 
-const DEFAULT_THEME: Pick<
+export const DEFAULT_THEME: Pick<
   ProjectTheme,
   'primary_color' | 'accent_color' | 'background_color' | 'surface_color' | 'text_color' | 'logo_url' | 'cover_image_url' | 'chart_colors'
 > = {

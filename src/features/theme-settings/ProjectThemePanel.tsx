@@ -1,8 +1,10 @@
-import { useRef } from 'react'
-import { Upload } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { RotateCcw, Upload } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Field, TextInput } from '@/components/ui/Input'
 import { MiniBarChart } from '@/components/MiniBarChart'
+import { DEFAULT_THEME } from '@/contexts/ProjectThemeContext'
 import { useProject } from '@/features/dashboard/useProjects'
 import { useUploadImage } from '@/lib/useUploadImage'
 import { useProjectThemeQuery, useUpdateProjectTheme } from '@/features/theme-settings/useProjectTheme'
@@ -12,6 +14,7 @@ export function ProjectThemePanel({ projectId }: { projectId: string }) {
   const { data: theme } = useProjectThemeQuery(projectId)
   const updateTheme = useUpdateProjectTheme(projectId)
   const { upload, uploading } = useUploadImage(projectId)
+  const [confirmingReset, setConfirmingReset] = useState(false)
 
   if (!theme || !project) return <p className="text-label text-sm text-canvas-fg/50">Carregando…</p>
 
@@ -26,10 +29,27 @@ export function ProjectThemePanel({ projectId }: { projectId: string }) {
     updateTheme.mutate({ chart_colors: next })
   }
 
+  function handleReset() {
+    updateTheme.mutate({
+      primary_color: DEFAULT_THEME.primary_color,
+      accent_color: DEFAULT_THEME.accent_color,
+      background_color: DEFAULT_THEME.background_color,
+      surface_color: DEFAULT_THEME.surface_color,
+      text_color: DEFAULT_THEME.text_color,
+      chart_colors: DEFAULT_THEME.chart_colors,
+    })
+    setConfirmingReset(false)
+  }
+
   return (
     <div>
+      <div className="mb-5 flex items-center justify-between">
+        <h3 className="text-display text-sm text-canvas-fg/80">Cores</h3>
+        <Button type="button" variant="ghost" size="sm" icon={<RotateCcw size={13} />} onClick={() => setConfirmingReset(true)}>
+          Redefinir
+        </Button>
+      </div>
       <div className="mb-5">
-        <h3 className="text-display mb-3 text-sm text-canvas-fg/80">Cores</h3>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <Field label="Primária" hint="Título e destaques">
             <ColorPicker value={theme.primary_color} onChange={(v) => updateTheme.mutate({ primary_color: v })} />
@@ -124,11 +144,38 @@ export function ProjectThemePanel({ projectId }: { projectId: string }) {
           Card de exemplo com a superfície e o texto do projeto.
         </div>
       </div>
+
+      <ConfirmDialog
+        open={confirmingReset}
+        onClose={() => setConfirmingReset(false)}
+        onConfirm={handleReset}
+        title="Redefinir tema"
+        description="Volta as cores (e as cores dos gráficos) pro padrão do GDScribe. Logo e capa não são afetados."
+        confirmLabel="Redefinir"
+      />
     </div>
   )
 }
 
+const HEX_COLOR = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i
+
 function ColorPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  // O input de texto só confirma no blur/Enter — mandar uma mutation a cada
+  // tecla digitada enviava hex incompleto/inválido pro banco, e como as
+  // respostas podem voltar fora de ordem, a cor acabava não "salvando" de
+  // verdade (ficava valendo um valor parcial de alguma tecla no meio).
+  const [draft, setDraft] = useState(value)
+
+  useEffect(() => {
+    setDraft(value)
+  }, [value])
+
+  function commit() {
+    const trimmed = draft.trim()
+    if (HEX_COLOR.test(trimmed)) onChange(trimmed)
+    else setDraft(value)
+  }
+
   return (
     <div className="flex items-center gap-2">
       <input
@@ -137,7 +184,18 @@ function ColorPicker({ value, onChange }: { value: string; onChange: (v: string)
         onChange={(e) => onChange(e.target.value)}
         className="h-9 w-9 cursor-pointer border-2 border-line bg-transparent p-0.5"
       />
-      <TextInput value={value} onChange={(e) => onChange(e.target.value)} className="w-24" />
+      <TextInput
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault()
+            commit()
+          }
+        }}
+        className="w-24"
+      />
     </div>
   )
 }
