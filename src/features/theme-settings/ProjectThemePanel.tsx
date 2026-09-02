@@ -16,6 +16,19 @@ export function ProjectThemePanel({ projectId }: { projectId: string }) {
   const { upload, uploading } = useUploadImage(projectId)
   const [confirmingReset, setConfirmingReset] = useState(false)
 
+  // Estado local pras cores dos gráficos: editar direto a partir de
+  // `theme.chart_colors` (a última resposta do servidor) tem uma corrida —
+  // escolher duas cores em sequência rápida faz a segunda mutation montar o
+  // array a partir de um snapshot que ainda não tem a primeira edição, e
+  // quem "ganha" por último sobrescreve a mudança anterior no banco. Estado
+  // local com atualização funcional garante que cada edição parte sempre do
+  // valor mais recente, mesmo antes do servidor confirmar a anterior.
+  const [chartColors, setChartColorsState] = useState<string[]>(theme?.chart_colors ?? DEFAULT_THEME.chart_colors)
+  useEffect(() => {
+    if (theme) setChartColorsState(theme.chart_colors)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [theme?.chart_colors])
+
   if (!theme || !project) return <p className="text-label text-sm text-canvas-fg/50">Carregando…</p>
 
   async function handleUpload(file: File, kind: 'logo' | 'cover') {
@@ -24,12 +37,16 @@ export function ProjectThemePanel({ projectId }: { projectId: string }) {
   }
 
   function setChartColor(index: number, value: string) {
-    const next = [...theme!.chart_colors]
-    next[index] = value
-    updateTheme.mutate({ chart_colors: next })
+    setChartColorsState((prev) => {
+      const next = [...prev]
+      next[index] = value
+      updateTheme.mutate({ chart_colors: next })
+      return next
+    })
   }
 
   function handleReset() {
+    setChartColorsState(DEFAULT_THEME.chart_colors)
     updateTheme.mutate({
       primary_color: DEFAULT_THEME.primary_color,
       accent_color: DEFAULT_THEME.accent_color,
@@ -75,7 +92,7 @@ export function ProjectThemePanel({ projectId }: { projectId: string }) {
       <div className="mb-5">
         <h3 className="text-display mb-3 text-sm text-canvas-fg/80">Cores dos gráficos</h3>
         <div className="flex flex-wrap gap-3">
-          {theme.chart_colors.map((color, i) => (
+          {chartColors.map((color, i) => (
             <ColorPicker key={i} value={color} onChange={(v) => setChartColor(i, v)} />
           ))}
         </div>
@@ -88,7 +105,7 @@ export function ProjectThemePanel({ projectId }: { projectId: string }) {
               { label: 'D', value: 4 },
               { label: 'E', value: 6 },
             ]}
-            colors={theme.chart_colors}
+            colors={chartColors}
           />
         </div>
       </div>
