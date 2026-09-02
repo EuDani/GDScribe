@@ -244,6 +244,24 @@ create index if not exists moodboard_images_project_id_idx on public.moodboard_i
 create index if not exists moodboard_images_folder_id_idx on public.moodboard_images (folder_id);
 
 -- ============================================================
+-- project_releases — linha do tempo de lançamentos/atualizações do jogo
+-- (alfa, beta, versão de lançamento, patches, DLCs...)
+-- ============================================================
+create table if not exists public.project_releases (
+  id uuid primary key default gen_random_uuid(),
+  project_id uuid not null references public.projects (id) on delete cascade,
+  name text not null,
+  version text,
+  release_date date not null,
+  notes text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists project_releases_project_id_idx on public.project_releases (project_id);
+create index if not exists project_releases_release_date_idx on public.project_releases (release_date);
+
+-- ============================================================
 -- flowcharts — diagramas de fluxo (nós + conexões), um projeto pode ter
 -- vários. Nós e arestas ficam num único blob JSON por simplicidade (o
 -- editor salva tudo de uma vez, com autosave).
@@ -434,6 +452,10 @@ drop trigger if exists set_updated_at on public.flowcharts;
 create trigger set_updated_at before update on public.flowcharts
   for each row execute function public.set_updated_at();
 
+drop trigger if exists set_updated_at on public.project_releases;
+create trigger set_updated_at before update on public.project_releases
+  for each row execute function public.set_updated_at();
+
 -- ============================================================
 -- Row Level Security — tudo restrito ao dono do projeto
 -- ============================================================
@@ -454,6 +476,7 @@ alter table public.reminders enable row level security;
 alter table public.moodboard_folders enable row level security;
 alter table public.moodboard_images enable row level security;
 alter table public.flowcharts enable row level security;
+alter table public.project_releases enable row level security;
 
 drop policy if exists "own projects" on public.projects;
 create policy "own projects" on public.projects
@@ -596,6 +619,15 @@ create policy "own moodboard_images" on public.moodboard_images
 
 drop policy if exists "own flowcharts" on public.flowcharts;
 create policy "own flowcharts" on public.flowcharts
+  for all using (
+    exists (select 1 from public.projects p where p.id = project_id and p.owner_id = auth.uid())
+  )
+  with check (
+    exists (select 1 from public.projects p where p.id = project_id and p.owner_id = auth.uid())
+  );
+
+drop policy if exists "own project_releases" on public.project_releases;
+create policy "own project_releases" on public.project_releases
   for all using (
     exists (select 1 from public.projects p where p.id = project_id and p.owner_id = auth.uid())
   )

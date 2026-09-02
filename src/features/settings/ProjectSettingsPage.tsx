@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react'
-import { ArrowDown, ArrowUp, Plus, Trash2 } from 'lucide-react'
+import { ArrowDown, ArrowUp, Pencil, Plus, Rocket, Trash2 } from 'lucide-react'
 import { useOutletContext } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { EmptyState } from '@/components/ui/EmptyState'
 import { Field, Select, TextInput, Textarea } from '@/components/ui/Input'
+import { Modal } from '@/components/ui/Modal'
 import { Tabs } from '@/components/ui/Tabs'
-import { STEAM_GENRES, type Project, type ProjectPhase, type ProjectSector } from '@/lib/types'
+import { STEAM_GENRES, type Project, type ProjectPhase, type ProjectRelease, type ProjectSector } from '@/lib/types'
 import { useUpdateProject } from '@/features/dashboard/useProjects'
 import { useUploadImage } from '@/lib/useUploadImage'
 import {
@@ -23,16 +25,28 @@ import {
   useRenameSector,
   useReorderSectors,
 } from '@/features/settings/useProjectSectors'
+import {
+  useCreateRelease,
+  useDeleteRelease,
+  useProjectReleases,
+  useUpdateRelease,
+} from '@/features/settings/useProjectReleases'
 import { ProjectThemePanel } from '@/features/theme-settings/ProjectThemePanel'
 import { useToast } from '@/contexts/ToastContext'
 
-type Tab = 'info' | 'phases' | 'sectors' | 'theme'
+type Tab = 'info' | 'phases' | 'sectors' | 'releases' | 'theme'
+
+function formatDate(iso: string) {
+  const [y, m, d] = iso.split('-')
+  return `${d}/${m}/${y}`
+}
 
 export function ProjectSettingsPage() {
   const { project } = useOutletContext<{ project: Project }>()
   const updateProject = useUpdateProject(project.id)
   const { data: phases } = useProjectPhases(project.id)
   const { data: sectors } = useProjectSectors(project.id)
+  const { data: releases } = useProjectReleases(project.id)
   const toast = useToast()
   const { upload, uploading } = useUploadImage(project.id)
 
@@ -83,6 +97,7 @@ export function ProjectSettingsPage() {
           { value: 'info', label: 'Informações' },
           { value: 'phases', label: 'Fases' },
           { value: 'sectors', label: 'Setores' },
+          { value: 'releases', label: 'Lançamentos' },
           { value: 'theme', label: 'Tema' },
         ]}
         value={tab}
@@ -188,6 +203,12 @@ export function ProjectSettingsPage() {
       {tab === 'sectors' && (
         <Card className="mt-5">
           <SectorManager projectId={project.id} sectors={sectors ?? []} />
+        </Card>
+      )}
+
+      {tab === 'releases' && (
+        <Card className="mt-5">
+          <ReleaseManager projectId={project.id} releases={releases ?? []} />
         </Card>
       )}
 
@@ -393,6 +414,170 @@ function SectorManager({ projectId, sectors }: { projectId: string; sectors: Pro
         onConfirm={() => pendingDelete && deleteSector.mutate(pendingDelete.id)}
         title="Excluir setor"
         description="Itens que tinham esse setor não são apagados, mas ficam com um setor que não existe mais até você reatribuí-los."
+        confirmLabel="Excluir"
+      />
+    </div>
+  )
+}
+
+function ReleaseManager({ projectId, releases }: { projectId: string; releases: ProjectRelease[] }) {
+  const createRelease = useCreateRelease(projectId)
+  const updateRelease = useUpdateRelease(projectId)
+  const deleteRelease = useDeleteRelease(projectId)
+
+  const [modalOpen, setModalOpen] = useState(false)
+  const [editing, setEditing] = useState<ProjectRelease | null>(null)
+  const [name, setName] = useState('')
+  const [version, setVersion] = useState('')
+  const [releaseDate, setReleaseDate] = useState('')
+  const [notes, setNotes] = useState('')
+  const [pendingDelete, setPendingDelete] = useState<ProjectRelease | null>(null)
+
+  const sorted = [...releases].sort((a, b) => (a.release_date < b.release_date ? -1 : 1))
+  const today = new Date().toISOString().slice(0, 10)
+
+  function openCreate() {
+    setEditing(null)
+    setName('')
+    setVersion('')
+    setReleaseDate('')
+    setNotes('')
+    setModalOpen(true)
+  }
+
+  function openEdit(release: ProjectRelease) {
+    setEditing(release)
+    setName(release.name)
+    setVersion(release.version ?? '')
+    setReleaseDate(release.release_date)
+    setNotes(release.notes ?? '')
+    setModalOpen(true)
+  }
+
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault()
+    if (!name.trim() || !releaseDate) return
+    const input = {
+      name: name.trim(),
+      version: version.trim() || null,
+      release_date: releaseDate,
+      notes: notes.trim() || null,
+    }
+    if (editing) await updateRelease.mutateAsync({ id: editing.id, ...input })
+    else await createRelease.mutateAsync(input)
+    setModalOpen(false)
+  }
+
+  return (
+    <div>
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <p className="text-xs text-canvas-fg/60">
+          Linha do tempo de lançamentos e atualizações do jogo — alfa, beta, versão de lançamento, patches, DLCs…
+          cada um com seu próprio nome/versão e data.
+        </p>
+        <Button size="sm" icon={<Plus size={13} />} onClick={openCreate}>
+          Novo
+        </Button>
+      </div>
+
+      {sorted.length === 0 && (
+        <EmptyState title="Nenhum lançamento cadastrado" description="Adicione alfa, beta, lançamento, patches, DLCs…" />
+      )}
+
+      <div className="space-y-2">
+        {sorted.map((release) => {
+          const past = release.release_date < today
+          return (
+            <div key={release.id} className="flex items-start gap-2 border-2 border-line/40 p-2.5">
+              <Rocket size={14} className={`mt-0.5 shrink-0 ${past ? 'text-canvas-fg/30' : 'text-accent-blue'}`} />
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="text-sm font-semibold text-canvas-fg">{release.name}</span>
+                  {release.version && (
+                    <span className="text-label border border-line/40 px-1 py-0.5 text-[10px] text-canvas-fg/60">
+                      {release.version}
+                    </span>
+                  )}
+                  <span className={`text-label text-[10px] ${past ? 'text-canvas-fg/40' : 'text-accent-blue'}`}>
+                    {formatDate(release.release_date)}
+                  </span>
+                </div>
+                {release.notes && <p className="mt-0.5 text-xs text-canvas-fg/50">{release.notes}</p>}
+              </div>
+              <button
+                type="button"
+                onClick={() => openEdit(release)}
+                aria-label="Editar lançamento"
+                className="shrink-0 cursor-pointer border-2 border-line/40 p-1.5 text-canvas-fg/50 hover:border-line hover:text-canvas-fg"
+              >
+                <Pencil size={12} />
+              </button>
+              <button
+                type="button"
+                onClick={() => setPendingDelete(release)}
+                aria-label="Excluir lançamento"
+                className="shrink-0 cursor-pointer border-2 border-line/40 p-1.5 text-canvas-fg/50 hover:bg-accent-red hover:text-canvas-fg"
+              >
+                <Trash2 size={12} />
+              </button>
+            </div>
+          )
+        })}
+      </div>
+
+      <Modal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        title={editing ? 'Editar lançamento' : 'Novo lançamento'}
+        isDirty={
+          editing
+            ? name !== editing.name ||
+              version !== (editing.version ?? '') ||
+              releaseDate !== editing.release_date ||
+              notes !== (editing.notes ?? '')
+            : Boolean(name.trim() || version.trim() || releaseDate || notes.trim())
+        }
+      >
+        <form onSubmit={handleSave}>
+          <Field label="Nome" hint="Ex: Alfa, Beta fechada, Lançamento, Patch de bugs, DLC: Reino Sombrio">
+            <TextInput required autoFocus value={name} onChange={(e) => setName(e.target.value)} />
+          </Field>
+          <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Field label="Versão" hint="Opcional">
+              <TextInput value={version} onChange={(e) => setVersion(e.target.value)} placeholder="Ex: 0.1.0" />
+            </Field>
+            <Field label="Data">
+              <TextInput type="date" required value={releaseDate} onChange={(e) => setReleaseDate(e.target.value)} />
+            </Field>
+          </div>
+          <Field label="Notas" hint="Opcional">
+            <Textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} />
+          </Field>
+          <div className="flex justify-between gap-2">
+            {editing && (
+              <Button type="button" variant="danger" onClick={() => setPendingDelete(editing)}>
+                Excluir
+              </Button>
+            )}
+            <div className="ml-auto flex gap-2">
+              <Button type="button" variant="ghost" onClick={() => setModalOpen(false)}>
+                Cancelar
+              </Button>
+              <Button type="submit">Salvar</Button>
+            </div>
+          </div>
+        </form>
+      </Modal>
+
+      <ConfirmDialog
+        open={Boolean(pendingDelete)}
+        onClose={() => setPendingDelete(null)}
+        onConfirm={() => {
+          if (pendingDelete) deleteRelease.mutate(pendingDelete.id)
+          setModalOpen(false)
+        }}
+        title="Excluir lançamento"
+        description="Essa ação não pode ser desfeita."
         confirmLabel="Excluir"
       />
     </div>

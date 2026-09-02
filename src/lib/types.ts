@@ -261,6 +261,17 @@ export interface GameReference {
   updated_at: string
 }
 
+export interface ProjectRelease {
+  id: string
+  project_id: string
+  name: string
+  version: string | null
+  release_date: string
+  notes: string | null
+  created_at: string
+  updated_at: string
+}
+
 export type FlowchartNodeShape = 'rectangle' | 'rounded' | 'diamond' | 'circle' | 'comment'
 
 export interface FlowchartNode {

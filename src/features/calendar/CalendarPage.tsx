@@ -9,6 +9,7 @@ import {
   Filter,
   ListChecks,
   Plus,
+  Rocket,
   Search,
 } from 'lucide-react'
 import { clsx } from 'clsx'
@@ -25,12 +26,14 @@ import {
   isReminderOverdue,
   type KanbanCard,
   type Project,
+  type ProjectRelease,
   type Reminder,
   type ReminderImportance,
 } from '@/lib/types'
 import { useAllKanbanCards, useAllKanbanColumns } from '@/features/kanban/useKanban'
 import { useReminders } from '@/features/reminders/useReminders'
 import { ReminderModal } from '@/features/reminders/ReminderModal'
+import { useProjectReleases } from '@/features/settings/useProjectReleases'
 import { useProjectSectors } from '@/features/settings/useProjectSectors'
 import {
   MONTH_LABELS,
@@ -56,6 +59,7 @@ export function CalendarPage() {
   const { data: cards } = useAllKanbanCards(project.id)
   const { data: columns } = useAllKanbanColumns(project.id)
   const { data: reminders } = useReminders(project.id)
+  const { data: releases } = useProjectReleases(project.id)
   const { data: sectors } = useProjectSectors(project.id)
   const [view, setView] = useState<ViewMode>('month')
   const [anchor, setAnchor] = useState(new Date())
@@ -109,6 +113,16 @@ export function CalendarPage() {
     }
     return map
   }, [filteredReminders])
+
+  const releasesByDate = useMemo(() => {
+    const map = new Map<string, ProjectRelease[]>()
+    for (const release of releases ?? []) {
+      const list = map.get(release.release_date) ?? []
+      list.push(release)
+      map.set(release.release_date, list)
+    }
+    return map
+  }, [releases])
 
   const stats = useMemo(() => {
     const now = new Date()
@@ -169,6 +183,7 @@ export function CalendarPage() {
 
   const selectedDayCards = selectedDate ? (cardsByDate.get(selectedDate) ?? []) : []
   const selectedDayReminders = selectedDate ? (remindersByDate.get(selectedDate) ?? []) : []
+  const selectedDayReleases = selectedDate ? (releasesByDate.get(selectedDate) ?? []) : []
   const hasActiveFilters =
     tagFilter.size > 0 || importanceFilter.size > 0 || sectorFilter.length > 0 || search.trim() !== ''
 
@@ -339,6 +354,7 @@ export function CalendarPage() {
                   anchor={anchor}
                   cardsByDate={cardsByDate}
                   remindersByDate={remindersByDate}
+                  releasesByDate={releasesByDate}
                   columnColor={columnColor}
                   onPickDay={setSelectedDate}
                 />
@@ -348,6 +364,7 @@ export function CalendarPage() {
                   anchor={anchor}
                   cardsByDate={cardsByDate}
                   remindersByDate={remindersByDate}
+                  releasesByDate={releasesByDate}
                   columnColor={columnColor}
                   onPickDay={setSelectedDate}
                 />
@@ -357,6 +374,7 @@ export function CalendarPage() {
                   anchor={anchor}
                   cardsByDate={cardsByDate}
                   remindersByDate={remindersByDate}
+                  releasesByDate={releasesByDate}
                   onPickMonth={(m) => {
                     setAnchor(new Date(anchor.getFullYear(), m, 1))
                     setView('month')
@@ -368,6 +386,7 @@ export function CalendarPage() {
                   cards={cards ?? []}
                   columnColor={columnColor}
                   reminders={filteredReminders}
+                  releases={releases ?? []}
                   onPickReminder={(reminder) => setReminderModal({ reminder })}
                 />
               )}
@@ -378,6 +397,26 @@ export function CalendarPage() {
 
       <Modal open={Boolean(selectedDate)} onClose={() => setSelectedDate(null)} title={selectedDate ?? ''}>
         <div className="space-y-4">
+          {selectedDayReleases.length > 0 && (
+            <div>
+              <p className="text-label mb-1.5 text-[10px] text-canvas-fg/50">Lançamentos</p>
+              <div className="space-y-2">
+                {selectedDayReleases.map((release) => (
+                  <div key={release.id} className="flex items-start gap-2.5 border-2 border-line bg-accent-blue/20 p-3">
+                    <Rocket size={14} className="mt-0.5 shrink-0 text-accent-blue" />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold text-canvas-fg">
+                        {release.name}
+                        {release.version && <span className="ml-1.5 text-canvas-fg/50">{release.version}</span>}
+                      </p>
+                      {release.notes && <p className="mt-0.5 text-xs text-canvas-fg/60">{release.notes}</p>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {selectedDayReminders.length > 0 && (
             <div>
               <p className="text-label mb-1.5 text-[10px] text-canvas-fg/50">Lembretes</p>
@@ -487,6 +526,18 @@ function DayChip({ card, color }: { card: KanbanCard; color?: string }) {
   )
 }
 
+function ReleaseChip({ release }: { release: ProjectRelease }) {
+  return (
+    <div
+      className="flex items-center gap-1 truncate border-2 border-line bg-accent-blue px-1.5 py-0.5 text-[10px] text-ink"
+      title={release.name}
+    >
+      <Rocket size={9} className="shrink-0" />
+      {release.name}
+    </div>
+  )
+}
+
 function ReminderChip({ reminder }: { reminder: Reminder }) {
   const imp = REMINDER_IMPORTANCE.find((i) => i.value === reminder.importance)
   return (
@@ -505,12 +556,14 @@ function MonthView({
   anchor,
   cardsByDate,
   remindersByDate,
+  releasesByDate,
   columnColor,
   onPickDay,
 }: {
   anchor: Date
   cardsByDate: Map<string, KanbanCard[]>
   remindersByDate: Map<string, Reminder[]>
+  releasesByDate: Map<string, ProjectRelease[]>
   columnColor: Map<string, string>
   onPickDay: (iso: string) => void
 }) {
@@ -531,7 +584,8 @@ function MonthView({
           const iso = toISODate(date)
           const dayCards = cardsByDate.get(iso) ?? []
           const dayReminders = remindersByDate.get(iso) ?? []
-          const total = dayCards.length + dayReminders.length
+          const dayReleases = releasesByDate.get(iso) ?? []
+          const total = dayCards.length + dayReminders.length + dayReleases.length
           const inMonth = date.getMonth() === anchor.getMonth()
           return (
             <button
@@ -555,10 +609,13 @@ function MonthView({
                 {date.getDate()}
               </div>
               <div className="space-y-1">
-                {dayReminders.slice(0, 2).map((reminder) => (
+                {dayReleases.slice(0, 1).map((release) => (
+                  <ReleaseChip key={release.id} release={release} />
+                ))}
+                {dayReminders.slice(0, dayReleases.length > 0 ? 1 : 2).map((reminder) => (
                   <ReminderChip key={reminder.id} reminder={reminder} />
                 ))}
-                {dayCards.slice(0, 3 - Math.min(2, dayReminders.length)).map((card) => (
+                {dayCards.slice(0, Math.max(0, 3 - dayReleases.length - Math.min(2, dayReminders.length))).map((card) => (
                   <DayChip key={card.id} card={card} color={columnColor.get(card.column_id)} />
                 ))}
                 {total > 3 && <p className="text-label text-[10px] text-canvas-fg/40">+{total - 3}</p>}
@@ -575,12 +632,14 @@ function WeekView({
   anchor,
   cardsByDate,
   remindersByDate,
+  releasesByDate,
   columnColor,
   onPickDay,
 }: {
   anchor: Date
   cardsByDate: Map<string, KanbanCard[]>
   remindersByDate: Map<string, Reminder[]>
+  releasesByDate: Map<string, ProjectRelease[]>
   columnColor: Map<string, string>
   onPickDay: (iso: string) => void
 }) {
@@ -593,7 +652,8 @@ function WeekView({
         const iso = toISODate(date)
         const dayCards = cardsByDate.get(iso) ?? []
         const dayReminders = remindersByDate.get(iso) ?? []
-        const total = dayCards.length + dayReminders.length
+        const dayReleases = releasesByDate.get(iso) ?? []
+        const total = dayCards.length + dayReminders.length + dayReleases.length
         return (
           <button
             type="button"
@@ -613,6 +673,9 @@ function WeekView({
               {WEEKDAY_LABELS[date.getDay()]} {date.getDate()}
             </div>
             <div className="min-h-[100px] space-y-1 p-1.5">
+              {dayReleases.map((release) => (
+                <ReleaseChip key={release.id} release={release} />
+              ))}
               {dayReminders.map((reminder) => (
                 <ReminderChip key={reminder.id} reminder={reminder} />
               ))}
@@ -631,11 +694,13 @@ function YearView({
   anchor,
   cardsByDate,
   remindersByDate,
+  releasesByDate,
   onPickMonth,
 }: {
   anchor: Date
   cardsByDate: Map<string, KanbanCard[]>
   remindersByDate: Map<string, Reminder[]>
+  releasesByDate: Map<string, ProjectRelease[]>
   onPickMonth: (month: number) => void
 }) {
   return (
@@ -654,7 +719,7 @@ function YearView({
             <div className="grid grid-cols-7 gap-0.5">
               {grid.map((date, i) => {
                 const iso = toISODate(date)
-                const hasCards = cardsByDate.has(iso) || remindersByDate.has(iso)
+                const hasCards = cardsByDate.has(iso) || remindersByDate.has(iso) || releasesByDate.has(iso)
                 const inMonth = date.getMonth() === month
                 return (
                   <div
@@ -746,11 +811,13 @@ function RoadmapView({
   cards,
   columnColor,
   reminders,
+  releases,
   onPickReminder,
 }: {
   cards: KanbanCard[]
   columnColor: Map<string, string>
   reminders: Reminder[]
+  releases: ProjectRelease[]
   onPickReminder: (reminder: Reminder) => void
 }) {
   const todayIso = toISODate(new Date())
@@ -765,9 +832,52 @@ function RoadmapView({
     [reminders],
   )
 
+  const sortedReleases = useMemo(
+    () => [...releases].sort((a, b) => (a.release_date < b.release_date ? -1 : 1)),
+    [releases],
+  )
+
   return (
     <div className="space-y-8">
       <GanttTimeline cards={cards} columnColor={columnColor} />
+
+      {sortedReleases.length > 0 && (
+        <div>
+          <h3 className="text-label mb-3 text-[11px] text-canvas-fg/50">Lançamentos e atualizações</h3>
+          <ul className="space-y-1.5">
+            {sortedReleases.map((release, i) => {
+              const isPast = release.release_date < todayIso
+              const isToday = release.release_date === todayIso
+              return (
+                <motion.li
+                  key={release.id}
+                  initial={{ opacity: 0, x: -8 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.2, delay: i * 0.02 }}
+                >
+                  <div
+                    className={clsx(
+                      'flex w-full items-center gap-3 border-2 p-2.5 text-left transition-colors',
+                      isPast && 'border-line/30 bg-surface text-canvas-fg/40',
+                      isToday && 'border-accent-red bg-accent-red/10 text-canvas-fg',
+                      !isPast && !isToday && 'border-accent-blue bg-accent-blue/10 text-canvas-fg',
+                    )}
+                  >
+                    <Rocket size={14} className="shrink-0 opacity-60" />
+                    <span className="w-24 shrink-0 text-xs">{release.release_date.split('-').reverse().join('/')}</span>
+                    <span className="min-w-0 flex-1 truncate text-sm font-semibold">{release.name}</span>
+                    {release.version && (
+                      <span className="text-label border border-line/40 px-1 py-0.5 text-[10px] opacity-70">
+                        {release.version}
+                      </span>
+                    )}
+                  </div>
+                </motion.li>
+              )
+            })}
+          </ul>
+        </div>
+      )}
 
       <div>
         <h3 className="text-label mb-3 text-[11px] text-canvas-fg/50">
