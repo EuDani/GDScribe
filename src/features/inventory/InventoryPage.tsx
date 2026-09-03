@@ -424,13 +424,20 @@ function InventoryTypePanel({
           <Field label="Setores" hint="Opcional">
             <SectorPicker value={itemSectors} onChange={setItemSectors} sectors={projectSectors ?? []} />
           </Field>
-          <div className="mt-2 flex justify-end gap-2">
-            <Button type="button" variant="ghost" onClick={() => setItemModalOpen(false)}>
-              Cancelar
-            </Button>
-            <Button type="submit" disabled={upsertItem.isPending}>
-              Salvar
-            </Button>
+          <div className="mt-2 flex justify-between gap-2">
+            {editingItem && (
+              <Button type="button" variant="danger" onClick={() => setPendingDeleteItem(editingItem.id)}>
+                Excluir
+              </Button>
+            )}
+            <div className={clsx('flex gap-2', !editingItem && 'ml-auto')}>
+              <Button type="button" variant="ghost" onClick={() => setItemModalOpen(false)}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={upsertItem.isPending}>
+                Salvar
+              </Button>
+            </div>
           </div>
         </form>
       </Modal>
@@ -438,7 +445,10 @@ function InventoryTypePanel({
       <ConfirmDialog
         open={Boolean(pendingDeleteItem)}
         onClose={() => setPendingDeleteItem(null)}
-        onConfirm={() => pendingDeleteItem && deleteItem.mutate(pendingDeleteItem)}
+        onConfirm={() => {
+          if (pendingDeleteItem) deleteItem.mutate(pendingDeleteItem)
+          setItemModalOpen(false)
+        }}
         title="Excluir item"
         description="Essa ação não pode ser desfeita."
         confirmLabel="Excluir"
