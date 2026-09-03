@@ -1,6 +1,7 @@
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { CalendarDays, CheckSquare } from 'lucide-react'
+import { motion } from 'motion/react'
 import type { KanbanCard as KanbanCardType } from '@/lib/types'
 import { Badge, accentFromString } from '@/components/ui/Badge'
 import { CardIcon } from '@/lib/iconMap'
@@ -69,18 +70,30 @@ export function KanbanCardView({
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: card.id,
     data: { type: 'card', columnId: card.column_id },
+    transition: { duration: 220, easing: 'cubic-bezier(0.2, 0, 0, 1)' },
   })
 
   return (
     <div
       ref={setNodeRef}
-      style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.3 : 1 }}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
       {...attributes}
       {...listeners}
       onClick={onClick}
-      className="cursor-grab touch-none overflow-hidden border-2 border-line bg-paper text-ink shadow-brutal-sm active:cursor-grabbing"
+      className="cursor-grab touch-none active:cursor-grabbing"
     >
-      <KanbanCardFace card={card} />
+      {/* A animação de scale/sombra fica num wrapper à parte do que o
+          dnd-kit controla — o framer-motion também gerencia a propriedade
+          CSS transform quando anima scale, e misturar isso com o transform
+          de posição do dnd-kit no mesmo elemento faz um pisar no pé do
+          outro (um deles simplesmente para de fazer efeito). */}
+      <motion.div
+        animate={{ scale: isDragging ? 1.04 : 1, opacity: isDragging ? 0.5 : 1 }}
+        transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+        className="overflow-hidden border-2 border-line bg-paper text-ink shadow-brutal-sm"
+      >
+        <KanbanCardFace card={card} />
+      </motion.div>
     </div>
   )
 }

@@ -190,6 +190,7 @@ export interface KanbanCard {
   due_date: string | null
   sectors: string[]
   estimated_hours: number | null
+  hours_per_day: number | null
   completed_at: string | null
   sort_order: number
   created_at: string
@@ -212,6 +213,7 @@ export interface Idea {
   tags: string[]
   sectors: string[]
   status: IdeaStatus
+  sort_order: number
   created_at: string
   updated_at: string
 }

@@ -11,6 +11,7 @@ import {
 } from '@dnd-kit/core'
 import { Pencil, Plus, Trash2, Upload } from 'lucide-react'
 import { clsx } from 'clsx'
+import { motion } from 'motion/react'
 import { useOutletContext } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
@@ -196,10 +197,7 @@ function KanbanBoardView({ projectId, boardId }: { projectId: string; boardId: s
   const [columnName, setColumnName] = useState('')
   const [pendingDeleteColumn, setPendingDeleteColumn] = useState<string | null>(null)
 
-  const [cardModalColumnId, setCardModalColumnId] = useState<string | null>(null)
-  const [cardTitle, setCardTitle] = useState('')
-  const [cardDescription, setCardDescription] = useState('')
-
+  const [creatingColumnId, setCreatingColumnId] = useState<string | null>(null)
   const [editingCard, setEditingCard] = useState<KanbanCard | null>(null)
   const [editTitle, setEditTitle] = useState('')
   const [editDescription, setEditDescription] = useState('')
@@ -212,7 +210,23 @@ function KanbanBoardView({ projectId, boardId }: { projectId: string; boardId: s
   const [editDueDate, setEditDueDate] = useState('')
   const [editSectors, setEditSectors] = useState<string[]>([])
   const [editEstimatedHours, setEditEstimatedHours] = useState('')
+  const [editHoursPerDay, setEditHoursPerDay] = useState('8')
   const [pendingDeleteCard, setPendingDeleteCard] = useState<string | null>(null)
+
+  const cardModalOpen = Boolean(editingCard) || Boolean(creatingColumnId)
+
+  // Quando início e conclusão estão definidos, as horas estimadas são
+  // calculadas automaticamente (dias entre as datas × horas por dia) —
+  // senão, o campo abaixo fica editável manualmente.
+  const autoEstimatedHours = useMemo(() => {
+    if (!editStartDate || !editDueDate) return null
+    const start = new Date(editStartDate)
+    const due = new Date(editDueDate)
+    const days = Math.max(1, Math.round((due.getTime() - start.getTime()) / 86_400_000) + 1)
+    const perDay = Number(editHoursPerDay)
+    if (!Number.isFinite(perDay) || perDay <= 0) return null
+    return days * perDay
+  }, [editStartDate, editDueDate, editHoursPerDay])
 
   const { upload: uploadCover, uploading: uploadingCover } = useUploadImage(projectId)
 
@@ -244,20 +258,29 @@ function KanbanBoardView({ projectId, boardId }: { projectId: string; boardId: s
     setColumnModalOpen(false)
   }
 
-  async function handleCreateCard(e: React.FormEvent) {
-    e.preventDefault()
-    if (!cardModalColumnId || !cardTitle.trim()) return
-    await createCard.mutateAsync({
-      columnId: cardModalColumnId,
-      title: cardTitle.trim(),
-      description: cardDescription.trim(),
-    })
-    setCardTitle('')
-    setCardDescription('')
-    setCardModalColumnId(null)
+  function resetCardForm() {
+    setEditTitle('')
+    setEditDescription('')
+    setEditTags([])
+    setEditIcon(null)
+    setEditCover(null)
+    setEditChecklist([])
+    setEditExtraFields([])
+    setEditStartDate('')
+    setEditDueDate('')
+    setEditSectors([])
+    setEditEstimatedHours('')
+    setEditHoursPerDay('8')
+  }
+
+  function openCreateCard(columnId: string) {
+    setEditingCard(null)
+    resetCardForm()
+    setCreatingColumnId(columnId)
   }
 
   function openEditCard(card: KanbanCard) {
+    setCreatingColumnId(null)
     setEditingCard(card)
     setEditTitle(card.title)
     setEditDescription(card.description ?? '')
@@ -270,13 +293,20 @@ function KanbanBoardView({ projectId, boardId }: { projectId: string; boardId: s
     setEditDueDate(card.due_date ?? '')
     setEditSectors(card.sectors)
     setEditEstimatedHours(card.estimated_hours !== null ? String(card.estimated_hours) : '')
+    setEditHoursPerDay(card.hours_per_day !== null ? String(card.hours_per_day) : '8')
+  }
+
+  function closeCardModal() {
+    setEditingCard(null)
+    setCreatingColumnId(null)
   }
 
   async function handleSaveCard(e: React.FormEvent) {
     e.preventDefault()
-    if (!editingCard) return
-    await updateCard.mutateAsync({
-      id: editingCard.id,
+    if (!editTitle.trim()) return
+    const finalEstimatedHours =
+      autoEstimatedHours ?? (editEstimatedHours.trim() === '' ? null : Number(editEstimatedHours))
+    const fields = {
       title: editTitle.trim(),
       description: editDescription.trim() || null,
       tags: editTags,
@@ -287,9 +317,15 @@ function KanbanBoardView({ projectId, boardId }: { projectId: string; boardId: s
       start_date: editStartDate || null,
       due_date: editDueDate || null,
       sectors: editSectors,
-      estimated_hours: editEstimatedHours.trim() === '' ? null : Number(editEstimatedHours),
-    })
-    setEditingCard(null)
+      estimated_hours: finalEstimatedHours,
+      hours_per_day: editHoursPerDay.trim() === '' ? null : Number(editHoursPerDay),
+    }
+    if (editingCard) {
+      await updateCard.mutateAsync({ id: editingCard.id, ...fields })
+    } else if (creatingColumnId) {
+      await createCard.mutateAsync({ columnId: creatingColumnId, ...fields })
+    }
+    closeCardModal()
   }
 
   function moveColumn(index: number, dir: -1 | 1) {
@@ -430,7 +466,7 @@ function KanbanBoardView({ projectId, boardId }: { projectId: string; boardId: s
                 key={column.id}
                 column={column}
                 cards={cardsFor(column.id)}
-                onAddCard={() => setCardModalColumnId(column.id)}
+                onAddCard={() => openCreateCard(column.id)}
                 onDeleteColumn={() => setPendingDeleteColumn(column.id)}
                 onRenameColumn={(name) => updateColumn.mutate({ id: column.id, name })}
                 onCardClick={openEditCard}
@@ -441,11 +477,16 @@ function KanbanBoardView({ projectId, boardId }: { projectId: string; boardId: s
               />
             ))}
           </div>
-          <DragOverlay>
+          <DragOverlay dropAnimation={{ duration: 220, easing: 'cubic-bezier(0.2, 0, 0, 1)' }}>
             {activeCard && (
-              <div className="w-72 rotate-2 overflow-hidden border-2 border-line bg-paper text-ink shadow-brutal-lg">
+              <motion.div
+                initial={{ scale: 1, rotate: 0 }}
+                animate={{ scale: 1.06, rotate: 2 }}
+                transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                className="w-72 overflow-hidden border-2 border-line bg-paper text-ink shadow-brutal-lg"
+              >
                 <KanbanCardFace card={activeCard} />
-              </div>
+              </motion.div>
             )}
           </DragOverlay>
         </DndContext>
@@ -477,71 +518,72 @@ function KanbanBoardView({ projectId, boardId }: { projectId: string; boardId: s
       </Modal>
 
       <Modal
-        open={Boolean(cardModalColumnId)}
-        onClose={() => setCardModalColumnId(null)}
-        title="Novo card"
-        isDirty={Boolean(cardTitle.trim() || cardDescription.trim())}
-      >
-        <form onSubmit={handleCreateCard}>
-          <Field label="Título">
-            <TextInput required autoFocus value={cardTitle} onChange={(e) => setCardTitle(e.target.value)} />
-          </Field>
-          <Field label="Descrição" hint="Opcional">
-            <Textarea rows={3} value={cardDescription} onChange={(e) => setCardDescription(e.target.value)} />
-          </Field>
-          <div className="flex justify-end gap-2">
-            <Button type="button" variant="ghost" onClick={() => setCardModalColumnId(null)}>
-              Cancelar
-            </Button>
-            <Button type="submit">Criar</Button>
-          </div>
-        </form>
-      </Modal>
-
-      <Modal
-        open={Boolean(editingCard)}
-        onClose={() => setEditingCard(null)}
-        title="Editar card"
+        open={cardModalOpen}
+        onClose={closeCardModal}
+        title={editingCard ? 'Editar card' : 'Novo card'}
         wide
         isDirty={Boolean(
-          editingCard &&
-            (editTitle !== editingCard.title ||
-              editDescription !== (editingCard.description ?? '') ||
-              JSON.stringify(editTags) !== JSON.stringify(editingCard.tags) ||
-              editIcon !== editingCard.icon ||
-              editCover !== editingCard.cover_image_url ||
-              JSON.stringify(editChecklist) !== JSON.stringify(editingCard.checklist) ||
-              JSON.stringify(editExtraFields) !== JSON.stringify(editingCard.extra_fields) ||
-              editStartDate !== (editingCard.start_date ?? '') ||
-              editDueDate !== (editingCard.due_date ?? '') ||
-              JSON.stringify(editSectors) !== JSON.stringify(editingCard.sectors) ||
-              editEstimatedHours !== (editingCard.estimated_hours !== null ? String(editingCard.estimated_hours) : '')),
+          editingCard
+            ? editTitle !== editingCard.title ||
+                editDescription !== (editingCard.description ?? '') ||
+                JSON.stringify(editTags) !== JSON.stringify(editingCard.tags) ||
+                editIcon !== editingCard.icon ||
+                editCover !== editingCard.cover_image_url ||
+                JSON.stringify(editChecklist) !== JSON.stringify(editingCard.checklist) ||
+                JSON.stringify(editExtraFields) !== JSON.stringify(editingCard.extra_fields) ||
+                editStartDate !== (editingCard.start_date ?? '') ||
+                editDueDate !== (editingCard.due_date ?? '') ||
+                JSON.stringify(editSectors) !== JSON.stringify(editingCard.sectors) ||
+                editEstimatedHours !== (editingCard.estimated_hours !== null ? String(editingCard.estimated_hours) : '')
+            : editTitle.trim() ||
+                editDescription.trim() ||
+                editTags.length > 0 ||
+                editChecklist.length > 0 ||
+                editStartDate ||
+                editDueDate,
         )}
       >
         <form onSubmit={handleSaveCard}>
           <Field label="Título">
-            <TextInput required value={editTitle} onChange={(e) => setEditTitle(e.target.value)} />
+            <TextInput required autoFocus={!editingCard} value={editTitle} onChange={(e) => setEditTitle(e.target.value)} />
           </Field>
-          <Field label="Descrição">
+          <Field label="Descrição" hint="Opcional">
             <Textarea rows={3} value={editDescription} onChange={(e) => setEditDescription(e.target.value)} />
           </Field>
 
-          <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-4">
             <Field label="Início">
               <TextInput type="date" value={editStartDate} onChange={(e) => setEditStartDate(e.target.value)} />
             </Field>
             <Field label="Conclusão">
               <TextInput type="date" value={editDueDate} onChange={(e) => setEditDueDate(e.target.value)} />
             </Field>
-            <Field label="Horas estimadas" hint="Usado no roadmap de conclusão">
+            <Field label="Horas por dia">
               <TextInput
                 type="number"
                 min="0"
                 step="0.5"
-                value={editEstimatedHours}
-                onChange={(e) => setEditEstimatedHours(e.target.value)}
-                placeholder="Ex: 4"
+                value={editHoursPerDay}
+                onChange={(e) => setEditHoursPerDay(e.target.value)}
+                placeholder="Ex: 8"
               />
+            </Field>
+            <Field
+              label="Horas estimadas"
+              hint={autoEstimatedHours !== null ? 'Calculado a partir das datas' : 'Defina início e conclusão pra calcular sozinho'}
+            >
+              {autoEstimatedHours !== null ? (
+                <TextInput type="number" value={autoEstimatedHours} disabled className="opacity-70" />
+              ) : (
+                <TextInput
+                  type="number"
+                  min="0"
+                  step="0.5"
+                  value={editEstimatedHours}
+                  onChange={(e) => setEditEstimatedHours(e.target.value)}
+                  placeholder="Ex: 4"
+                />
+              )}
             </Field>
           </div>
 
@@ -599,20 +641,16 @@ function KanbanBoardView({ projectId, boardId }: { projectId: string; boardId: s
           </Field>
 
           <div className="mt-4 flex justify-between gap-2">
-            <Button
-              type="button"
-              variant="danger"
-              onClick={() => {
-                if (editingCard) setPendingDeleteCard(editingCard.id)
-              }}
-            >
-              Excluir
-            </Button>
-            <div className="flex gap-2">
-              <Button type="button" variant="ghost" onClick={() => setEditingCard(null)}>
+            {editingCard && (
+              <Button type="button" variant="danger" onClick={() => setPendingDeleteCard(editingCard.id)}>
+                Excluir
+              </Button>
+            )}
+            <div className={clsx('flex gap-2', !editingCard && 'ml-auto')}>
+              <Button type="button" variant="ghost" onClick={closeCardModal}>
                 Cancelar
               </Button>
-              <Button type="submit">Salvar</Button>
+              <Button type="submit">{editingCard ? 'Salvar' : 'Criar'}</Button>
             </div>
           </div>
         </form>
@@ -632,7 +670,7 @@ function KanbanBoardView({ projectId, boardId }: { projectId: string; boardId: s
         onClose={() => setPendingDeleteCard(null)}
         onConfirm={() => {
           if (pendingDeleteCard) deleteCard.mutate(pendingDeleteCard)
-          setEditingCard(null)
+          closeCardModal()
         }}
         title="Excluir card"
         description="Essa ação não pode ser desfeita."

@@ -176,18 +176,30 @@ export function useDeleteColumn(projectId: string, boardId: string) {
   })
 }
 
+type NewCardInput = {
+  columnId: string
+  title: string
+  description: string | null
+} & Partial<
+  Pick<
+    KanbanCard,
+    | 'tags'
+    | 'icon'
+    | 'cover_image_url'
+    | 'checklist'
+    | 'extra_fields'
+    | 'start_date'
+    | 'due_date'
+    | 'sectors'
+    | 'estimated_hours'
+    | 'hours_per_day'
+  >
+>
+
 export function useCreateCard(projectId: string, boardId: string) {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async ({
-      columnId,
-      title,
-      description,
-    }: {
-      columnId: string
-      title: string
-      description: string
-    }) => {
+    mutationFn: async ({ columnId, title, description, ...rest }: NewCardInput) => {
       const existing = queryClient.getQueryData<KanbanCard[]>(['kanban_cards', projectId, boardId]) ?? []
       const columnCards = existing.filter((c) => c.column_id === columnId)
       const { error } = await supabase.from('kanban_cards').insert({
@@ -198,6 +210,7 @@ export function useCreateCard(projectId: string, boardId: string) {
         description: description || null,
         tags: [],
         sort_order: columnCards.length,
+        ...rest,
       })
       if (error) throw error
     },

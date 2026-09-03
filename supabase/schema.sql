@@ -175,6 +175,7 @@ create table if not exists public.ideas (
   body text,
   tags text[] not null default '{}',
   status text not null default 'new' check (status in ('new', 'considering', 'approved', 'rejected')),
+  sort_order integer not null default 0,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -365,6 +366,27 @@ alter table public.game_references add column if not exists tags text[] not null
 -- (usado pra estimar a tendência de conclusão do projeto)
 alter table public.kanban_cards add column if not exists estimated_hours numeric;
 alter table public.kanban_cards add column if not exists completed_at timestamptz;
+
+-- Horas por dia usadas pra calcular estimated_hours automaticamente a
+-- partir do intervalo entre start_date e due_date
+alter table public.kanban_cards add column if not exists hours_per_day numeric;
+
+-- Ordem das ideias (arrastar e soltar no Hub de Ideias)
+alter table public.ideas add column if not exists sort_order integer not null default 0;
+do $$
+begin
+  if exists (
+    select 1 from public.ideas where sort_order = 0
+    group by project_id having count(*) > 1
+  ) then
+    update public.ideas i set sort_order = ranked.rn - 1
+    from (
+      select id, row_number() over (partition by project_id order by created_at asc) as rn
+      from public.ideas
+    ) ranked
+    where ranked.id = i.id;
+  end if;
+end $$;
 
 -- Data prevista de lançamento do projeto, comparada com a previsão de
 -- conclusão do desenvolvimento (baseada no ritmo de conclusão de cards)

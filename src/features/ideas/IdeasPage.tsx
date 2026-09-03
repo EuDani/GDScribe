@@ -1,4 +1,7 @@
 import { useMemo, useState } from 'react'
+import { DndContext, type DragEndEvent, PointerSensor, closestCenter, useSensor, useSensors } from '@dnd-kit/core'
+import { SortableContext, rectSortingStrategy, useSortable } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import { Filter, Plus } from 'lucide-react'
 import { clsx } from 'clsx'
 import { useOutletContext } from 'react-router-dom'
@@ -13,7 +16,7 @@ import { TagInput } from '@/components/TagInput'
 import { SectorPicker, matchesSectorFilter } from '@/components/SectorPicker'
 import { isHtmlEmpty, stripHtml } from '@/lib/html'
 import { IDEA_STATUSES, type Idea, type IdeaStatus, type Project } from '@/lib/types'
-import { useCreateIdea, useDeleteIdea, useIdeas, useUpdateIdea } from '@/features/ideas/useIdeas'
+import { useCreateIdea, useDeleteIdea, useIdeas, useReorderIdeas, useUpdateIdea } from '@/features/ideas/useIdeas'
 import { useProjectSectors } from '@/features/settings/useProjectSectors'
 
 const FILTER_ITEMS = [{ value: 'all' as const, label: 'Todas' }, ...IDEA_STATUSES]
@@ -24,7 +27,9 @@ export function IdeasPage() {
   const createIdea = useCreateIdea(project.id)
   const updateIdea = useUpdateIdea(project.id)
   const deleteIdea = useDeleteIdea(project.id)
+  const reorderIdeas = useReorderIdeas(project.id)
   const { data: sectors } = useProjectSectors(project.id)
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
 
   const [statusFilter, setStatusFilter] = useState<IdeaStatus | 'all'>('all')
   const [tagFilter, setTagFilter] = useState<string[]>([])
@@ -55,6 +60,25 @@ export function IdeasPage() {
 
   function toggleTag(tag: string) {
     setTagFilter((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]))
+  }
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event
+    if (!over || active.id === over.id || !ideas) return
+    const filteredIds = filtered.map((i) => i.id)
+    const oldIndex = filteredIds.indexOf(active.id as string)
+    const newIndex = filteredIds.indexOf(over.id as string)
+    if (oldIndex < 0 || newIndex < 0) return
+
+    const reorderedFiltered = [...filtered]
+    const [moved] = reorderedFiltered.splice(oldIndex, 1)
+    reorderedFiltered.splice(newIndex, 0, moved)
+
+    // Só reordena entre si os itens visíveis no filtro atual, preservando a
+    // posição relativa dos que estão escondidos.
+    let cursor = 0
+    const merged = ideas.map((idea) => (filteredIds.includes(idea.id) ? reorderedFiltered[cursor++] : idea))
+    reorderIdeas.mutate(merged.map((idea, i) => ({ id: idea.id, sort_order: i })))
   }
 
   function openCreate() {
@@ -96,7 +120,7 @@ export function IdeasPage() {
   return (
     <div>
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-display text-2xl">Hub de Ideias</h1>
+        <h1 className="text-display text-2xl">Ideias</h1>
         <Button size="sm" icon={<Plus size={16} />} onClick={openCreate}>
           Nova ideia
         </Button>
@@ -181,40 +205,15 @@ export function IdeasPage() {
             <EmptyState title="Nenhuma ideia por aqui" description="Jogue qualquer ideia solta antes que ela vire escopo." />
           )}
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {filtered.map((idea) => {
-              const statusMeta = IDEA_STATUSES.find((s) => s.value === idea.status)!
-              return (
-                <div
-                  key={idea.id}
-                  onClick={() => openEdit(idea)}
-                  className="cursor-pointer border-2 border-line bg-surface p-4 shadow-brutal-sm transition-transform hover:-translate-x-0.5 hover:-translate-y-0.5"
-                >
-                  <div className="mb-2 flex items-center justify-between gap-2">
-                    <span
-                      className="text-label border-2 border-line px-1.5 py-0.5 text-[10px] text-ink"
-                      style={{ backgroundColor: statusMeta.color }}
-                    >
-                      {statusMeta.label}
-                    </span>
-                  </div>
-                  <h3 className="text-display mb-1 text-base">{idea.title}</h3>
-                  {idea.body && !isHtmlEmpty(idea.body) && (
-                    <p className="mb-2 line-clamp-3 text-sm text-canvas-fg/60">{stripHtml(idea.body)}</p>
-                  )}
-                  {idea.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1">
-                      {idea.tags.map((tag) => (
-                        <Badge key={tag} accent={accentFromString(tag)}>
-                          {tag}
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )
-            })}
-          </div>
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <SortableContext items={filtered.map((i) => i.id)} strategy={rectSortingStrategy}>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                {filtered.map((idea) => (
+                  <IdeaCard key={idea.id} idea={idea} onClick={() => openEdit(idea)} />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
         </div>
       </div>
 
@@ -289,6 +288,44 @@ export function IdeasPage() {
         description="Essa ação não pode ser desfeita."
         confirmLabel="Excluir"
       />
+    </div>
+  )
+}
+
+function IdeaCard({ idea, onClick }: { idea: Idea; onClick: () => void }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: idea.id })
+  const statusMeta = IDEA_STATUSES.find((s) => s.value === idea.status)!
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 }}
+      {...attributes}
+      {...listeners}
+      onClick={onClick}
+      className="cursor-grab touch-none border-2 border-line bg-surface p-4 shadow-brutal-sm transition-transform hover:-translate-x-0.5 hover:-translate-y-0.5 active:cursor-grabbing"
+    >
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <span
+          className="text-label border-2 border-line px-1.5 py-0.5 text-[10px] text-ink"
+          style={{ backgroundColor: statusMeta.color }}
+        >
+          {statusMeta.label}
+        </span>
+      </div>
+      <h3 className="text-display mb-1 text-base">{idea.title}</h3>
+      {idea.body && !isHtmlEmpty(idea.body) && (
+        <p className="mb-2 line-clamp-3 text-sm text-canvas-fg/60">{stripHtml(idea.body)}</p>
+      )}
+      {idea.tags.length > 0 && (
+        <div className="flex flex-wrap gap-1">
+          {idea.tags.map((tag) => (
+            <Badge key={tag} accent={accentFromString(tag)}>
+              {tag}
+            </Badge>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

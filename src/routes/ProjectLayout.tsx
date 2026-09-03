@@ -41,7 +41,7 @@ const NAV_ITEMS = [
   { to: 'moodboard', label: 'Moodboard', icon: Images },
   { to: 'flowchart', label: 'Fluxograma', icon: Workflow },
   { to: 'calendar', label: 'Calendário', icon: CalendarDays },
-  { to: 'ideas', label: 'Hub de Ideias', icon: Lightbulb },
+  { to: 'ideas', label: 'Ideias', icon: Lightbulb },
   { to: 'export', label: 'Exportar', icon: Download },
   { to: 'settings', label: 'Configurações', icon: Settings },
 ]
