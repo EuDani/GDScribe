@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
-import type { Project } from '@/lib/types'
+import { DEFAULT_PHASES, type Project } from '@/lib/types'
 import { useAuth } from '@/contexts/AuthContext'
 
 const DEFAULT_MODULES: { key: string; title: string; icon: string; phase: string }[] = [
@@ -66,7 +66,17 @@ export function useCreateProject() {
   const { user } = useAuth()
 
   return useMutation({
-    mutationFn: async ({ name, description }: { name: string; description: string }) => {
+    mutationFn: async ({
+      name,
+      description,
+      primaryGenre,
+      secondaryGenre,
+    }: {
+      name: string
+      description: string
+      primaryGenre?: string
+      secondaryGenre?: string
+    }) => {
       if (!user) throw new Error('Não autenticado')
 
       const { data: project, error } = await supabase
@@ -77,12 +87,14 @@ export function useCreateProject() {
           slug: slugify(name),
           description: description || null,
           status: 'pre_production',
+          primary_genre: primaryGenre || null,
+          secondary_genre: secondaryGenre || null,
         })
         .select('*')
         .single()
       if (error) throw error
 
-      await Promise.all([
+      const [, , boardResult] = await Promise.all([
         supabase.from('project_themes').insert({ project_id: project.id }),
         supabase.from('gdd_modules').insert(
           DEFAULT_MODULES.map((m, i) => ({
@@ -96,20 +108,50 @@ export function useCreateProject() {
             content: '',
           })),
         ),
-        supabase.from('kanban_columns').insert(
-          DEFAULT_COLUMNS.map((c, i) => ({
+        supabase
+          .from('kanban_boards')
+          .insert({ project_id: project.id, name: 'Ações', sort_order: 0 })
+          .select('*')
+          .single(),
+        supabase.from('project_phases').insert(
+          DEFAULT_PHASES.map((p, i) => ({
             project_id: project.id,
-            name: c.name,
-            color: c.color,
+            key: p.key,
+            label: p.label,
             sort_order: i,
           })),
         ),
       ])
+      if (boardResult.error) throw boardResult.error
+
+      await supabase.from('kanban_columns').insert(
+        DEFAULT_COLUMNS.map((c, i) => ({
+          project_id: project.id,
+          board_id: boardResult.data.id,
+          name: c.name,
+          color: c.color,
+          sort_order: i,
+        })),
+      )
 
       return project as Project
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['projects'] })
+    },
+  })
+}
+
+export function useUpdateProject(projectId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (changes: Partial<Project>) => {
+      const { error } = await supabase.from('projects').update(changes).eq('id', projectId)
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['projects'] })
+      queryClient.invalidateQueries({ queryKey: ['projects', projectId] })
     },
   })
 }

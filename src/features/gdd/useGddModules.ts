@@ -21,13 +21,22 @@ export function useGddModules(projectId: string | undefined) {
 export function useCreateModule(projectId: string) {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async ({ title, phase }: { title: string; phase: Phase }) => {
+    mutationFn: async ({
+      title,
+      phase,
+      parentId,
+    }: {
+      title: string
+      phase: Phase
+      parentId?: string | null
+    }) => {
       const modules = queryClient.getQueryData<GddModule[]>(['gdd_modules', projectId]) ?? []
       const key = `custom-${Date.now()}`
       const { data, error } = await supabase
         .from('gdd_modules')
         .insert({
           project_id: projectId,
+          parent_id: parentId ?? null,
           key,
           title,
           icon: 'FileText',
@@ -57,6 +66,32 @@ export function useUpdateModule(projectId: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['gdd_modules', projectId] })
     },
+  })
+}
+
+export function useReorderModules(projectId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (modules: { id: string; sort_order: number }[]) => {
+      await Promise.all(
+        modules.map((m) => supabase.from('gdd_modules').update({ sort_order: m.sort_order }).eq('id', m.id)),
+      )
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['gdd_modules', projectId] }),
+  })
+}
+
+export function useReparentModules(projectId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (updates: { id: string; parent_id: string | null; sort_order: number }[]) => {
+      await Promise.all(
+        updates.map((m) =>
+          supabase.from('gdd_modules').update({ parent_id: m.parent_id, sort_order: m.sort_order }).eq('id', m.id),
+        ),
+      )
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['gdd_modules', projectId] }),
   })
 }
 

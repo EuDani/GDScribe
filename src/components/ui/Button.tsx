@@ -24,8 +24,8 @@ interface ButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, Conf
 const VARIANT_CLASSES: Record<Variant, string> = {
   primary: 'bg-paper text-ink hover:bg-accent-yellow',
   accent: 'bg-accent-yellow text-ink hover:bg-paper',
-  ghost: 'bg-transparent text-paper hover:bg-ink-soft',
-  danger: 'bg-accent-red text-paper hover:bg-paper hover:text-accent-red',
+  ghost: 'bg-transparent text-canvas-fg hover:bg-surface',
+  danger: 'bg-accent-red text-canvas-fg hover:bg-paper hover:text-accent-red',
 }
 
 const SIZE_CLASSES: Record<Size, string> = {
@@ -49,7 +49,7 @@ export function Button({
       whileHover={disabled ? undefined : { x: -2, y: -2 }}
       whileTap={disabled ? undefined : { x: 0, y: 0 }}
       className={clsx(
-        'text-label inline-flex cursor-pointer items-center justify-center border-2 border-ink font-semibold shadow-brutal-sm transition-colors',
+        'text-label inline-flex cursor-pointer items-center justify-center border-2 border-line font-semibold shadow-brutal-sm transition-colors',
         'disabled:cursor-not-allowed disabled:opacity-50',
         VARIANT_CLASSES[variant],
         SIZE_CLASSES[size],

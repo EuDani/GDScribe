@@ -1,149 +1,285 @@
-import { useEffect, useMemo, useState } from 'react'
-import { Plus, Trash2 } from 'lucide-react'
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
-import { clsx } from 'clsx'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { DndContext, type DragEndEvent, PointerSensor, closestCenter, useSensor, useSensors } from '@dnd-kit/core'
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
+import { CornerDownRight, Plus, Search, Trash2 } from 'lucide-react'
 import { useOutletContext } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { EmptyState } from '@/components/ui/EmptyState'
-import { Field, Select, TextInput, Textarea } from '@/components/ui/Input'
+import { Field, Select, TextInput } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
 import { Tabs } from '@/components/ui/Tabs'
 import { Badge } from '@/components/ui/Badge'
-import { PHASES, type GddModule, type Phase, type Project } from '@/lib/types'
+import { StatusSelect } from '@/components/StatusSelect'
+import { RichTextEditor } from '@/components/RichTextEditor'
+import { SectorPicker, matchesSectorFilter } from '@/components/SectorPicker'
+import { ALL_PHASES, type ExtraField, type GddModule, type Phase, type Project } from '@/lib/types'
+import { computeNestedDragUpdate } from '@/lib/nestedReorder'
 import {
   useCreateModule,
   useDeleteModule,
   useGddModules,
+  useReparentModules,
   useUpdateModule,
 } from '@/features/gdd/useGddModules'
+import { GddModuleRow } from '@/features/gdd/GddModuleRow'
+import { useProjectPhases } from '@/features/settings/useProjectPhases'
+import { useProjectSectors } from '@/features/settings/useProjectSectors'
+import { ExtraFieldsEditor } from '@/features/gdd/ExtraFieldsEditor'
 
-const PHASE_LABEL: Record<Phase, string> = Object.fromEntries(
-  PHASES.map((p) => [p.value, p.label]),
-) as Record<Phase, string>
+function sameExtraFields(a: ExtraField[], b: ExtraField[]) {
+  return JSON.stringify(a) === JSON.stringify(b)
+}
 
 export function GddPage() {
   const { project } = useOutletContext<{ project: Project }>()
   const { data: modules, isLoading } = useGddModules(project.id)
+  const { data: phases } = useProjectPhases(project.id)
+  const { data: sectors } = useProjectSectors(project.id)
   const createModule = useCreateModule(project.id)
   const updateModule = useUpdateModule(project.id)
   const deleteModule = useDeleteModule(project.id)
+  const reparentModules = useReparentModules(project.id)
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
 
-  const [phaseFilter, setPhaseFilter] = useState<Phase>('all')
+  const phaseItems = useMemo(
+    () => [{ value: ALL_PHASES, label: 'Todas as fases' }, ...(phases ?? []).map((p) => ({ value: p.key, label: p.label }))],
+    [phases],
+  )
+  const phaseLabel = useMemo(() => {
+    const map: Record<string, string> = { [ALL_PHASES]: 'Todas as fases' }
+    for (const p of phases ?? []) map[p.key] = p.label
+    return map
+  }, [phases])
+
+  const [phaseFilter, setPhaseFilter] = useState<Phase>(ALL_PHASES)
+  const [sectorFilter, setSectorFilter] = useState<string[]>([])
+  const [search, setSearch] = useState('')
   const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [view, setView] = useState<'edit' | 'preview'>('edit')
   const [draft, setDraft] = useState('')
+  const [draftExtraFields, setDraftExtraFields] = useState<ExtraField[]>([])
   const [creating, setCreating] = useState(false)
+  const [creatingParentId, setCreatingParentId] = useState<string | null>(null)
   const [newTitle, setNewTitle] = useState('')
-  const [newPhase, setNewPhase] = useState<Phase>('all')
+  const [newPhase, setNewPhase] = useState<Phase>(ALL_PHASES)
   const [pendingDelete, setPendingDelete] = useState<string | null>(null)
 
-  const filtered = useMemo(
-    () => (modules ?? []).filter((m) => phaseFilter === 'all' || m.phase === phaseFilter),
-    [modules, phaseFilter],
+  const topLevelFiltered = useMemo(
+    () =>
+      (modules ?? [])
+        .filter((m) => !m.parent_id)
+        .filter((m) => {
+          const matchesPhase = phaseFilter === ALL_PHASES || m.phase === phaseFilter
+          const matchesSearch = m.title.toLowerCase().includes(search.trim().toLowerCase())
+          const matchesSector = matchesSectorFilter(m.sectors, sectorFilter)
+          return matchesPhase && matchesSearch && matchesSector
+        }),
+    [modules, phaseFilter, search, sectorFilter],
   )
 
-  const selected = modules?.find((m) => m.id === selectedId) ?? filtered[0] ?? null
+  const childrenByParent = useMemo(() => {
+    const map = new Map<string, GddModule[]>()
+    for (const m of modules ?? []) {
+      if (!m.parent_id) continue
+      const list = map.get(m.parent_id) ?? []
+      list.push(m)
+      map.set(m.parent_id, list)
+    }
+    return map
+  }, [modules])
+
+  const flatRows = useMemo(() => {
+    const rows: { module: GddModule; depth: number }[] = []
+    for (const m of topLevelFiltered) {
+      rows.push({ module: m, depth: 0 })
+      for (const child of (childrenByParent.get(m.id) ?? []).sort((a, b) => a.sort_order - b.sort_order)) {
+        rows.push({ module: child, depth: 1 })
+      }
+    }
+    return rows
+  }, [topLevelFiltered, childrenByParent])
+
+  const selected = modules?.find((m) => m.id === selectedId) ?? topLevelFiltered[0] ?? null
 
   useEffect(() => {
     setDraft(selected?.content ?? '')
-  }, [selected?.id, selected?.content])
+    setDraftExtraFields(selected?.extra_fields ?? [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selected?.id])
 
-  const isDirty = selected ? draft !== (selected.content ?? '') : false
+  const isDirty = selected
+    ? draft !== (selected.content ?? '') || !sameExtraFields(draftExtraFields, selected.extra_fields ?? [])
+    : false
+
+  function persist(moduleId: string, content: string, extraFields: ExtraField[]) {
+    updateModule.mutate({ id: moduleId, content, extra_fields: extraFields })
+  }
+
+  function flush() {
+    if (selected && isDirty) persist(selected.id, draft, draftExtraFields)
+  }
+
+  function selectModule(id: string) {
+    flush()
+    setSelectedId(id)
+  }
+
+  // autosave enquanto digita, sem precisar trocar de módulo
+  useEffect(() => {
+    if (!selected || !isDirty) return
+    const t = setTimeout(() => persist(selected.id, draft, draftExtraFields), 1200)
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draft, draftExtraFields])
+
+  // garante que a última edição não se perca ao sair da página
+  const flushRef = useRef(flush)
+  flushRef.current = flush
+  useEffect(() => () => flushRef.current(), [])
+
+  function openCreate(parentId: string | null) {
+    setCreatingParentId(parentId)
+    setNewTitle('')
+    setNewPhase(ALL_PHASES)
+    setCreating(true)
+  }
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over, delta } = event
+    if (!over || !modules) return
+    const updates = computeNestedDragUpdate(modules, active.id as string, over.id as string, delta.x)
+    if (updates) reparentModules.mutate(updates)
+  }
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault()
     if (!newTitle.trim()) return
-    const created = await createModule.mutateAsync({ title: newTitle.trim(), phase: newPhase })
-    setSelectedId(created.id)
+    const created = await createModule.mutateAsync({
+      title: newTitle.trim(),
+      phase: newPhase,
+      parentId: creatingParentId,
+    })
+    selectModule(created.id)
     setNewTitle('')
-    setNewPhase('all')
     setCreating(false)
   }
 
   return (
     <div className="flex h-full min-h-[70vh] flex-col">
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-display text-2xl">Documento de Design</h1>
-        <Button size="sm" icon={<Plus size={16} />} onClick={() => setCreating(true)}>
+        <Button size="sm" icon={<Plus size={16} />} onClick={() => openCreate(null)}>
           Novo módulo
         </Button>
       </div>
 
-      <Tabs items={PHASES} value={phaseFilter} onChange={setPhaseFilter} />
+      <div className="mb-4 flex items-center gap-2 border-2 border-line bg-paper px-3 py-2 text-ink">
+        <Search size={15} className="shrink-0 text-ink/50" />
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Buscar módulos…"
+          className="w-full bg-transparent text-sm outline-none placeholder:text-ink/40"
+        />
+      </div>
 
-      {isLoading && <p className="text-label mt-6 text-sm text-paper/50">Carregando…</p>}
+      <Tabs items={phaseItems} value={phaseFilter} onChange={setPhaseFilter} />
 
-      {!isLoading && filtered.length === 0 && (
+      {(sectors ?? []).length > 0 && (
+        <div className="mt-3 flex flex-wrap items-center gap-1.5">
+          <span className="text-label text-[10px] text-canvas-fg/40">Setor:</span>
+          <SectorPicker value={sectorFilter} onChange={setSectorFilter} sectors={sectors ?? []} />
+        </div>
+      )}
+
+      {isLoading && <p className="text-label mt-6 text-sm text-canvas-fg/50">Carregando…</p>}
+
+      {!isLoading && topLevelFiltered.length === 0 && (
         <div className="mt-6">
           <EmptyState
-            title="Nenhum módulo nessa fase"
-            description="Crie um módulo customizado ou troque o filtro de fase."
+            title="Nenhum módulo encontrado"
+            description="Ajuste a busca, troque o filtro de fase ou crie um módulo customizado."
           />
         </div>
       )}
 
-      {!isLoading && filtered.length > 0 && (
-        <div className="mt-6 grid flex-1 grid-cols-1 gap-5 lg:grid-cols-[260px_1fr]">
-          <ul className="space-y-1.5">
-            {filtered.map((m: GddModule) => (
-              <li key={m.id}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedId(m.id)
-                    setView('edit')
-                  }}
-                  className={clsx(
-                    'w-full cursor-pointer border-2 px-3 py-2.5 text-left transition-colors',
-                    selected?.id === m.id
-                      ? 'border-ink bg-accent-yellow text-ink shadow-brutal-sm'
-                      : 'border-ink/40 bg-ink-soft text-paper/80 hover:border-ink',
-                  )}
-                >
-                  <div className="text-sm font-semibold">{m.title}</div>
-                  <div className="text-label mt-0.5 text-[10px] opacity-60">
-                    {PHASE_LABEL[m.phase]}
-                  </div>
-                </button>
-              </li>
-            ))}
-          </ul>
+      {!isLoading && topLevelFiltered.length > 0 && (
+        <div className="mt-6 grid flex-1 grid-cols-1 gap-5 lg:grid-cols-[280px_1fr]">
+          <div>
+            <p className="text-label mb-2 text-[10px] text-canvas-fg/40">
+              Arraste pra direita pra aninhar como sub-módulo, pra esquerda pra tornar principal de novo.
+            </p>
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+              <SortableContext items={flatRows.map((r) => r.module.id)} strategy={verticalListSortingStrategy}>
+                <ul className="space-y-1.5">
+                  {flatRows.map(({ module: m, depth }) => (
+                    <li key={m.id}>
+                      <div className="flex items-center gap-1">
+                        <GddModuleRow
+                          module={m}
+                          active={selected?.id === m.id}
+                          phaseLabel={phaseLabel[m.phase] ?? m.phase}
+                          depth={depth}
+                          onClick={() => selectModule(m.id)}
+                        />
+                        {depth === 0 && (
+                          <button
+                            type="button"
+                            onClick={() => openCreate(m.id)}
+                            aria-label="Novo sub-módulo"
+                            title="Novo sub-módulo"
+                            className="shrink-0 cursor-pointer border-2 border-line/40 p-1.5 text-canvas-fg/40 hover:border-line hover:text-canvas-fg"
+                          >
+                            <Plus size={12} />
+                          </button>
+                        )}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </SortableContext>
+            </DndContext>
+          </div>
 
           {selected && (
-            <div className="min-w-0 border-2 border-ink bg-ink-soft shadow-brutal">
-              <div className="flex flex-wrap items-center justify-between gap-3 border-b-2 border-ink p-4">
-                <div className="flex min-w-0 flex-1 items-center gap-3">
+            <div className="min-w-0 border-2 border-line bg-surface shadow-brutal">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b-2 border-line p-4">
+                <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+                  {selected.parent_id && <CornerDownRight size={14} className="text-canvas-fg/40" />}
                   <TextInput
                     value={selected.title}
-                    onChange={(e) =>
-                      updateModule.mutate({ id: selected.id, title: e.target.value })
-                    }
+                    onChange={(e) => updateModule.mutate({ id: selected.id, title: e.target.value })}
                     className="max-w-xs"
                   />
                   <Select
                     value={selected.phase}
-                    onChange={(e) =>
-                      updateModule.mutate({ id: selected.id, phase: e.target.value as Phase })
-                    }
-                    className="max-w-[160px]"
+                    onChange={(e) => updateModule.mutate({ id: selected.id, phase: e.target.value })}
+                    className="max-w-[150px]"
                   >
-                    {PHASES.filter((p) => p.value !== 'all' || true).map((p) => (
+                    {phaseItems.map((p) => (
                       <option key={p.value} value={p.value}>
                         {p.label}
                       </option>
                     ))}
                   </Select>
+                  <StatusSelect
+                    projectId={project.id}
+                    value={selected.status}
+                    onChange={(status) => updateModule.mutate({ id: selected.id, status })}
+                    className="max-w-[150px]"
+                  />
                   {selected.is_custom && <Badge accent="purple">Custom</Badge>}
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
+                  <span className="text-label text-[10px] text-canvas-fg/40">
+                    {updateModule.isPending ? 'Salvando…' : isDirty ? 'Alterações pendentes' : 'Salvo automaticamente'}
+                  </span>
                   {selected.is_custom && (
                     <button
                       type="button"
                       onClick={() => setPendingDelete(selected.id)}
                       aria-label="Excluir módulo"
-                      className="cursor-pointer border-2 border-ink p-1.5 text-paper/60 hover:bg-accent-red hover:text-paper"
+                      className="cursor-pointer border-2 border-line p-1.5 text-canvas-fg/60 hover:bg-accent-red hover:text-canvas-fg"
                     >
                       <Trash2 size={14} />
                     </button>
@@ -151,61 +287,36 @@ export function GddPage() {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between gap-3 px-4 pt-3">
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setView('edit')}
-                    className={clsx(
-                      'text-label border-2 border-ink px-2.5 py-1 text-[11px]',
-                      view === 'edit' ? 'bg-accent-yellow text-ink' : 'text-paper/60',
-                    )}
-                  >
-                    Editar
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setView('preview')}
-                    className={clsx(
-                      'text-label border-2 border-ink px-2.5 py-1 text-[11px]',
-                      view === 'preview' ? 'bg-accent-yellow text-ink' : 'text-paper/60',
-                    )}
-                  >
-                    Preview
-                  </button>
-                </div>
-                <Button
-                  size="sm"
-                  disabled={!isDirty || updateModule.isPending}
-                  onClick={() => updateModule.mutate({ id: selected.id, content: draft })}
-                >
-                  {updateModule.isPending ? 'Salvando…' : isDirty ? 'Salvar' : 'Salvo'}
-                </Button>
-              </div>
-
               <div className="p-4">
-                {view === 'edit' ? (
-                  <Textarea
-                    value={draft}
-                    onChange={(e) => setDraft(e.target.value)}
-                    rows={18}
-                    className="font-mono text-xs"
-                    placeholder="Escreva em Markdown…"
-                  />
-                ) : (
-                  <div className="prose prose-invert max-w-none text-sm">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                      {draft || '*Nada escrito ainda.*'}
-                    </ReactMarkdown>
+                <RichTextEditor projectId={project.id} value={draft} onChange={setDraft} minHeight={300} />
+
+                {(sectors ?? []).length > 0 && (
+                  <div className="mt-5 border-t-2 border-line/30 pt-4">
+                    <h3 className="text-label mb-3 text-xs text-canvas-fg/60">Setores</h3>
+                    <SectorPicker
+                      value={selected.sectors}
+                      onChange={(value) => updateModule.mutate({ id: selected.id, sectors: value })}
+                      sectors={sectors ?? []}
+                    />
                   </div>
                 )}
+
+                <div className="mt-5 border-t-2 border-line/30 pt-4">
+                  <h3 className="text-label mb-3 text-xs text-canvas-fg/60">Campos extras</h3>
+                  <ExtraFieldsEditor fields={draftExtraFields} onChange={setDraftExtraFields} />
+                </div>
               </div>
             </div>
           )}
         </div>
       )}
 
-      <Modal open={creating} onClose={() => setCreating(false)} title="Novo módulo">
+      <Modal
+        open={creating}
+        onClose={() => setCreating(false)}
+        title={creatingParentId ? 'Novo sub-módulo' : 'Novo módulo'}
+        isDirty={Boolean(newTitle.trim())}
+      >
         <form onSubmit={handleCreate}>
           <Field label="Título">
             <TextInput
@@ -217,8 +328,8 @@ export function GddPage() {
             />
           </Field>
           <Field label="Fase">
-            <Select value={newPhase} onChange={(e) => setNewPhase(e.target.value as Phase)}>
-              {PHASES.map((p) => (
+            <Select value={newPhase} onChange={(e) => setNewPhase(e.target.value)}>
+              {phaseItems.map((p) => (
                 <option key={p.value} value={p.value}>
                   {p.label}
                 </option>
@@ -244,7 +355,7 @@ export function GddPage() {
           setSelectedId(null)
         }}
         title="Excluir módulo"
-        description="O conteúdo desse módulo será apagado permanentemente."
+        description="O conteúdo desse módulo (e dos sub-módulos, se houver) será apagado permanentemente."
         confirmLabel="Excluir"
       />
     </div>

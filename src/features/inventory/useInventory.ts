@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
-import type { InventoryField, InventoryItem, InventoryType } from '@/lib/types'
+import type { InventoryField, InventoryItem, InventoryType, InventoryValue } from '@/lib/types'
 
 export function useInventoryTypes(projectId: string | undefined) {
   return useQuery({
@@ -79,6 +79,21 @@ export function useDeleteInventoryType(projectId: string) {
   })
 }
 
+export function useAllInventoryItems(projectId: string | undefined) {
+  return useQuery({
+    queryKey: ['inventory_items', projectId, 'all'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('inventory_items')
+        .select('*')
+        .eq('project_id', projectId)
+      if (error) throw error
+      return data as InventoryItem[]
+    },
+    enabled: Boolean(projectId),
+  })
+}
+
 export function useInventoryItems(projectId: string | undefined, typeId: string | undefined) {
   return useQuery({
     queryKey: ['inventory_items', projectId, typeId],
@@ -101,17 +116,26 @@ export function useUpsertInventoryItem(projectId: string, typeId: string) {
     mutationFn: async ({
       id,
       data,
+      status,
+      tags,
+      sectors,
     }: {
       id?: string
-      data: Record<string, string | number | null>
+      data: Record<string, InventoryValue>
+      status?: string | null
+      tags?: string[]
+      sectors?: string[]
     }) => {
       if (id) {
-        const { error } = await supabase.from('inventory_items').update({ data }).eq('id', id)
+        const { error } = await supabase
+          .from('inventory_items')
+          .update({ data, status, tags: tags ?? [], sectors: sectors ?? [] })
+          .eq('id', id)
         if (error) throw error
       } else {
         const { error } = await supabase
           .from('inventory_items')
-          .insert({ project_id: projectId, type_id: typeId, data })
+          .insert({ project_id: projectId, type_id: typeId, data, status, tags: tags ?? [], sectors: sectors ?? [] })
         if (error) throw error
       }
     },
