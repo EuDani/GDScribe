@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useDroppable } from '@dnd-kit/core'
-import { CheckCircle2, GitBranch, Pause, Target, Timer, Trash2, X } from 'lucide-react'
+import { CheckCircle2, GitBranch, Maximize2, Minimize2, Pause, Target, Timer, Trash2, X } from 'lucide-react'
 import { clsx } from 'clsx'
 import type { FlowPriority, FlowTask, ProjectSector } from '@/lib/types'
 import { FLOW_PRIORITIES } from '@/lib/types'
@@ -35,6 +35,8 @@ export function FlowFocusPanel({
   task,
   sectors,
   projectId,
+  expanded,
+  onToggleExpand,
   onCommit,
   onBumpVersion,
   onPause,
@@ -45,6 +47,8 @@ export function FlowFocusPanel({
   task: FlowTask | null
   sectors: ProjectSector[]
   projectId: string
+  expanded: boolean
+  onToggleExpand: () => void
   onCommit: (fields: Partial<FlowTask>) => void
   onBumpVersion: () => void
   onPause: () => void
@@ -168,6 +172,14 @@ export function FlowFocusPanel({
             className="cursor-pointer border-2 border-line p-1 text-canvas-fg/60 hover:bg-accent-red hover:text-canvas-fg"
           >
             <Trash2 size={13} />
+          </button>
+          <button
+            type="button"
+            onClick={onToggleExpand}
+            title={expanded ? 'Sair da tela cheia' : 'Ver só a tarefa em foco'}
+            className="cursor-pointer border-2 border-line p-1 text-canvas-fg/60 hover:bg-accent-blue hover:text-ink"
+          >
+            {expanded ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
           </button>
         </div>
       </div>

@@ -61,6 +61,7 @@ export function FlowPage() {
   const [pendingDelete, setPendingDelete] = useState<string | null>(null)
   const [cancelingTaskId, setCancelingTaskId] = useState<string | null>(null)
   const [confirmingBumpVersion, setConfirmingBumpVersion] = useState(false)
+  const [focusExpanded, setFocusExpanded] = useState(false)
 
   const editingTask = tasks?.find((t) => t.id === editingTaskId) ?? null
   const focusedTask = tasks?.find((t) => t.state === 'focus') ?? null
@@ -340,24 +341,28 @@ export function FlowPage() {
       {hasAnyTask && (
         <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
           <div className="flex flex-col gap-4 lg:flex-row lg:items-stretch">
-            <div className="lg:w-2/5">
-              <FlowColumn
-                state="queued"
-                label="Fila"
-                tasks={queue}
-                sectors={sectors ?? []}
-                onAddTask={() => setCreateModalOpen(true)}
-                onTaskClick={(t) => setEditingTaskId(t.id)}
-                onFocusTask={handleFocusTask}
-                className="h-[720px]"
-              />
-            </div>
+            {!focusExpanded && (
+              <div className="lg:w-2/5">
+                <FlowColumn
+                  state="queued"
+                  label="Fila"
+                  tasks={queue}
+                  sectors={sectors ?? []}
+                  onAddTask={() => setCreateModalOpen(true)}
+                  onTaskClick={(t) => setEditingTaskId(t.id)}
+                  onFocusTask={handleFocusTask}
+                  className="h-[720px]"
+                />
+              </div>
+            )}
 
-            <div className="lg:w-3/5">
+            <div className={clsx(focusExpanded ? 'w-full h-[80vh]' : 'lg:w-3/5')}>
               <FlowFocusPanel
                 task={focusedTask}
                 sectors={sectors ?? []}
                 projectId={project.id}
+                expanded={focusExpanded}
+                onToggleExpand={() => setFocusExpanded((v) => !v)}
                 onCommit={commitFocusEdit}
                 onBumpVersion={() => setConfirmingBumpVersion(true)}
                 onPause={pauseFocusTask}
