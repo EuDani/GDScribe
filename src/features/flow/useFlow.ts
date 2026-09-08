@@ -25,21 +25,25 @@ type NewFlowTaskInput = {
   title: string
   description: string | null
 } & Partial<
-  Pick<FlowTask, 'priority' | 'sectors' | 'desired_date' | 'start_date' | 'checklists' | 'version_label' | 'logs'>
+  Pick<
+    FlowTask,
+    'priority' | 'sectors' | 'desired_date' | 'start_date' | 'checklists' | 'version_label' | 'logs' | 'state'
+  >
 >
 
 export function useCreateFlowTask(projectId: string) {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async ({ title, description, ...rest }: NewFlowTaskInput) => {
+    mutationFn: async ({ title, description, state, ...rest }: NewFlowTaskInput) => {
       const existing = queryClient.getQueryData<FlowTask[]>(['flow_tasks', projectId]) ?? []
-      const backlogCount = existing.filter((t) => t.state === 'backlog').length
+      const targetState = state ?? 'queued'
+      const count = existing.filter((t) => t.state === targetState).length
       const { error } = await supabase.from('flow_tasks').insert({
         project_id: projectId,
         title,
         description: description || null,
-        state: 'backlog',
-        queue_order: backlogCount,
+        state: targetState,
+        queue_order: count,
         // pré-preenche com hoje — o usuário ajusta se o trabalho começar depois
         start_date: new Date().toISOString().slice(0, 10),
         logs: [{ id: crypto.randomUUID(), message: 'Tarefa criada', created_at: new Date().toISOString() }],

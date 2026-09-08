@@ -156,6 +156,7 @@ export function FlowPage() {
       checklists: focusedTask.checklists,
       version_label: oldVersion,
       start_date: focusedTask.start_date,
+      state: 'backlog',
       logs: [
         {
           id: crypto.randomUUID(),
@@ -343,6 +344,7 @@ export function FlowPage() {
                 label="Fila"
                 tasks={queue}
                 sectors={sectors ?? []}
+                onAddTask={() => setCreateModalOpen(true)}
                 onTaskClick={(t) => setEditingTaskId(t.id)}
                 onFocusTask={handleFocusTask}
                 className="h-[720px]"
@@ -400,7 +402,7 @@ export function FlowPage() {
             <Button type="button" variant="ghost" onClick={() => setCreateModalOpen(false)}>
               Cancelar
             </Button>
-            <Button type="submit">Adicionar ao backlog</Button>
+            <Button type="submit">Adicionar à fila</Button>
           </div>
         </form>
       </Modal>
