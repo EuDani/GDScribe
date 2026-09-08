@@ -4,7 +4,8 @@ import { CalendarDays, CheckSquare, RotateCcw, Target } from 'lucide-react'
 import { motion } from 'motion/react'
 import { clsx } from 'clsx'
 import type { FlowTask, ProjectSector } from '@/lib/types'
-import { priorityMeta } from '@/features/flow/flowLogic'
+import { stripHtml } from '@/lib/html'
+import { aggregateChecklistProgress, priorityMeta } from '@/features/flow/flowLogic'
 
 function formatDate(iso: string) {
   const [y, m, d] = iso.split('-')
@@ -22,10 +23,11 @@ export function FlowTaskCardFace({
   onFocus?: () => void
   onResume?: () => void
 }) {
-  const doneCount = task.checklist.filter((i) => i.done).length
+  const { done: doneCount, total: checklistTotal } = aggregateChecklistProgress(task.checklists)
   const overdue = task.desired_date ? new Date(task.desired_date) < new Date(new Date().toDateString()) : false
   const priority = priorityMeta(task.priority)
   const taskSectors = sectors.filter((s) => task.sectors.includes(s.id))
+  const descriptionPreview = task.description ? stripHtml(task.description) : ''
 
   return (
     <div className="group/card relative p-3">
@@ -37,14 +39,14 @@ export function FlowTaskCardFace({
         />
         <p className="text-sm font-semibold">{task.title}</p>
       </div>
-      {task.description && <p className="mt-1 line-clamp-2 text-xs text-ink/60">{task.description}</p>}
+      {descriptionPreview && <p className="mt-1 line-clamp-2 text-xs text-ink/60">{descriptionPreview}</p>}
 
-      {(task.checklist.length > 0 || task.desired_date) && (
+      {(checklistTotal > 0 || task.desired_date) && (
         <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-ink/60">
-          {task.checklist.length > 0 && (
+          {checklistTotal > 0 && (
             <span className="flex items-center gap-1">
               <CheckSquare size={12} />
-              {doneCount}/{task.checklist.length}
+              {doneCount}/{checklistTotal}
             </span>
           )}
           {task.desired_date && (

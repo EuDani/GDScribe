@@ -1,4 +1,4 @@
-import type { ChecklistItem, FlowLogEntry, FlowPriority, FlowTask, FlowTaskState } from '@/lib/types'
+import type { FlowChecklistGroup, FlowLogEntry, FlowPriority, FlowTask, FlowTaskState } from '@/lib/types'
 import { FLOW_PRIORITIES } from '@/lib/types'
 
 export const STATE_LABELS: Record<FlowTaskState, string> = {
@@ -56,14 +56,20 @@ export function formatLogTimestamp(iso: string): string {
   return `${date} ${time}`
 }
 
+/** Soma os itens de todos os checklists nomeados de uma tarefa num único total. */
+export function aggregateChecklistProgress(checklists: FlowChecklistGroup[]): { done: number; total: number } {
+  const items = checklists.flatMap((g) => g.items)
+  return { done: items.filter((i) => i.done).length, total: items.length }
+}
+
 /**
  * Previsão de conclusão: extrapola linearmente o ritmo de checklist concluída
- * desde a criação da tarefa (dias corridos / % concluído) — mesma lógica de
- * tendência usada no roadmap do projeto, só que por tarefa.
+ * (somando todos os checklists nomeados) desde a criação da tarefa (dias
+ * corridos / % concluído) — mesma lógica de tendência usada no roadmap do
+ * projeto, só que por tarefa.
  */
-export function computeForecastDate(task: Pick<FlowTask, 'checklist' | 'created_at'>): string | null {
-  const total = task.checklist.length
-  const done = task.checklist.filter((i) => i.done).length
+export function computeForecastDate(task: Pick<FlowTask, 'checklists' | 'created_at'>): string | null {
+  const { done, total } = aggregateChecklistProgress(task.checklists)
   if (total === 0 || done === 0 || done >= total) return null
   const percent = done / total
   const elapsedMs = Date.now() - new Date(task.created_at).getTime()
@@ -73,21 +79,45 @@ export function computeForecastDate(task: Pick<FlowTask, 'checklist' | 'created_
   return new Date(Date.now() + remainingMs).toISOString().slice(0, 10)
 }
 
-/** Compara a diferença entre dois checklists e devolve mensagens de log legíveis. */
-function diffChecklist(before: ChecklistItem[], after: ChecklistItem[]): string[] {
+/** Gera o próximo rótulo de versão — "v1" -> "v2", "Versão 3" -> "Versão 4", senão anexa " 2". */
+export function nextVersionLabel(current: string): string {
+  const match = current.trim().match(/^(.*?)(\d+)(\D*)$/)
+  if (match) {
+    const [, prefix, num, suffix] = match
+    return `${prefix}${Number(num) + 1}${suffix}`
+  }
+  return `${current.trim()} 2`.trim()
+}
+
+/** Compara a diferença entre dois conjuntos de checklists nomeados e devolve mensagens de log legíveis. */
+function diffChecklistGroups(before: FlowChecklistGroup[], after: FlowChecklistGroup[]): string[] {
   const messages: string[] = []
-  const beforeIds = new Set(before.map((i) => i.id))
-  const afterIds = new Set(after.map((i) => i.id))
-  const added = after.filter((i) => !beforeIds.has(i.id))
-  const removed = before.filter((i) => !afterIds.has(i.id))
-  if (added.length === 1) messages.push(`Item adicionado à checklist: "${added[0].text}"`)
-  else if (added.length > 1) messages.push(`${added.length} novos itens adicionados à checklist`)
-  if (removed.length === 1) messages.push(`Item removido da checklist: "${removed[0].text}"`)
-  else if (removed.length > 1) messages.push(`${removed.length} itens removidos da checklist`)
-  for (const item of after) {
-    const prev = before.find((i) => i.id === item.id)
-    if (prev && prev.done !== item.done) {
-      messages.push(item.done ? `"${item.text}" concluído` : `"${item.text}" reaberto`)
+  const beforeGroups = new Map(before.map((g) => [g.id, g]))
+  const afterGroups = new Map(after.map((g) => [g.id, g]))
+
+  for (const g of after) {
+    if (!beforeGroups.has(g.id)) messages.push(`Checklist "${g.name}" criado`)
+  }
+  for (const g of before) {
+    if (!afterGroups.has(g.id)) messages.push(`Checklist "${g.name}" removido`)
+  }
+
+  for (const g of after) {
+    const prevGroup = beforeGroups.get(g.id)
+    if (!prevGroup) continue
+    const beforeIds = new Set(prevGroup.items.map((i) => i.id))
+    const afterIds = new Set(g.items.map((i) => i.id))
+    const added = g.items.filter((i) => !beforeIds.has(i.id))
+    const removed = prevGroup.items.filter((i) => !afterIds.has(i.id))
+    if (added.length === 1) messages.push(`Item adicionado em "${g.name}": "${added[0].text}"`)
+    else if (added.length > 1) messages.push(`${added.length} itens adicionados em "${g.name}"`)
+    if (removed.length === 1) messages.push(`Item removido de "${g.name}": "${removed[0].text}"`)
+    else if (removed.length > 1) messages.push(`${removed.length} itens removidos de "${g.name}"`)
+    for (const item of g.items) {
+      const prevItem = prevGroup.items.find((i) => i.id === item.id)
+      if (prevItem && prevItem.done !== item.done) {
+        messages.push(`"${item.text}" ${item.done ? 'concluído' : 'reaberto'} (${g.name})`)
+      }
     }
   }
   return messages
@@ -117,8 +147,8 @@ export function diffTaskEdit(before: FlowTask, after: Partial<FlowTask>): string
   if (after.sectors !== undefined && JSON.stringify(after.sectors) !== JSON.stringify(before.sectors)) {
     messages.push('Setores alterados')
   }
-  if (after.checklist !== undefined) {
-    messages.push(...diffChecklist(before.checklist, after.checklist))
+  if (after.checklists !== undefined) {
+    messages.push(...diffChecklistGroups(before.checklists, after.checklists))
   }
   if (after.notes !== undefined && after.notes.length !== before.notes.length) {
     messages.push(after.notes.length > before.notes.length ? 'Observação adicionada' : 'Observação removida')

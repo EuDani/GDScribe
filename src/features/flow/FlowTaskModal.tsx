@@ -1,20 +1,22 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import { clsx } from 'clsx'
-import type { ChecklistItem, FlowNoteEntry, FlowPriority, FlowTask, ProjectSector } from '@/lib/types'
+import type { FlowChecklistGroup, FlowNoteEntry, FlowPriority, FlowTask, ProjectSector } from '@/lib/types'
 import { FLOW_PRIORITIES } from '@/lib/types'
 import { Button } from '@/components/ui/Button'
-import { Field, Select, TextInput, Textarea } from '@/components/ui/Input'
+import { Field, Select, TextInput } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
-import { ChecklistEditor } from '@/components/ChecklistEditor'
 import { SectorPicker } from '@/components/SectorPicker'
+import { RichTextEditor } from '@/components/RichTextEditor'
 import { EntryListEditor } from '@/features/flow/EntryListEditor'
+import { FlowChecklistGroups } from '@/features/flow/FlowChecklistGroups'
 import { formatLogTimestamp, STATE_LABELS } from '@/features/flow/flowLogic'
 
 export function FlowTaskModal({
   open,
   task,
   sectors,
+  projectId,
   onClose,
   onSave,
   onDelete,
@@ -23,6 +25,7 @@ export function FlowTaskModal({
   open: boolean
   task: FlowTask | null
   sectors: ProjectSector[]
+  projectId: string
   onClose: () => void
   onSave: (fields: Partial<FlowTask>) => void
   onDelete: () => void
@@ -35,13 +38,23 @@ export function FlowTaskModal({
   const [desiredDate, setDesiredDate] = useState('')
   const [versionLabel, setVersionLabel] = useState('v1')
   const [taskSectors, setTaskSectors] = useState<string[]>([])
-  const [checklist, setChecklist] = useState<ChecklistItem[]>([])
+  const [checklists, setChecklists] = useState<FlowChecklistGroup[]>([])
   const [notes, setNotes] = useState<FlowNoteEntry[]>([])
   const [decisions, setDecisions] = useState<FlowNoteEntry[]>([])
   const [logsOpen, setLogsOpen] = useState(false)
+  const lastTaskId = useRef<string | null>(null)
 
+  // Só ressincroniza o rascunho quando abre uma tarefa DIFERENTE — usar o
+  // objeto inteiro como dependência faz o formulário se resetar sozinho a
+  // cada refetch em segundo plano (ex: o polling do cronômetro), perdendo o
+  // que o usuário tinha acabado de digitar/selecionar.
   useEffect(() => {
-    if (!task) return
+    if (!task) {
+      lastTaskId.current = null
+      return
+    }
+    if (task.id === lastTaskId.current) return
+    lastTaskId.current = task.id
     setTitle(task.title)
     setDescription(task.description ?? '')
     setPriority(task.priority)
@@ -49,7 +62,7 @@ export function FlowTaskModal({
     setDesiredDate(task.desired_date ?? '')
     setVersionLabel(task.version_label)
     setTaskSectors(task.sectors)
-    setChecklist(task.checklist)
+    setChecklists(task.checklists)
     setNotes(task.notes)
     setDecisions(task.decisions)
     setLogsOpen(false)
@@ -65,7 +78,7 @@ export function FlowTaskModal({
     desiredDate !== (task.desired_date ?? '') ||
     versionLabel !== task.version_label ||
     JSON.stringify(taskSectors) !== JSON.stringify(task.sectors) ||
-    JSON.stringify(checklist) !== JSON.stringify(task.checklist) ||
+    JSON.stringify(checklists) !== JSON.stringify(task.checklists) ||
     JSON.stringify(notes) !== JSON.stringify(task.notes) ||
     JSON.stringify(decisions) !== JSON.stringify(task.decisions)
 
@@ -80,7 +93,7 @@ export function FlowTaskModal({
       desired_date: desiredDate || null,
       version_label: versionLabel.trim() || 'v1',
       sectors: taskSectors,
-      checklist,
+      checklists,
       notes,
       decisions,
     })
@@ -100,7 +113,7 @@ export function FlowTaskModal({
           <TextInput required autoFocus value={title} onChange={(e) => setTitle(e.target.value)} />
         </Field>
         <Field label="Descrição" hint="Opcional">
-          <Textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} />
+          <RichTextEditor projectId={projectId} value={description} onChange={setDescription} minHeight={140} />
         </Field>
 
         <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -128,8 +141,8 @@ export function FlowTaskModal({
           <SectorPicker value={taskSectors} onChange={setTaskSectors} sectors={sectors} />
         </Field>
 
-        <Field label="Checklist">
-          <ChecklistEditor items={checklist} onChange={setChecklist} />
+        <Field label="Checklists">
+          <FlowChecklistGroups groups={checklists} onChange={setChecklists} />
         </Field>
 
         <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2">

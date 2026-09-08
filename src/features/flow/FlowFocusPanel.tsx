@@ -1,16 +1,23 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useDroppable } from '@dnd-kit/core'
-import { CheckCircle2, Pause, Target, Timer, Trash2, X } from 'lucide-react'
+import { CheckCircle2, GitBranch, Pause, Target, Timer, Trash2, X } from 'lucide-react'
 import { clsx } from 'clsx'
-import { motion } from 'motion/react'
 import type { FlowPriority, FlowTask, ProjectSector } from '@/lib/types'
 import { FLOW_PRIORITIES } from '@/lib/types'
 import { Button } from '@/components/ui/Button'
 import { Select, TextInput } from '@/components/ui/Input'
-import { ChecklistEditor } from '@/components/ChecklistEditor'
 import { SectorPicker } from '@/components/SectorPicker'
+import { RichTextEditor } from '@/components/RichTextEditor'
 import { EntryListEditor } from '@/features/flow/EntryListEditor'
-import { computeForecastDate, formatDuration, formatLogTimestamp, liveTimeSpent, priorityMeta } from '@/features/flow/flowLogic'
+import { FlowChecklistGroups } from '@/features/flow/FlowChecklistGroups'
+import {
+  aggregateChecklistProgress,
+  computeForecastDate,
+  formatDuration,
+  formatLogTimestamp,
+  liveTimeSpent,
+  priorityMeta,
+} from '@/features/flow/flowLogic'
 
 function formatDate(iso: string) {
   const [y, m, d] = iso.split('-')
@@ -27,7 +34,9 @@ const editableFieldClasses =
 export function FlowFocusPanel({
   task,
   sectors,
+  projectId,
   onCommit,
+  onBumpVersion,
   onPause,
   onComplete,
   onCancel,
@@ -35,7 +44,9 @@ export function FlowFocusPanel({
 }: {
   task: FlowTask | null
   sectors: ProjectSector[]
+  projectId: string
   onCommit: (fields: Partial<FlowTask>) => void
+  onBumpVersion: () => void
   onPause: () => void
   onComplete: (force: boolean) => void
   onCancel: () => void
@@ -46,14 +57,22 @@ export function FlowFocusPanel({
   const [confirmingForce, setConfirmingForce] = useState(false)
   const [draftTitle, setDraftTitle] = useState('')
   const [draftDescription, setDraftDescription] = useState('')
-  const [draftVersion, setDraftVersion] = useState('')
+  const lastTaskId = useRef<string | null>(null)
 
+  // Só ressincroniza o rascunho quando abre uma tarefa DIFERENTE — usar o
+  // objeto inteiro como dependência faz o formulário se resetar sozinho a
+  // cada refetch em segundo plano (ex: o polling do cronômetro), perdendo o
+  // que o usuário tinha acabado de digitar.
   useEffect(() => {
-    if (!task) return
+    if (!task) {
+      lastTaskId.current = null
+      return
+    }
+    if (task.id === lastTaskId.current) return
+    lastTaskId.current = task.id
     setDraftTitle(task.title)
     setDraftDescription(task.description ?? '')
-    setDraftVersion(task.version_label)
-  }, [task?.id])
+  }, [task])
 
   useEffect(() => {
     if (task?.state !== 'focus') return
@@ -77,10 +96,8 @@ export function FlowFocusPanel({
     )
   }
 
-  const doneCount = task.checklist.filter((i) => i.done).length
-  const total = task.checklist.length
+  const { done: doneCount, total } = aggregateChecklistProgress(task.checklists)
   const pending = total - doneCount
-  const percent = total > 0 ? Math.round((doneCount / total) * 100) : 0
   const seconds = liveTimeSpent(task)
   const forecast = computeForecastDate(task)
   const priority = priorityMeta(task.priority)
@@ -97,13 +114,6 @@ export function FlowFocusPanel({
     if (draftDescription !== (task.description ?? '')) onCommit({ description: draftDescription.trim() || null })
   }
 
-  function commitVersion() {
-    if (!task) return
-    const v = draftVersion.trim() || 'v1'
-    setDraftVersion(v)
-    if (v !== task.version_label) onCommit({ version_label: v })
-  }
-
   return (
     <div
       ref={setNodeRef}
@@ -116,13 +126,15 @@ export function FlowFocusPanel({
         <div className="flex items-center gap-2">
           <Target size={14} className="text-canvas-fg/50" />
           <h3 className="text-label text-xs font-semibold text-canvas-fg/60">FOCO</h3>
-          <input
-            value={draftVersion}
-            onChange={(e) => setDraftVersion(e.target.value)}
-            onBlur={commitVersion}
-            onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-            className="w-14 border border-line/30 bg-transparent px-1 py-0.5 text-[10px] text-canvas-fg/60 outline-none hover:border-line/50 focus:border-line"
-          />
+          <span className="text-label border border-line/30 px-1.5 py-0.5 text-[10px] text-canvas-fg/60">{task.version_label}</span>
+          <button
+            type="button"
+            onClick={onBumpVersion}
+            title="Nova versão — arquiva a atual no backlog"
+            className="cursor-pointer border-2 border-line p-1 text-canvas-fg/60 hover:bg-accent-yellow hover:text-ink"
+          >
+            <GitBranch size={12} />
+          </button>
         </div>
         <div className="flex shrink-0 items-center gap-1">
           <button
@@ -170,14 +182,9 @@ export function FlowFocusPanel({
         />
 
         <SectionHeader label="Descrição" />
-        <textarea
-          value={draftDescription}
-          onChange={(e) => setDraftDescription(e.target.value)}
-          onBlur={commitDescription}
-          rows={3}
-          placeholder="Sem descrição — clique para adicionar"
-          className={clsx(editableFieldClasses, 'resize-y text-sm placeholder:text-canvas-fg/30')}
-        />
+        <div onBlur={(e) => !e.currentTarget.contains(e.relatedTarget as Node) && commitDescription()}>
+          <RichTextEditor projectId={projectId} value={draftDescription} onChange={setDraftDescription} placeholder="Sem descrição — clique para adicionar" minHeight={100} />
+        </div>
 
         <SectionHeader label="Prioridade" />
         <Select value={task.priority} onChange={(e) => onCommit({ priority: e.target.value as FlowPriority })} className="max-w-[200px]">
@@ -215,21 +222,13 @@ export function FlowFocusPanel({
           {formatDuration(seconds)}
         </p>
 
-        <SectionHeader label="Checklist" />
+        <SectionHeader label="Checklists" />
         {total > 0 && (
-          <div className="mb-2">
-            <div className="mb-1 flex items-center justify-between text-xs text-canvas-fg/60">
-              <span>
-                ☑ {doneCount}/{total}
-              </span>
-              <span>{percent}%</span>
-            </div>
-            <div className="h-3 w-full border-2 border-line bg-canvas">
-              <motion.div className="h-full bg-accent-green" animate={{ width: `${percent}%` }} transition={{ duration: 0.25, ease: 'easeOut' }} />
-            </div>
-          </div>
+          <p className="mb-2 text-xs text-canvas-fg/50">
+            ☑ {doneCount}/{total} no total
+          </p>
         )}
-        <ChecklistEditor items={task.checklist} onChange={(checklist) => onCommit({ checklist })} />
+        <FlowChecklistGroups groups={task.checklists} onChange={(checklists) => onCommit({ checklists })} />
 
         <SectionHeader label="Observações" />
         <EntryListEditor placeholder="Nova observação…" items={task.notes} onChange={(notes) => onCommit({ notes })} />

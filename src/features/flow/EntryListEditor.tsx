@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
 import type { FlowNoteEntry } from '@/lib/types'
-import { TextInput } from '@/components/ui/Input'
+import { Textarea } from '@/components/ui/Input'
 
 /** Lista append-able de observações/decisões — usada tanto no modal quanto no painel de foco. */
 export function EntryListEditor({
@@ -27,7 +27,7 @@ export function EntryListEditor({
         <div className="mb-1.5 space-y-1.5">
           {items.map((item) => (
             <div key={item.id} className="flex items-start gap-2 border-2 border-line/30 bg-canvas px-2 py-1.5 text-xs">
-              <span className="flex-1">{item.text}</span>
+              <span className="flex-1 whitespace-pre-wrap">{item.text}</span>
               <button
                 type="button"
                 onClick={() => onChange(items.filter((i) => i.id !== item.id))}
@@ -40,17 +40,18 @@ export function EntryListEditor({
           ))}
         </div>
       )}
-      <div className="flex items-center gap-2">
-        <TextInput
+      <div className="flex items-start gap-2">
+        <Textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === 'Enter') {
+            if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
               e.preventDefault()
               add()
             }
           }}
-          placeholder={placeholder}
+          placeholder={`${placeholder} (Ctrl+Enter para adicionar)`}
+          rows={2}
           className="flex-1"
         />
         <button

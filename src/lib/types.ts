@@ -380,6 +380,13 @@ export interface FlowNoteEntry {
   created_at: string
 }
 
+/** Checklist nomeado — uma tarefa pode ter vários (ex: "Móveis", "Instrumentos"). */
+export interface FlowChecklistGroup {
+  id: string
+  name: string
+  items: ChecklistItem[]
+}
+
 export interface FlowTask {
   id: string
   project_id: string
@@ -392,7 +399,7 @@ export interface FlowTask {
   start_date: string | null
   desired_date: string | null
   version_label: string
-  checklist: ChecklistItem[]
+  checklists: FlowChecklistGroup[]
   notes: FlowNoteEntry[]
   decisions: FlowNoteEntry[]
   logs: FlowLogEntry[]

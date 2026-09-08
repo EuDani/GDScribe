@@ -24,7 +24,9 @@ export function useFlowTasks(projectId: string | undefined) {
 type NewFlowTaskInput = {
   title: string
   description: string | null
-} & Partial<Pick<FlowTask, 'priority' | 'sectors' | 'desired_date' | 'checklist'>>
+} & Partial<
+  Pick<FlowTask, 'priority' | 'sectors' | 'desired_date' | 'start_date' | 'checklists' | 'version_label' | 'logs'>
+>
 
 export function useCreateFlowTask(projectId: string) {
   const queryClient = useQueryClient()
@@ -38,6 +40,8 @@ export function useCreateFlowTask(projectId: string) {
         description: description || null,
         state: 'backlog',
         queue_order: backlogCount,
+        // pré-preenche com hoje — o usuário ajusta se o trabalho começar depois
+        start_date: new Date().toISOString().slice(0, 10),
         logs: [{ id: crypto.randomUUID(), message: 'Tarefa criada', created_at: new Date().toISOString() }],
         ...rest,
       })

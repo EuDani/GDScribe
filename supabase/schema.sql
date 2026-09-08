@@ -280,6 +280,7 @@ create table if not exists public.flow_tasks (
   desired_date date,
   version_label text not null default 'v1',
   checklist jsonb not null default '[]'::jsonb,
+  checklists jsonb not null default '[]'::jsonb,
   notes jsonb not null default '[]'::jsonb,
   decisions jsonb not null default '[]'::jsonb,
   logs jsonb not null default '[]'::jsonb,
@@ -295,9 +296,13 @@ create table if not exists public.flow_tasks (
 create index if not exists flow_tasks_project_id_idx on public.flow_tasks (project_id);
 create index if not exists flow_tasks_state_idx on public.flow_tasks (state);
 
--- Coluna adicionada depois da criação da tabela acima — garante que bancos
--- que já rodaram esse arquivo uma vez ganhem a coluna também.
+-- Colunas adicionadas depois da criação da tabela acima — garante que bancos
+-- que já rodaram esse arquivo uma vez ganhem as colunas também.
+-- checklists substitui checklist (agora são vários checklists nomeados por
+-- tarefa: [{id, name, items}] em vez de uma lista única) — a coluna antiga
+-- fica sem uso, não é removida pra não arriscar dado de quem já rodou antes.
 alter table public.flow_tasks add column if not exists start_date date;
+alter table public.flow_tasks add column if not exists checklists jsonb not null default '[]'::jsonb;
 
 -- ============================================================
 -- flowcharts — diagramas de fluxo (nós + conexões), um projeto pode ter

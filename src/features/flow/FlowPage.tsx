@@ -9,7 +9,7 @@ import {
   useSensor,
   useSensors,
 } from '@dnd-kit/core'
-import { ChevronDown, ChevronUp, Plus } from 'lucide-react'
+import { Archive, Plus } from 'lucide-react'
 import { clsx } from 'clsx'
 import { motion } from 'motion/react'
 import { useOutletContext } from 'react-router-dom'
@@ -26,8 +26,9 @@ import { FlowColumn } from '@/features/flow/FlowColumn'
 import { FlowFocusPanel } from '@/features/flow/FlowFocusPanel'
 import { FlowTaskCardFace } from '@/features/flow/FlowTaskCard'
 import { FlowTaskModal } from '@/features/flow/FlowTaskModal'
+import { FlowOverviewModal } from '@/features/flow/FlowOverviewModal'
 import { CancelTaskDialog } from '@/features/flow/CancelTaskDialog'
-import { appendLogs, priorityMeta, STATE_LABELS, stopTimer, diffTaskEdit } from '@/features/flow/flowLogic'
+import { appendLogs, nextVersionLabel, STATE_LABELS, stopTimer, diffTaskEdit } from '@/features/flow/flowLogic'
 import {
   useBulkUpdateFlowTasks,
   useCreateFlowTask,
@@ -35,11 +36,6 @@ import {
   useFlowTasks,
   useUpdateFlowTask,
 } from '@/features/flow/useFlow'
-
-function formatShortDate(iso: string) {
-  const [y, m, d] = iso.split('-')
-  return `${d}/${m}/${y.slice(2)}`
-}
 
 export function FlowPage() {
   const { project } = useOutletContext<{ project: Project }>()
@@ -54,7 +50,7 @@ export function FlowPage() {
   const [activeTask, setActiveTask] = useState<FlowTask | null>(null)
   const [priorityFilter, setPriorityFilter] = useState<Set<FlowPriority>>(new Set())
   const [sectorFilter, setSectorFilter] = useState<string[]>([])
-  const [historyOpen, setHistoryOpen] = useState(false)
+  const [overviewOpen, setOverviewOpen] = useState(false)
 
   const [createModalOpen, setCreateModalOpen] = useState(false)
   const [newTitle, setNewTitle] = useState('')
@@ -80,13 +76,8 @@ export function FlowPage() {
       .sort((a, b) => a.queue_order - b.queue_order)
   }
 
-  const backlog = bucket('backlog')
   const queue = bucket('queued')
-  const paused = bucket('paused')
-  const history = (tasks ?? [])
-    .filter((t) => t.state === 'done' || t.state === 'cancelled')
-    .filter(matchesFilters)
-    .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
+  const overviewTasks = (tasks ?? []).filter((t) => t.state !== 'focus')
 
   function togglePriority(p: FlowPriority) {
     setPriorityFilter((prev) => {
@@ -116,13 +107,13 @@ export function FlowPage() {
       logs: appendLogs(task.logs, [current ? `Foco retomado (troca com "${current.title}")` : 'Foco iniciado']),
     })
     bulkUpdate.mutate(updates)
+    setOverviewOpen(false)
   }
 
-  function resumeTask(task: FlowTask) {
+  function sendToQueue(task: FlowTask) {
     const list = bucket('queued')
-    bulkUpdate.mutate([
-      { id: task.id, state: 'queued', queue_order: list.length, logs: appendLogs(task.logs, ['Retomada — voltou para a fila']) },
-    ])
+    const message = task.state === 'paused' ? 'Retomada — voltou para a fila' : 'Movida para a fila'
+    bulkUpdate.mutate([{ id: task.id, state: 'queued', queue_order: list.length, logs: appendLogs(task.logs, [message]) }])
   }
 
   function pauseFocusTask() {
@@ -134,7 +125,7 @@ export function FlowPage() {
 
   function completeFocusTask(force: boolean) {
     if (!focusedTask) return
-    const pending = focusedTask.checklist.filter((i) => !i.done).length
+    const pending = focusedTask.checklists.flatMap((g) => g.items).filter((i) => !i.done).length
     const message = force && pending > 0 ? `Concluída com ${pending} item(ns) pendente(s) (forçada)` : 'Concluída'
     bulkUpdate.mutate([
       {
@@ -151,6 +142,33 @@ export function FlowPage() {
     if (!focusedTask) return
     const messages = diffTaskEdit(focusedTask, fields)
     updateTask.mutate({ id: focusedTask.id, ...fields, logs: appendLogs(focusedTask.logs, messages) })
+  }
+
+  function handleBumpVersion() {
+    if (!focusedTask) return
+    const oldVersion = focusedTask.version_label
+    const newVersion = nextVersionLabel(oldVersion)
+    createTask.mutate({
+      title: focusedTask.title,
+      description: focusedTask.description,
+      priority: focusedTask.priority,
+      sectors: focusedTask.sectors,
+      checklists: focusedTask.checklists,
+      version_label: oldVersion,
+      start_date: focusedTask.start_date,
+      logs: [
+        {
+          id: crypto.randomUUID(),
+          message: `Arquivada no backlog como versão anterior (${oldVersion}) de "${focusedTask.title}"`,
+          created_at: new Date().toISOString(),
+        },
+      ],
+    })
+    updateTask.mutate({
+      id: focusedTask.id,
+      version_label: newVersion,
+      logs: appendLogs(focusedTask.logs, [`Nova versão: ${newVersion} — ${oldVersion} arquivada no backlog`]),
+    })
   }
 
   function openCancelDialog(taskId: string) {
@@ -207,9 +225,8 @@ export function FlowPage() {
       handleFocusTask(task)
       return
     }
-    if (targetState !== 'backlog' && targetState !== 'queued' && targetState !== 'paused') return
+    if (targetState !== 'queued') return
 
-    const wasFocus = task.state === 'focus'
     const sourceState = task.state
     const destList = bucket(targetState).filter((t) => t.id !== task.id)
     let insertIndex = destList.length
@@ -219,20 +236,14 @@ export function FlowPage() {
     }
     destList.splice(insertIndex, 0, task)
 
-    const timerFields = wasFocus ? stopTimer(task) : {}
     const logMessages = sourceState !== targetState ? [`Movida para ${STATE_LABELS[targetState]}`] : []
 
     const updates: (Partial<FlowTask> & { id: string })[] = destList.map((t, i) => ({
       id: t.id,
       state: targetState,
       queue_order: i,
-      ...(t.id === task.id ? { ...timerFields, logs: appendLogs(task.logs, logMessages) } : {}),
+      ...(t.id === task.id ? { logs: appendLogs(task.logs, logMessages) } : {}),
     }))
-
-    if (sourceState !== targetState && sourceState !== 'focus') {
-      const sourceList = bucket(sourceState).filter((t) => t.id !== task.id)
-      updates.push(...sourceList.map((t, i) => ({ id: t.id, queue_order: i })))
-    }
 
     bulkUpdate.mutate(updates)
   }
@@ -263,9 +274,14 @@ export function FlowPage() {
           <h1 className="text-display text-2xl">Flow</h1>
           <p className="text-sm text-canvas-fg/50">O que estou fazendo? O que faço depois? Quando termino?</p>
         </div>
-        <Button icon={<Plus size={16} />} onClick={() => setCreateModalOpen(true)}>
-          Nova tarefa
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="ghost" icon={<Archive size={16} />} onClick={() => setOverviewOpen(true)}>
+            Backlog
+          </Button>
+          <Button icon={<Plus size={16} />} onClick={() => setCreateModalOpen(true)}>
+            Nova tarefa
+          </Button>
+        </div>
       </div>
 
       <div className="mb-4 flex flex-wrap items-center gap-3">
@@ -321,45 +337,25 @@ export function FlowPage() {
       {hasAnyTask && (
         <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
           <div className="flex flex-col gap-4 lg:flex-row lg:items-stretch">
-            <div className="flex flex-col gap-4 lg:w-3/5">
+            <div className="lg:w-2/5">
               <FlowColumn
-                state="backlog"
-                label="Backlog"
-                tasks={backlog}
+                state="queued"
+                label="Fila"
+                tasks={queue}
                 sectors={sectors ?? []}
-                onAddTask={() => setCreateModalOpen(true)}
                 onTaskClick={(t) => setEditingTaskId(t.id)}
                 onFocusTask={handleFocusTask}
-                className="max-h-[240px]"
+                className="h-[720px]"
               />
-              <div className="flex h-[600px] flex-col gap-4">
-                <FlowColumn
-                  state="queued"
-                  label="Fila"
-                  tasks={queue}
-                  sectors={sectors ?? []}
-                  onTaskClick={(t) => setEditingTaskId(t.id)}
-                  onFocusTask={handleFocusTask}
-                  className="flex-[2]"
-                />
-                <FlowColumn
-                  state="paused"
-                  label="Pausadas"
-                  tasks={paused}
-                  sectors={sectors ?? []}
-                  onTaskClick={(t) => setEditingTaskId(t.id)}
-                  onFocusTask={handleFocusTask}
-                  onResumeTask={resumeTask}
-                  className="flex-[1]"
-                />
-              </div>
             </div>
 
-            <div className="lg:w-2/5">
+            <div className="lg:w-3/5">
               <FlowFocusPanel
                 task={focusedTask}
                 sectors={sectors ?? []}
+                projectId={project.id}
                 onCommit={commitFocusEdit}
+                onBumpVersion={handleBumpVersion}
                 onPause={pauseFocusTask}
                 onComplete={completeFocusTask}
                 onCancel={() => focusedTask && openCancelDialog(focusedTask.id)}
@@ -381,42 +377,6 @@ export function FlowPage() {
             )}
           </DragOverlay>
         </DndContext>
-      )}
-
-      {history.length > 0 && (
-        <div className="mt-6 border-t-2 border-line pt-3">
-          <button
-            type="button"
-            onClick={() => setHistoryOpen((v) => !v)}
-            className="text-label flex items-center gap-1.5 text-xs text-canvas-fg/50 hover:text-canvas-fg"
-          >
-            {historyOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-            Concluídas e canceladas ({history.length})
-          </button>
-          {historyOpen && (
-            <div className="mt-3 space-y-1.5">
-              {history.map((t) => {
-                const priority = priorityMeta(t.priority)
-                return (
-                  <button
-                    key={t.id}
-                    type="button"
-                    onClick={() => setEditingTaskId(t.id)}
-                    className="flex w-full items-center justify-between gap-2 border-2 border-line/30 bg-surface px-3 py-2 text-left text-sm hover:border-line"
-                  >
-                    <span className="flex items-center gap-2 truncate">
-                      <span className="h-2 w-2 shrink-0 border border-line" style={{ backgroundColor: priority.color }} />
-                      <span className={clsx('truncate', t.state === 'cancelled' && 'text-canvas-fg/50 line-through')}>{t.title}</span>
-                    </span>
-                    <span className="text-label shrink-0 text-[10px] text-canvas-fg/40">
-                      {STATE_LABELS[t.state]} · {formatShortDate((t.state === 'done' ? t.completed_at : t.cancelled_at)?.slice(0, 10) ?? t.updated_at.slice(0, 10))}
-                    </span>
-                  </button>
-                )
-              })}
-            </div>
-          )}
-        </div>
       )}
 
       <Modal open={createModalOpen} onClose={() => setCreateModalOpen(false)} title="Nova tarefa" isDirty={Boolean(newTitle.trim() || newDescription.trim())}>
@@ -449,10 +409,23 @@ export function FlowPage() {
         open={Boolean(editingTask)}
         task={editingTask}
         sectors={sectors ?? []}
+        projectId={project.id}
         onClose={() => setEditingTaskId(null)}
         onSave={handleSaveEdit}
         onDelete={() => editingTask && setPendingDelete(editingTask.id)}
         onCancelTask={() => editingTask && openCancelDialog(editingTask.id)}
+      />
+
+      <FlowOverviewModal
+        open={overviewOpen}
+        onClose={() => setOverviewOpen(false)}
+        tasks={overviewTasks}
+        onTaskClick={(t) => {
+          setOverviewOpen(false)
+          setEditingTaskId(t.id)
+        }}
+        onFocusTask={handleFocusTask}
+        onSendToQueue={sendToQueue}
       />
 
       <CancelTaskDialog open={Boolean(cancelingTask)} onClose={() => setCancelingTaskId(null)} onConfirm={handleConfirmCancel} />
