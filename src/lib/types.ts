@@ -389,6 +389,7 @@ export interface FlowTask {
   priority: FlowPriority
   sectors: string[]
   queue_order: number
+  start_date: string | null
   desired_date: string | null
   version_label: string
   checklist: ChecklistItem[]

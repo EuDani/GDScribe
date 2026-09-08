@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { ChevronDown, ChevronUp, Plus, Trash2 } from 'lucide-react'
+import { ChevronDown, ChevronUp } from 'lucide-react'
 import { clsx } from 'clsx'
 import type { ChecklistItem, FlowNoteEntry, FlowPriority, FlowTask, ProjectSector } from '@/lib/types'
 import { FLOW_PRIORITIES } from '@/lib/types'
@@ -8,69 +8,8 @@ import { Field, Select, TextInput, Textarea } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
 import { ChecklistEditor } from '@/components/ChecklistEditor'
 import { SectorPicker } from '@/components/SectorPicker'
+import { EntryListEditor } from '@/features/flow/EntryListEditor'
 import { formatLogTimestamp, STATE_LABELS } from '@/features/flow/flowLogic'
-
-function EntryListEditor({
-  label,
-  placeholder,
-  items,
-  onChange,
-}: {
-  label: string
-  placeholder: string
-  items: FlowNoteEntry[]
-  onChange: (items: FlowNoteEntry[]) => void
-}) {
-  const [text, setText] = useState('')
-
-  function add() {
-    if (!text.trim()) return
-    onChange([...items, { id: crypto.randomUUID(), text: text.trim(), created_at: new Date().toISOString() }])
-    setText('')
-  }
-
-  return (
-    <Field label={label}>
-      <div className="space-y-1.5">
-        {items.map((item) => (
-          <div key={item.id} className="flex items-start gap-2 border-2 border-line/30 bg-canvas px-2 py-1.5 text-xs">
-            <span className="flex-1">{item.text}</span>
-            <button
-              type="button"
-              onClick={() => onChange(items.filter((i) => i.id !== item.id))}
-              aria-label="Remover"
-              className="shrink-0 cursor-pointer text-canvas-fg/40 hover:text-accent-red"
-            >
-              <Trash2 size={12} />
-            </button>
-          </div>
-        ))}
-      </div>
-      <div className="mt-1.5 flex items-center gap-2">
-        <TextInput
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault()
-              add()
-            }
-          }}
-          placeholder={placeholder}
-          className="flex-1"
-        />
-        <button
-          type="button"
-          onClick={add}
-          aria-label="Adicionar"
-          className="cursor-pointer border-2 border-line p-1.5 text-canvas-fg/60 hover:bg-accent-yellow hover:text-ink"
-        >
-          <Plus size={14} />
-        </button>
-      </div>
-    </Field>
-  )
-}
 
 export function FlowTaskModal({
   open,
@@ -92,6 +31,7 @@ export function FlowTaskModal({
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [priority, setPriority] = useState<FlowPriority>('normal')
+  const [startDate, setStartDate] = useState('')
   const [desiredDate, setDesiredDate] = useState('')
   const [versionLabel, setVersionLabel] = useState('v1')
   const [taskSectors, setTaskSectors] = useState<string[]>([])
@@ -105,6 +45,7 @@ export function FlowTaskModal({
     setTitle(task.title)
     setDescription(task.description ?? '')
     setPriority(task.priority)
+    setStartDate(task.start_date ?? '')
     setDesiredDate(task.desired_date ?? '')
     setVersionLabel(task.version_label)
     setTaskSectors(task.sectors)
@@ -120,6 +61,7 @@ export function FlowTaskModal({
     title !== task.title ||
     description !== (task.description ?? '') ||
     priority !== task.priority ||
+    startDate !== (task.start_date ?? '') ||
     desiredDate !== (task.desired_date ?? '') ||
     versionLabel !== task.version_label ||
     JSON.stringify(taskSectors) !== JSON.stringify(task.sectors) ||
@@ -134,6 +76,7 @@ export function FlowTaskModal({
       title: title.trim(),
       description: description.trim() || null,
       priority,
+      start_date: startDate || null,
       desired_date: desiredDate || null,
       version_label: versionLabel.trim() || 'v1',
       sectors: taskSectors,
@@ -160,7 +103,7 @@ export function FlowTaskModal({
           <Textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} />
         </Field>
 
-        <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="Prioridade">
             <Select value={priority} onChange={(e) => setPriority(e.target.value as FlowPriority)}>
               {FLOW_PRIORITIES.map((p) => (
@@ -170,11 +113,14 @@ export function FlowTaskModal({
               ))}
             </Select>
           </Field>
-          <Field label="Data desejada de conclusão">
-            <TextInput type="date" value={desiredDate} onChange={(e) => setDesiredDate(e.target.value)} />
-          </Field>
           <Field label="Versão">
             <TextInput value={versionLabel} onChange={(e) => setVersionLabel(e.target.value)} placeholder="v1" />
+          </Field>
+          <Field label="Início">
+            <TextInput type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+          </Field>
+          <Field label="Fim (data desejada)">
+            <TextInput type="date" value={desiredDate} onChange={(e) => setDesiredDate(e.target.value)} />
           </Field>
         </div>
 
@@ -187,8 +133,12 @@ export function FlowTaskModal({
         </Field>
 
         <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <EntryListEditor label="Observações" placeholder="Nova observação…" items={notes} onChange={setNotes} />
-          <EntryListEditor label="Decisões" placeholder="Nova decisão…" items={decisions} onChange={setDecisions} />
+          <Field label="Observações">
+            <EntryListEditor placeholder="Nova observação…" items={notes} onChange={setNotes} />
+          </Field>
+          <Field label="Decisões">
+            <EntryListEditor placeholder="Nova decisão…" items={decisions} onChange={setDecisions} />
+          </Field>
         </div>
 
         <div className="mb-4">

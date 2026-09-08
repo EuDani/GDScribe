@@ -147,23 +147,10 @@ export function FlowPage() {
     ])
   }
 
-  function toggleFocusChecklistItem(itemId: string) {
+  function commitFocusEdit(fields: Partial<FlowTask>) {
     if (!focusedTask) return
-    const checklist = focusedTask.checklist.map((i) => (i.id === itemId ? { ...i, done: !i.done } : i))
-    const messages = diffTaskEdit(focusedTask, { checklist })
-    updateTask.mutate({ id: focusedTask.id, checklist, logs: appendLogs(focusedTask.logs, messages) })
-  }
-
-  function addFocusNote(text: string) {
-    if (!focusedTask) return
-    const notes = [...focusedTask.notes, { id: crypto.randomUUID(), text, created_at: new Date().toISOString() }]
-    updateTask.mutate({ id: focusedTask.id, notes, logs: appendLogs(focusedTask.logs, ['Observação adicionada']) })
-  }
-
-  function addFocusDecision(text: string) {
-    if (!focusedTask) return
-    const decisions = [...focusedTask.decisions, { id: crypto.randomUUID(), text, created_at: new Date().toISOString() }]
-    updateTask.mutate({ id: focusedTask.id, decisions, logs: appendLogs(focusedTask.logs, ['Decisão registrada']) })
+    const messages = diffTaskEdit(focusedTask, fields)
+    updateTask.mutate({ id: focusedTask.id, ...fields, logs: appendLogs(focusedTask.logs, messages) })
   }
 
   function openCancelDialog(taskId: string) {
@@ -333,47 +320,52 @@ export function FlowPage() {
 
       {hasAnyTask && (
         <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-          <div className="mb-4">
-            <FlowFocusPanel
-              task={focusedTask}
-              sectors={sectors ?? []}
-              onToggleChecklistItem={toggleFocusChecklistItem}
-              onAddNote={addFocusNote}
-              onAddDecision={addFocusDecision}
-              onPause={pauseFocusTask}
-              onComplete={completeFocusTask}
-              onCancel={() => focusedTask && openCancelDialog(focusedTask.id)}
-              onEdit={() => focusedTask && setEditingTaskId(focusedTask.id)}
-            />
-          </div>
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-stretch">
+            <div className="flex flex-col gap-4 lg:w-3/5">
+              <FlowColumn
+                state="backlog"
+                label="Backlog"
+                tasks={backlog}
+                sectors={sectors ?? []}
+                onAddTask={() => setCreateModalOpen(true)}
+                onTaskClick={(t) => setEditingTaskId(t.id)}
+                onFocusTask={handleFocusTask}
+                className="max-h-[240px]"
+              />
+              <div className="flex h-[600px] flex-col gap-4">
+                <FlowColumn
+                  state="queued"
+                  label="Fila"
+                  tasks={queue}
+                  sectors={sectors ?? []}
+                  onTaskClick={(t) => setEditingTaskId(t.id)}
+                  onFocusTask={handleFocusTask}
+                  className="flex-[2]"
+                />
+                <FlowColumn
+                  state="paused"
+                  label="Pausadas"
+                  tasks={paused}
+                  sectors={sectors ?? []}
+                  onTaskClick={(t) => setEditingTaskId(t.id)}
+                  onFocusTask={handleFocusTask}
+                  onResumeTask={resumeTask}
+                  className="flex-[1]"
+                />
+              </div>
+            </div>
 
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-            <FlowColumn
-              state="backlog"
-              label="Backlog"
-              tasks={backlog}
-              sectors={sectors ?? []}
-              onAddTask={() => setCreateModalOpen(true)}
-              onTaskClick={(t) => setEditingTaskId(t.id)}
-              onFocusTask={handleFocusTask}
-            />
-            <FlowColumn
-              state="queued"
-              label="Fila"
-              tasks={queue}
-              sectors={sectors ?? []}
-              onTaskClick={(t) => setEditingTaskId(t.id)}
-              onFocusTask={handleFocusTask}
-            />
-            <FlowColumn
-              state="paused"
-              label="Pausadas"
-              tasks={paused}
-              sectors={sectors ?? []}
-              onTaskClick={(t) => setEditingTaskId(t.id)}
-              onFocusTask={handleFocusTask}
-              onResumeTask={resumeTask}
-            />
+            <div className="lg:w-2/5">
+              <FlowFocusPanel
+                task={focusedTask}
+                sectors={sectors ?? []}
+                onCommit={commitFocusEdit}
+                onPause={pauseFocusTask}
+                onComplete={completeFocusTask}
+                onCancel={() => focusedTask && openCancelDialog(focusedTask.id)}
+                onDelete={() => focusedTask && setPendingDelete(focusedTask.id)}
+              />
+            </div>
           </div>
 
           <DragOverlay dropAnimation={{ duration: 220, easing: 'cubic-bezier(0.2, 0, 0, 1)' }}>

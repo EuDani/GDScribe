@@ -102,20 +102,29 @@ export function diffTaskEdit(before: FlowTask, after: Partial<FlowTask>): string
   if (after.priority !== undefined && after.priority !== before.priority) {
     messages.push(`Prioridade alterada para ${priorityMeta(after.priority).label}`)
   }
+  if (after.description !== undefined && after.description !== before.description) {
+    messages.push('Descrição atualizada')
+  }
+  if (after.start_date !== undefined && after.start_date !== before.start_date) {
+    messages.push(after.start_date ? `Início definido para ${after.start_date}` : 'Início removido')
+  }
   if (after.desired_date !== undefined && after.desired_date !== before.desired_date) {
     messages.push(after.desired_date ? `Data desejada definida para ${after.desired_date}` : 'Data desejada removida')
   }
   if (after.version_label !== undefined && after.version_label !== before.version_label) {
     messages.push(`Nova versão: ${after.version_label}`)
   }
+  if (after.sectors !== undefined && JSON.stringify(after.sectors) !== JSON.stringify(before.sectors)) {
+    messages.push('Setores alterados')
+  }
   if (after.checklist !== undefined) {
     messages.push(...diffChecklist(before.checklist, after.checklist))
   }
-  if (after.notes !== undefined && after.notes.length > before.notes.length) {
-    messages.push('Observação adicionada')
+  if (after.notes !== undefined && after.notes.length !== before.notes.length) {
+    messages.push(after.notes.length > before.notes.length ? 'Observação adicionada' : 'Observação removida')
   }
-  if (after.decisions !== undefined && after.decisions.length > before.decisions.length) {
-    messages.push('Decisão registrada')
+  if (after.decisions !== undefined && after.decisions.length !== before.decisions.length) {
+    messages.push(after.decisions.length > before.decisions.length ? 'Decisão registrada' : 'Decisão removida')
   }
   return messages
 }

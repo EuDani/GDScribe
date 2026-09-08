@@ -276,6 +276,7 @@ create table if not exists public.flow_tasks (
   priority text not null default 'normal' check (priority in ('critical', 'high', 'normal', 'low')),
   sectors text[] not null default '{}',
   queue_order integer not null default 0,
+  start_date date,
   desired_date date,
   version_label text not null default 'v1',
   checklist jsonb not null default '[]'::jsonb,
@@ -293,6 +294,10 @@ create table if not exists public.flow_tasks (
 
 create index if not exists flow_tasks_project_id_idx on public.flow_tasks (project_id);
 create index if not exists flow_tasks_state_idx on public.flow_tasks (state);
+
+-- Coluna adicionada depois da criação da tabela acima — garante que bancos
+-- que já rodaram esse arquivo uma vez ganhem a coluna também.
+alter table public.flow_tasks add column if not exists start_date date;
 
 -- ============================================================
 -- flowcharts — diagramas de fluxo (nós + conexões), um projeto pode ter

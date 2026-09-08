@@ -1,11 +1,15 @@
 import { useEffect, useState } from 'react'
 import { useDroppable } from '@dnd-kit/core'
-import { CalendarDays, CheckCircle2, ChevronDown, ChevronUp, Pause, Pencil, Target, Timer, X } from 'lucide-react'
+import { CheckCircle2, Pause, Target, Timer, Trash2, X } from 'lucide-react'
 import { clsx } from 'clsx'
 import { motion } from 'motion/react'
-import type { FlowTask, ProjectSector } from '@/lib/types'
+import type { FlowPriority, FlowTask, ProjectSector } from '@/lib/types'
+import { FLOW_PRIORITIES } from '@/lib/types'
 import { Button } from '@/components/ui/Button'
-import { TextInput } from '@/components/ui/Input'
+import { Select, TextInput } from '@/components/ui/Input'
+import { ChecklistEditor } from '@/components/ChecklistEditor'
+import { SectorPicker } from '@/components/SectorPicker'
+import { EntryListEditor } from '@/features/flow/EntryListEditor'
 import { computeForecastDate, formatDuration, formatLogTimestamp, liveTimeSpent, priorityMeta } from '@/features/flow/flowLogic'
 
 function formatDate(iso: string) {
@@ -13,33 +17,43 @@ function formatDate(iso: string) {
   return `${d}/${m}/${y.slice(2)}`
 }
 
+function SectionHeader({ label }: { label: string }) {
+  return <h4 className="text-label mb-2 mt-5 border-b-2 border-line/30 pb-1 text-xs font-semibold text-canvas-fg/50">{label}</h4>
+}
+
+const editableFieldClasses =
+  'w-full border-b-2 border-transparent bg-transparent text-canvas-fg outline-none transition-colors hover:border-line/20 focus:border-line'
+
 export function FlowFocusPanel({
   task,
   sectors,
-  onToggleChecklistItem,
-  onAddNote,
-  onAddDecision,
+  onCommit,
   onPause,
   onComplete,
   onCancel,
-  onEdit,
+  onDelete,
 }: {
   task: FlowTask | null
   sectors: ProjectSector[]
-  onToggleChecklistItem: (itemId: string) => void
-  onAddNote: (text: string) => void
-  onAddDecision: (text: string) => void
+  onCommit: (fields: Partial<FlowTask>) => void
   onPause: () => void
   onComplete: (force: boolean) => void
   onCancel: () => void
-  onEdit: () => void
+  onDelete: () => void
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: 'focus', data: { type: 'focus-zone' } })
   const [, forceTick] = useState(0)
-  const [logsOpen, setLogsOpen] = useState(false)
-  const [noteText, setNoteText] = useState('')
-  const [decisionText, setDecisionText] = useState('')
   const [confirmingForce, setConfirmingForce] = useState(false)
+  const [draftTitle, setDraftTitle] = useState('')
+  const [draftDescription, setDraftDescription] = useState('')
+  const [draftVersion, setDraftVersion] = useState('')
+
+  useEffect(() => {
+    if (!task) return
+    setDraftTitle(task.title)
+    setDraftDescription(task.description ?? '')
+    setDraftVersion(task.version_label)
+  }, [task?.id])
 
   useEffect(() => {
     if (task?.state !== 'focus') return
@@ -52,13 +66,13 @@ export function FlowFocusPanel({
       <div
         ref={setNodeRef}
         className={clsx(
-          'flex min-h-[220px] flex-1 flex-col items-center justify-center gap-2 border-2 border-dashed p-8 text-center transition-colors',
+          'flex h-full min-h-[220px] flex-col items-center justify-center gap-2 border-2 border-dashed p-8 text-center transition-colors',
           isOver ? 'border-accent-yellow bg-accent-yellow/10' : 'border-line/40',
         )}
       >
         <Target size={28} className="text-canvas-fg/30" />
         <p className="text-display text-lg text-canvas-fg/50">FOCO</p>
-        <p className="text-sm text-canvas-fg/40">Arraste uma tarefa da fila até aqui, ou clique no alvo de um card.</p>
+        <p className="text-sm text-canvas-fg/40">Arraste uma tarefa até aqui, ou clique no alvo de um card.</p>
       </div>
     )
   }
@@ -70,189 +84,175 @@ export function FlowFocusPanel({
   const seconds = liveTimeSpent(task)
   const forecast = computeForecastDate(task)
   const priority = priorityMeta(task.priority)
-  const taskSectors = sectors.filter((s) => task.sectors.includes(s.id))
-  const overdue = task.desired_date ? new Date(task.desired_date) < new Date(new Date().toDateString()) : false
   const forecastLate = forecast && task.desired_date ? forecast > task.desired_date : false
 
+  function commitTitle() {
+    if (!task) return
+    if (draftTitle.trim() && draftTitle !== task.title) onCommit({ title: draftTitle.trim() })
+    else setDraftTitle(task.title)
+  }
+
+  function commitDescription() {
+    if (!task) return
+    if (draftDescription !== (task.description ?? '')) onCommit({ description: draftDescription.trim() || null })
+  }
+
+  function commitVersion() {
+    if (!task) return
+    const v = draftVersion.trim() || 'v1'
+    setDraftVersion(v)
+    if (v !== task.version_label) onCommit({ version_label: v })
+  }
+
   return (
-    <div ref={setNodeRef} className={clsx('flex-1 border-2 bg-surface transition-colors', isOver ? 'border-accent-yellow' : 'border-line')}>
-      <div className="flex items-center justify-between gap-2 border-b-2 border-line px-4 py-2.5" style={{ boxShadow: `inset 4px 0 0 0 ${priority.color}` }}>
+    <div
+      ref={setNodeRef}
+      className={clsx('flex h-full flex-col border-2 bg-surface transition-colors', isOver ? 'border-accent-yellow' : 'border-line')}
+    >
+      <div
+        className="flex items-center justify-between gap-2 border-b-2 border-line px-4 py-2.5"
+        style={{ boxShadow: `inset 4px 0 0 0 ${priority.color}` }}
+      >
         <div className="flex items-center gap-2">
           <Target size={14} className="text-canvas-fg/50" />
           <h3 className="text-label text-xs font-semibold text-canvas-fg/60">FOCO</h3>
-          <span className="text-label border border-line/40 px-1.5 py-0.5 text-[10px] text-canvas-fg/50">{task.version_label}</span>
+          <input
+            value={draftVersion}
+            onChange={(e) => setDraftVersion(e.target.value)}
+            onBlur={commitVersion}
+            onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+            className="w-14 border border-line/30 bg-transparent px-1 py-0.5 text-[10px] text-canvas-fg/60 outline-none hover:border-line/50 focus:border-line"
+          />
         </div>
-        <button
-          type="button"
-          onClick={onEdit}
-          aria-label="Editar tarefa"
-          className="cursor-pointer border-2 border-line p-1 text-canvas-fg/60 hover:bg-accent-blue hover:text-ink"
-        >
-          <Pencil size={13} />
-        </button>
+        <div className="flex shrink-0 items-center gap-1">
+          <button
+            type="button"
+            onClick={onPause}
+            title="Pausar"
+            className="cursor-pointer border-2 border-line p-1 text-canvas-fg/60 hover:bg-accent-blue hover:text-ink"
+          >
+            <Pause size={13} />
+          </button>
+          <button
+            type="button"
+            onClick={onCancel}
+            title="Cancelar tarefa"
+            className="cursor-pointer border-2 border-line p-1 text-canvas-fg/60 hover:bg-accent-red hover:text-canvas-fg"
+          >
+            <X size={13} />
+          </button>
+          <button
+            type="button"
+            onClick={() => (pending > 0 ? setConfirmingForce(true) : onComplete(false))}
+            title="Concluir"
+            className="cursor-pointer border-2 border-line p-1 text-canvas-fg/60 hover:bg-accent-green hover:text-ink"
+          >
+            <CheckCircle2 size={13} />
+          </button>
+          <button
+            type="button"
+            onClick={onDelete}
+            title="Excluir"
+            className="cursor-pointer border-2 border-line p-1 text-canvas-fg/60 hover:bg-accent-red hover:text-canvas-fg"
+          >
+            <Trash2 size={13} />
+          </button>
+        </div>
       </div>
 
-      <div className="p-4">
-        <p className="text-display text-xl">{task.title}</p>
-        {task.description && <p className="mt-1.5 text-sm text-canvas-fg/60">{task.description}</p>}
+      <div className="flex-1 overflow-y-auto p-4">
+        <input
+          value={draftTitle}
+          onChange={(e) => setDraftTitle(e.target.value)}
+          onBlur={commitTitle}
+          onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+          className={clsx(editableFieldClasses, 'text-display text-xl')}
+        />
 
-        {taskSectors.length > 0 && (
-          <div className="mt-2 flex flex-wrap gap-1">
-            {taskSectors.map((s) => (
-              <span key={s.id} className="text-label border border-line px-1.5 py-0.5 text-[10px] text-ink" style={{ backgroundColor: s.color }}>
-                {s.name}
-              </span>
-            ))}
-          </div>
+        <SectionHeader label="Descrição" />
+        <textarea
+          value={draftDescription}
+          onChange={(e) => setDraftDescription(e.target.value)}
+          onBlur={commitDescription}
+          rows={3}
+          placeholder="Sem descrição — clique para adicionar"
+          className={clsx(editableFieldClasses, 'resize-y text-sm placeholder:text-canvas-fg/30')}
+        />
+
+        <SectionHeader label="Prioridade" />
+        <Select value={task.priority} onChange={(e) => onCommit({ priority: e.target.value as FlowPriority })} className="max-w-[200px]">
+          {FLOW_PRIORITIES.map((p) => (
+            <option key={p.value} value={p.value}>
+              {p.dot} {p.label}
+            </option>
+          ))}
+        </Select>
+
+        <SectionHeader label="Setores" />
+        <SectorPicker value={task.sectors} onChange={(s) => onCommit({ sectors: s })} sectors={sectors} />
+
+        <SectionHeader label="Datas" />
+        <div className="grid grid-cols-2 gap-3">
+          <label className="block">
+            <span className="text-label mb-1 block text-[10px] text-canvas-fg/40">Início</span>
+            <TextInput type="date" value={task.start_date ?? ''} onChange={(e) => onCommit({ start_date: e.target.value || null })} />
+          </label>
+          <label className="block">
+            <span className="text-label mb-1 block text-[10px] text-canvas-fg/40">Fim</span>
+            <TextInput type="date" value={task.desired_date ?? ''} onChange={(e) => onCommit({ desired_date: e.target.value || null })} />
+          </label>
+        </div>
+        {forecast && (
+          <p className={clsx('mt-2 text-xs', forecastLate ? 'text-accent-red' : 'text-accent-green')}>
+            Previsão de conclusão: {formatDate(forecast)}
+            {task.desired_date ? (forecastLate ? ' (depois do desejado)' : ' (antes do desejado)') : ''}
+          </p>
         )}
 
-        <div className="mt-4 flex flex-wrap items-center gap-4 text-xs text-canvas-fg/70">
-          <span className="flex items-center gap-1.5">
-            <Timer size={14} />
-            {formatDuration(seconds)}
-          </span>
-          {task.desired_date && (
-            <span className={clsx('flex items-center gap-1.5', overdue && 'text-accent-red')}>
-              <CalendarDays size={14} />
-              Desejado: {formatDate(task.desired_date)}
-            </span>
-          )}
-          {forecast && (
-            <span className={clsx('flex items-center gap-1.5', forecastLate ? 'text-accent-red' : 'text-accent-green')}>
-              Previsão: {formatDate(forecast)} {forecastLate ? '(depois do desejado)' : task.desired_date ? '(antes do desejado)' : ''}
-            </span>
-          )}
-        </div>
+        <SectionHeader label="Tempo" />
+        <p className="flex items-center gap-1.5 text-sm text-canvas-fg/80">
+          <Timer size={14} />
+          {formatDuration(seconds)}
+        </p>
 
+        <SectionHeader label="Checklist" />
         {total > 0 && (
-          <div className="mt-4">
-            <div className="mb-1.5 flex items-center justify-between text-xs text-canvas-fg/60">
+          <div className="mb-2">
+            <div className="mb-1 flex items-center justify-between text-xs text-canvas-fg/60">
               <span>
                 ☑ {doneCount}/{total}
               </span>
               <span>{percent}%</span>
             </div>
             <div className="h-3 w-full border-2 border-line bg-canvas">
-              <motion.div
-                className="h-full bg-accent-green"
-                animate={{ width: `${percent}%` }}
-                transition={{ duration: 0.25, ease: 'easeOut' }}
-              />
-            </div>
-            <div className="mt-2 space-y-1">
-              {task.checklist.map((item) => (
-                <label key={item.id} className="flex cursor-pointer items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={item.done}
-                    onChange={() => onToggleChecklistItem(item.id)}
-                    className="h-4 w-4 shrink-0 cursor-pointer accent-[var(--color-accent-green)]"
-                  />
-                  <span className={clsx(item.done && 'text-canvas-fg/40 line-through')}>{item.text}</span>
-                </label>
-              ))}
+              <motion.div className="h-full bg-accent-green" animate={{ width: `${percent}%` }} transition={{ duration: 0.25, ease: 'easeOut' }} />
             </div>
           </div>
         )}
+        <ChecklistEditor items={task.checklist} onChange={(checklist) => onCommit({ checklist })} />
 
-        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div>
-            <p className="text-label mb-1 text-[10px] text-canvas-fg/40">Observação rápida</p>
-            <div className="flex gap-1.5">
-              <TextInput
-                value={noteText}
-                onChange={(e) => setNoteText(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && noteText.trim()) {
-                    onAddNote(noteText.trim())
-                    setNoteText('')
-                  }
-                }}
-                placeholder="Anotar algo…"
-                className="flex-1 text-xs"
-              />
+        <SectionHeader label="Observações" />
+        <EntryListEditor placeholder="Nova observação…" items={task.notes} onChange={(notes) => onCommit({ notes })} />
+
+        <SectionHeader label="Decisões" />
+        <EntryListEditor placeholder="Nova decisão…" items={task.decisions} onChange={(decisions) => onCommit({ decisions })} />
+
+        <SectionHeader label="Histórico" />
+        <div className="space-y-1.5 text-xs text-canvas-fg/60">
+          {[...task.logs].reverse().map((log) => (
+            <div key={log.id} className="flex gap-2">
+              <span className="shrink-0 text-canvas-fg/30">{formatLogTimestamp(log.created_at)}</span>
+              <span>{log.message}</span>
             </div>
-            {task.notes.length > 0 && (
-              <ul className="mt-1.5 space-y-1 text-xs text-canvas-fg/60">
-                {task.notes
-                  .slice(-3)
-                  .reverse()
-                  .map((n) => (
-                    <li key={n.id}>• {n.text}</li>
-                  ))}
-              </ul>
-            )}
-          </div>
-          <div>
-            <p className="text-label mb-1 text-[10px] text-canvas-fg/40">Decisão importante</p>
-            <div className="flex gap-1.5">
-              <TextInput
-                value={decisionText}
-                onChange={(e) => setDecisionText(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && decisionText.trim()) {
-                    onAddDecision(decisionText.trim())
-                    setDecisionText('')
-                  }
-                }}
-                placeholder="Registrar decisão…"
-                className="flex-1 text-xs"
-              />
-            </div>
-            {task.decisions.length > 0 && (
-              <ul className="mt-1.5 space-y-1 text-xs text-canvas-fg/60">
-                {task.decisions
-                  .slice(-3)
-                  .reverse()
-                  .map((d) => (
-                    <li key={d.id}>• {d.text}</li>
-                  ))}
-              </ul>
-            )}
-          </div>
+          ))}
+          {task.logs.length === 0 && <p className="text-canvas-fg/30">Nenhum registro ainda.</p>}
         </div>
-
-        <div className="mt-5 flex flex-wrap items-center justify-between gap-2 border-t-2 border-line pt-4">
-          <button
-            type="button"
-            onClick={() => setLogsOpen((v) => !v)}
-            className="text-label flex items-center gap-1 text-[11px] text-canvas-fg/40 hover:text-canvas-fg"
-          >
-            {logsOpen ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-            Histórico ({task.logs.length})
-          </button>
-          <div className="flex gap-2">
-            <Button size="sm" variant="ghost" icon={<Pause size={13} />} onClick={onPause}>
-              Pausar
-            </Button>
-            <Button size="sm" variant="danger" icon={<X size={13} />} onClick={onCancel}>
-              Cancelar
-            </Button>
-            <Button
-              size="sm"
-              variant="accent"
-              icon={<CheckCircle2 size={13} />}
-              onClick={() => (pending > 0 ? setConfirmingForce(true) : onComplete(false))}
-            >
-              Concluir
-            </Button>
-          </div>
-        </div>
-
-        {logsOpen && (
-          <div className="mt-3 max-h-48 space-y-1.5 overflow-y-auto border-t border-line/30 pt-3 text-xs text-canvas-fg/60">
-            {[...task.logs].reverse().map((log) => (
-              <div key={log.id} className="flex gap-2">
-                <span className="shrink-0 text-canvas-fg/30">{formatLogTimestamp(log.created_at)}</span>
-                <span>{log.message}</span>
-              </div>
-            ))}
-          </div>
-        )}
 
         {confirmingForce && (
-          <div className="mt-3 border-2 border-accent-red bg-accent-red/10 p-3 text-center">
-            <p className="text-sm font-semibold">Ainda existem {pending} {pending === 1 ? 'item pendente' : 'itens pendentes'}.</p>
+          <div className="mt-4 border-2 border-accent-red bg-accent-red/10 p-3 text-center">
+            <p className="text-sm font-semibold">
+              Ainda existem {pending} {pending === 1 ? 'item pendente' : 'itens pendentes'}.
+            </p>
             <div className="mt-2 flex justify-center gap-2">
               <Button size="sm" variant="ghost" onClick={() => setConfirmingForce(false)}>
                 Voltar

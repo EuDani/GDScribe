@@ -14,6 +14,7 @@ export function FlowColumn({
   onTaskClick,
   onFocusTask,
   onResumeTask,
+  className = 'flex-1',
 }: {
   state: FlowTaskState
   label: string
@@ -23,13 +24,15 @@ export function FlowColumn({
   onTaskClick: (task: FlowTask) => void
   onFocusTask: (task: FlowTask) => void
   onResumeTask?: (task: FlowTask) => void
+  className?: string
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: state, data: { type: 'column' } })
 
   return (
     <div
       className={clsx(
-        'flex min-w-0 flex-1 flex-col border-2 bg-surface transition-colors',
+        'flex min-h-0 min-w-0 flex-col border-2 bg-surface transition-colors',
+        className,
         isOver ? 'border-accent-yellow' : 'border-line',
       )}
     >
@@ -50,8 +53,7 @@ export function FlowColumn({
       </div>
       <div
         ref={setNodeRef}
-        className={clsx('flex-1 space-y-2 overflow-y-auto p-2.5 transition-colors', isOver && 'bg-accent-yellow/5')}
-        style={{ minHeight: 120, maxHeight: 520 }}
+        className={clsx('min-h-0 flex-1 space-y-2 overflow-y-auto p-2.5 transition-colors', isOver && 'bg-accent-yellow/5')}
       >
         <SortableContext items={tasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
           {tasks.map((task) => (
