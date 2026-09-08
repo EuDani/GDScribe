@@ -16,6 +16,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Settings,
+  Target,
   Workflow,
   X,
 } from 'lucide-react'
@@ -38,6 +39,7 @@ const NAV_ITEMS = [
   { to: 'inventory', label: 'Inventário', icon: Boxes },
   { to: 'references', label: 'Referências', icon: BookMarked },
   { to: 'kanban', label: 'Kanban', icon: KanbanSquare },
+  { to: 'flow', label: 'Flow', icon: Target },
   { to: 'moodboard', label: 'Moodboard', icon: Images },
   { to: 'flowchart', label: 'Fluxograma', icon: Workflow },
   { to: 'calendar', label: 'Calendário', icon: CalendarDays },

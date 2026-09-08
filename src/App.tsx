@@ -17,6 +17,7 @@ import { StoryPage } from '@/features/story/StoryPage'
 import { ReferencesPage } from '@/features/references/ReferencesPage'
 import { InventoryPage } from '@/features/inventory/InventoryPage'
 import { KanbanPage } from '@/features/kanban/KanbanPage'
+import { FlowPage } from '@/features/flow/FlowPage'
 import { MoodboardPage } from '@/features/moodboard/MoodboardPage'
 import { FlowchartPage } from '@/features/flowchart/FlowchartPage'
 import { IdeasPage } from '@/features/ideas/IdeasPage'
@@ -84,6 +85,7 @@ function App() {
                   <Route path="inventory" element={<InventoryPage />} />
                   <Route path="references" element={<ReferencesPage />} />
                   <Route path="kanban" element={<KanbanPage />} />
+                  <Route path="flow" element={<FlowPage />} />
                   <Route path="moodboard" element={<MoodboardPage />} />
                   <Route path="flowchart" element={<FlowchartPage />} />
                   <Route path="ideas" element={<IdeasPage />} />

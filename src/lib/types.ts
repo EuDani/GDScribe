@@ -357,6 +357,53 @@ export interface Reminder {
   updated_at: string
 }
 
+export type FlowTaskState = 'backlog' | 'queued' | 'focus' | 'paused' | 'done' | 'cancelled'
+
+export type FlowPriority = 'critical' | 'high' | 'normal' | 'low'
+
+export const FLOW_PRIORITIES: { value: FlowPriority; label: string; color: string; dot: string }[] = [
+  { value: 'critical', label: 'Crítica', color: 'var(--color-accent-red)', dot: '🔴' },
+  { value: 'high', label: 'Alta', color: 'var(--color-accent-purple)', dot: '🟠' },
+  { value: 'normal', label: 'Normal', color: 'var(--color-accent-yellow)', dot: '🟡' },
+  { value: 'low', label: 'Baixa', color: 'var(--color-accent-blue)', dot: '🔵' },
+]
+
+export interface FlowLogEntry {
+  id: string
+  message: string
+  created_at: string
+}
+
+export interface FlowNoteEntry {
+  id: string
+  text: string
+  created_at: string
+}
+
+export interface FlowTask {
+  id: string
+  project_id: string
+  title: string
+  description: string | null
+  state: FlowTaskState
+  priority: FlowPriority
+  sectors: string[]
+  queue_order: number
+  desired_date: string | null
+  version_label: string
+  checklist: ChecklistItem[]
+  notes: FlowNoteEntry[]
+  decisions: FlowNoteEntry[]
+  logs: FlowLogEntry[]
+  active_since: string | null
+  time_spent_seconds: number
+  completed_at: string | null
+  cancelled_at: string | null
+  cancel_reason: string | null
+  created_at: string
+  updated_at: string
+}
+
 /** Atrasado = tem prazo (end_date ou event_date) já passado. */
 export function isReminderOverdue(r: Pick<Reminder, 'event_date' | 'end_date'>): boolean {
   const deadline = r.end_date ?? r.event_date

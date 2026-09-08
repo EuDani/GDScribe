@@ -263,6 +263,38 @@ create index if not exists project_releases_project_id_idx on public.project_rel
 create index if not exists project_releases_release_date_idx on public.project_releases (release_date);
 
 -- ============================================================
+-- flow_tasks — sistema de gerenciamento de trabalho com foco único
+-- (Flow): backlog -> fila -> foco (só uma tarefa por vez) -> pausada/concluída/cancelada.
+-- notes/decisions/logs são listas append-only (histórico imutável).
+-- ============================================================
+create table if not exists public.flow_tasks (
+  id uuid primary key default gen_random_uuid(),
+  project_id uuid not null references public.projects (id) on delete cascade,
+  title text not null,
+  description text,
+  state text not null default 'backlog' check (state in ('backlog', 'queued', 'focus', 'paused', 'done', 'cancelled')),
+  priority text not null default 'normal' check (priority in ('critical', 'high', 'normal', 'low')),
+  sectors text[] not null default '{}',
+  queue_order integer not null default 0,
+  desired_date date,
+  version_label text not null default 'v1',
+  checklist jsonb not null default '[]'::jsonb,
+  notes jsonb not null default '[]'::jsonb,
+  decisions jsonb not null default '[]'::jsonb,
+  logs jsonb not null default '[]'::jsonb,
+  active_since timestamptz,
+  time_spent_seconds integer not null default 0,
+  completed_at timestamptz,
+  cancelled_at timestamptz,
+  cancel_reason text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists flow_tasks_project_id_idx on public.flow_tasks (project_id);
+create index if not exists flow_tasks_state_idx on public.flow_tasks (state);
+
+-- ============================================================
 -- flowcharts — diagramas de fluxo (nós + conexões), um projeto pode ter
 -- vários. Nós e arestas ficam num único blob JSON por simplicidade (o
 -- editor salva tudo de uma vez, com autosave).
@@ -478,6 +510,10 @@ drop trigger if exists set_updated_at on public.project_releases;
 create trigger set_updated_at before update on public.project_releases
   for each row execute function public.set_updated_at();
 
+drop trigger if exists set_updated_at on public.flow_tasks;
+create trigger set_updated_at before update on public.flow_tasks
+  for each row execute function public.set_updated_at();
+
 -- ============================================================
 -- Row Level Security — tudo restrito ao dono do projeto
 -- ============================================================
@@ -499,6 +535,7 @@ alter table public.moodboard_folders enable row level security;
 alter table public.moodboard_images enable row level security;
 alter table public.flowcharts enable row level security;
 alter table public.project_releases enable row level security;
+alter table public.flow_tasks enable row level security;
 
 drop policy if exists "own projects" on public.projects;
 create policy "own projects" on public.projects
@@ -650,6 +687,15 @@ create policy "own flowcharts" on public.flowcharts
 
 drop policy if exists "own project_releases" on public.project_releases;
 create policy "own project_releases" on public.project_releases
+  for all using (
+    exists (select 1 from public.projects p where p.id = project_id and p.owner_id = auth.uid())
+  )
+  with check (
+    exists (select 1 from public.projects p where p.id = project_id and p.owner_id = auth.uid())
+  );
+
+drop policy if exists "own flow_tasks" on public.flow_tasks;
+create policy "own flow_tasks" on public.flow_tasks
   for all using (
     exists (select 1 from public.projects p where p.id = project_id and p.owner_id = auth.uid())
   )
