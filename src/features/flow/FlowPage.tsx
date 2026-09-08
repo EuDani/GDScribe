@@ -60,6 +60,7 @@ export function FlowPage() {
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null)
   const [pendingDelete, setPendingDelete] = useState<string | null>(null)
   const [cancelingTaskId, setCancelingTaskId] = useState<string | null>(null)
+  const [confirmingBumpVersion, setConfirmingBumpVersion] = useState(false)
 
   const editingTask = tasks?.find((t) => t.id === editingTaskId) ?? null
   const focusedTask = tasks?.find((t) => t.state === 'focus') ?? null
@@ -170,6 +171,7 @@ export function FlowPage() {
       version_label: newVersion,
       logs: appendLogs(focusedTask.logs, [`Nova versão: ${newVersion} — ${oldVersion} arquivada no backlog`]),
     })
+    setConfirmingBumpVersion(false)
   }
 
   function openCancelDialog(taskId: string) {
@@ -357,7 +359,7 @@ export function FlowPage() {
                 sectors={sectors ?? []}
                 projectId={project.id}
                 onCommit={commitFocusEdit}
-                onBumpVersion={handleBumpVersion}
+                onBumpVersion={() => setConfirmingBumpVersion(true)}
                 onPause={pauseFocusTask}
                 onComplete={completeFocusTask}
                 onCancel={() => focusedTask && openCancelDialog(focusedTask.id)}
@@ -431,6 +433,19 @@ export function FlowPage() {
       />
 
       <CancelTaskDialog open={Boolean(cancelingTask)} onClose={() => setCancelingTaskId(null)} onConfirm={handleConfirmCancel} />
+
+      <ConfirmDialog
+        open={confirmingBumpVersion}
+        onClose={() => setConfirmingBumpVersion(false)}
+        onConfirm={handleBumpVersion}
+        title="Nova versão"
+        description={
+          focusedTask
+            ? `A versão atual (${focusedTask.version_label}) será arquivada no backlog, e essa tarefa continua como ${nextVersionLabel(focusedTask.version_label)}.`
+            : ''
+        }
+        confirmLabel="Criar nova versão"
+      />
 
       <ConfirmDialog
         open={Boolean(pendingDelete)}
