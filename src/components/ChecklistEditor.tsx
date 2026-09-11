@@ -1,7 +1,57 @@
 import { useState } from 'react'
-import { Plus, Trash2 } from 'lucide-react'
+import { DndContext, PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
+import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
+import { GripVertical, Plus, Trash2 } from 'lucide-react'
 import type { ChecklistItem } from '@/lib/types'
 import { TextInput } from '@/components/ui/Input'
+
+function SortableChecklistRow({
+  item,
+  onToggle,
+  onTextChange,
+  onRemove,
+}: {
+  item: ChecklistItem
+  onToggle: (checked: boolean) => void
+  onTextChange: (text: string) => void
+  onRemove: () => void
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id })
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      className="flex items-center gap-2"
+    >
+      <button
+        type="button"
+        {...attributes}
+        {...listeners}
+        aria-label="Arrastar para reordenar"
+        className={`shrink-0 cursor-grab touch-none text-canvas-fg/30 hover:text-canvas-fg/70 active:cursor-grabbing ${isDragging ? 'text-canvas-fg/70' : ''}`}
+      >
+        <GripVertical size={14} />
+      </button>
+      <input
+        type="checkbox"
+        checked={item.done}
+        onChange={(e) => onToggle(e.target.checked)}
+        className="h-4 w-4 shrink-0 cursor-pointer accent-[var(--color-accent-green)]"
+      />
+      <TextInput value={item.text} onChange={(e) => onTextChange(e.target.value)} className="flex-1" />
+      <button
+        type="button"
+        onClick={onRemove}
+        aria-label="Remover item"
+        className="cursor-pointer border-2 border-line p-1 text-canvas-fg/50 hover:bg-accent-red hover:text-canvas-fg"
+      >
+        <Trash2 size={12} />
+      </button>
+    </div>
+  )
+}
 
 export function ChecklistEditor({
   items,
@@ -12,11 +62,21 @@ export function ChecklistEditor({
 }) {
   const [newText, setNewText] = useState('')
   const done = items.filter((i) => i.done).length
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
 
   function addItem() {
     if (!newText.trim()) return
     onChange([...items, { id: crypto.randomUUID(), text: newText.trim(), done: false }])
     setNewText('')
+  }
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+    const oldIndex = items.findIndex((i) => i.id === active.id)
+    const newIndex = items.findIndex((i) => i.id === over.id)
+    if (oldIndex < 0 || newIndex < 0) return
+    onChange(arrayMove(items, oldIndex, newIndex))
   }
 
   return (
@@ -29,35 +89,21 @@ export function ChecklistEditor({
           />
         </div>
       )}
-      <div className="space-y-1.5">
-        {items.map((item) => (
-          <div key={item.id} className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              checked={item.done}
-              onChange={(e) =>
-                onChange(items.map((i) => (i.id === item.id ? { ...i, done: e.target.checked } : i)))
-              }
-              className="h-4 w-4 shrink-0 cursor-pointer accent-[var(--color-accent-green)]"
-            />
-            <TextInput
-              value={item.text}
-              onChange={(e) =>
-                onChange(items.map((i) => (i.id === item.id ? { ...i, text: e.target.value } : i)))
-              }
-              className="flex-1"
-            />
-            <button
-              type="button"
-              onClick={() => onChange(items.filter((i) => i.id !== item.id))}
-              aria-label="Remover item"
-              className="cursor-pointer border-2 border-line p-1 text-canvas-fg/50 hover:bg-accent-red hover:text-canvas-fg"
-            >
-              <Trash2 size={12} />
-            </button>
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <SortableContext items={items.map((i) => i.id)} strategy={verticalListSortingStrategy}>
+          <div className="space-y-1.5">
+            {items.map((item) => (
+              <SortableChecklistRow
+                key={item.id}
+                item={item}
+                onToggle={(checked) => onChange(items.map((i) => (i.id === item.id ? { ...i, done: checked } : i)))}
+                onTextChange={(text) => onChange(items.map((i) => (i.id === item.id ? { ...i, text } : i)))}
+                onRemove={() => onChange(items.filter((i) => i.id !== item.id))}
+              />
+            ))}
           </div>
-        ))}
-      </div>
+        </SortableContext>
+      </DndContext>
       <div className="mt-2 flex items-center gap-2">
         <TextInput
           value={newText}
