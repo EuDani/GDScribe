@@ -3,6 +3,7 @@ import { RotateCcw, Upload } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Field, TextInput } from '@/components/ui/Input'
+import { ClipboardImageButton } from '@/components/ClipboardImageButton'
 import { MiniBarChart } from '@/components/MiniBarChart'
 import { DEFAULT_THEME } from '@/contexts/ProjectThemeContext'
 import { useProject } from '@/features/dashboard/useProjects'
@@ -233,16 +234,19 @@ function UploadButton({ uploading, onSelect }: { uploading: boolean; onSelect: (
           e.target.value = ''
         }}
       />
-      <Button
-        variant="ghost"
-        size="sm"
-        icon={<Upload size={14} />}
-        disabled={uploading}
-        type="button"
-        onClick={() => inputRef.current?.click()}
-      >
-        {uploading ? 'Enviando…' : 'Enviar imagem'}
-      </Button>
+      <div className="flex flex-wrap items-center gap-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          icon={<Upload size={14} />}
+          disabled={uploading}
+          type="button"
+          onClick={() => inputRef.current?.click()}
+        >
+          {uploading ? 'Enviando…' : 'Enviar imagem'}
+        </Button>
+        <ClipboardImageButton onImage={onSelect} label="Colar" />
+      </div>
     </>
   )
 }

@@ -1,5 +1,8 @@
 import { useMemo, useState } from 'react'
-import { LayoutGrid, Pencil, Plus, Table as TableIcon, Trash2 } from 'lucide-react'
+import { DndContext, closestCenter, type DragEndEvent } from '@dnd-kit/core'
+import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
+import { LayoutGrid, List, Pencil, Plus, Table as TableIcon, Trash2 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { useOutletContext } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
@@ -13,11 +16,13 @@ import { TagInput } from '@/components/TagInput'
 import { SectorPicker, matchesSectorFilter } from '@/components/SectorPicker'
 import { Badge, accentFromString } from '@/components/ui/Badge'
 import { useToast } from '@/contexts/ToastContext'
+import { useDndSensors } from '@/lib/useDndSensors'
 import type { InventoryField, InventoryItem, InventoryType, InventoryValue, Project } from '@/lib/types'
 import { FieldBuilder } from '@/features/inventory/FieldBuilder'
 import { formatInventoryValue, getMissingRequiredFields, ItemForm } from '@/features/inventory/ItemForm'
 import { InventoryTableView } from '@/features/inventory/InventoryTableView'
 import { InventoryKanbanView } from '@/features/inventory/InventoryKanbanView'
+import { InventoryListView } from '@/features/inventory/InventoryListView'
 import { useProjectSectors } from '@/features/settings/useProjectSectors'
 import {
   useCreateInventoryType,
@@ -25,13 +30,52 @@ import {
   useDeleteInventoryType,
   useInventoryItems,
   useInventoryTypes,
+  useReorderInventoryTypes,
   useUpdateInventoryType,
   useUpsertInventoryItem,
 } from '@/features/inventory/useInventory'
 
 const DEFAULT_FIELDS: InventoryField[] = [{ key: 'descricao', label: 'Descrição', type: 'textarea' }]
 
-type ViewMode = 'cards' | 'kanban' | 'table'
+type ViewMode = 'cards' | 'kanban' | 'table' | 'list'
+
+function SortableTypeButton({
+  type,
+  selected,
+  onClick,
+}: {
+  type: InventoryType
+  selected: boolean
+  onClick: () => void
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: type.id,
+    transition: { duration: 220, easing: 'cubic-bezier(0.2, 0, 0, 1)' },
+  })
+
+  return (
+    <li
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 }}
+      {...attributes}
+      {...listeners}
+      className="group relative touch-none"
+    >
+      <button
+        type="button"
+        onClick={onClick}
+        className={clsx(
+          'w-full cursor-grab px-3 py-2.5 text-left text-sm font-semibold transition-colors active:cursor-grabbing',
+          selected
+            ? 'border-2 border-line bg-accent-yellow text-ink shadow-brutal-sm'
+            : 'border-2 border-line/40 bg-surface text-canvas-fg/80 hover:border-line',
+        )}
+      >
+        {type.name}
+      </button>
+    </li>
+  )
+}
 
 export function InventoryPage() {
   const { project } = useOutletContext<{ project: Project }>()
@@ -39,6 +83,8 @@ export function InventoryPage() {
   const createType = useCreateInventoryType(project.id)
   const updateType = useUpdateInventoryType(project.id)
   const deleteType = useDeleteInventoryType(project.id)
+  const reorderTypes = useReorderInventoryTypes(project.id)
+  const sensors = useDndSensors()
 
   const [selectedTypeId, setSelectedTypeId] = useState<string | null>(null)
   const [typeModalOpen, setTypeModalOpen] = useState(false)
@@ -77,6 +123,18 @@ export function InventoryPage() {
     setTypeModalOpen(false)
   }
 
+  function handleTypeDragEnd(event: DragEndEvent) {
+    const { active, over } = event
+    if (!over || active.id === over.id || !types) return
+    const oldIndex = types.findIndex((t) => t.id === active.id)
+    const newIndex = types.findIndex((t) => t.id === over.id)
+    if (oldIndex < 0 || newIndex < 0) return
+    const reordered = [...types]
+    const [moved] = reordered.splice(oldIndex, 1)
+    reordered.splice(newIndex, 0, moved)
+    reorderTypes.mutate(reordered.map((t, i) => ({ id: t.id, sort_order: i })))
+  }
+
   return (
     <div>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
@@ -87,6 +145,7 @@ export function InventoryPage() {
               { value: 'cards', label: 'Cards' },
               { value: 'kanban', label: 'Cards (Kanban)' },
               { value: 'table', label: 'Tabela' },
+              { value: 'list', label: 'Lista' },
             ]}
             value={view}
             onChange={setView}
@@ -112,25 +171,21 @@ export function InventoryPage() {
       )}
 
       {!typesLoading && types && types.length > 0 && (
-        <div className="grid grid-cols-1 gap-5 lg:grid-cols-[220px_1fr]">
-          <ul className="space-y-1.5">
-            {types.map((type) => (
-              <li key={type.id} className="group relative">
-                <button
-                  type="button"
-                  onClick={() => setSelectedTypeId(type.id)}
-                  className={clsx(
-                    'w-full cursor-pointer border-2 px-3 py-2.5 text-left text-sm font-semibold transition-colors',
-                    selectedType?.id === type.id
-                      ? 'border-line bg-accent-yellow text-ink shadow-brutal-sm'
-                      : 'border-line/40 bg-surface text-canvas-fg/80 hover:border-line',
-                  )}
-                >
-                  {type.name}
-                </button>
-              </li>
-            ))}
-          </ul>
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-[220px_60%]">
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleTypeDragEnd}>
+            <SortableContext items={types.map((t) => t.id)} strategy={verticalListSortingStrategy}>
+              <ul className="space-y-1.5">
+                {types.map((type) => (
+                  <SortableTypeButton
+                    key={type.id}
+                    type={type}
+                    selected={selectedType?.id === type.id}
+                    onClick={() => setSelectedTypeId(type.id)}
+                  />
+                ))}
+              </ul>
+            </SortableContext>
+          </DndContext>
 
           {selectedType && (
             <InventoryTypePanel
@@ -286,7 +341,7 @@ function InventoryTypePanel({
     <div className="min-w-0 border-2 border-line bg-surface shadow-brutal">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b-2 border-line p-4">
         <h2 className="text-display flex items-center gap-2 text-lg">
-          {view === 'table' ? <TableIcon size={16} /> : <LayoutGrid size={16} />}
+          {view === 'table' ? <TableIcon size={16} /> : view === 'list' ? <List size={16} /> : <LayoutGrid size={16} />}
           {type.name}
         </h2>
         <div className="flex items-center gap-2">
@@ -355,6 +410,9 @@ function InventoryTypePanel({
         )}
         {!isLoading && items && items.length > 0 && view === 'kanban' && (
           <InventoryKanbanView projectId={projectId} type={type} items={filteredItems} onItemClick={openEditItem} />
+        )}
+        {!isLoading && items && items.length > 0 && view === 'list' && (
+          <InventoryListView projectId={projectId} type={type} items={filteredItems} onItemClick={openEditItem} />
         )}
         {!isLoading && items && items.length > 0 && view === 'cards' && (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">

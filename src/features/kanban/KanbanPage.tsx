@@ -1,14 +1,5 @@
 import { useMemo, useState } from 'react'
-import {
-  DndContext,
-  DragOverlay,
-  type DragEndEvent,
-  type DragStartEvent,
-  PointerSensor,
-  closestCorners,
-  useSensor,
-  useSensors,
-} from '@dnd-kit/core'
+import { DndContext, DragOverlay, type DragEndEvent, type DragStartEvent, closestCorners } from '@dnd-kit/core'
 import { Pencil, Plus, Trash2, Upload } from 'lucide-react'
 import { clsx } from 'clsx'
 import { motion } from 'motion/react'
@@ -20,10 +11,12 @@ import { Field, TextInput, Textarea } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
 import { ChecklistEditor } from '@/components/ChecklistEditor'
 import { IconPicker } from '@/components/IconPicker'
+import { ClipboardImageButton } from '@/components/ClipboardImageButton'
 import { TagInput } from '@/components/TagInput'
 import { SectorPicker, matchesSectorFilter } from '@/components/SectorPicker'
 import { ExtraFieldsEditor } from '@/features/gdd/ExtraFieldsEditor'
 import { useUploadImage } from '@/lib/useUploadImage'
+import { useDndSensors } from '@/lib/useDndSensors'
 import type { ChecklistItem, ExtraField, KanbanCard, Project } from '@/lib/types'
 import { KanbanColumnView } from '@/features/kanban/KanbanColumn'
 import { KanbanCardFace } from '@/features/kanban/KanbanCard'
@@ -188,7 +181,7 @@ function KanbanBoardView({ projectId, boardId }: { projectId: string; boardId: s
   const reorderColumns = useReorderColumns(projectId, boardId)
   const { data: sectors } = useProjectSectors(projectId)
 
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
+  const sensors = useDndSensors()
   const [activeCard, setActiveCard] = useState<KanbanCard | null>(null)
   const [tagFilter, setTagFilter] = useState<Set<string>>(new Set())
   const [sectorFilter, setSectorFilter] = useState<string[]>([])
@@ -620,6 +613,7 @@ function KanbanBoardView({ projectId, boardId }: { projectId: string; boardId: s
                   {uploadingCover ? 'Enviando…' : 'Trocar capa'}
                 </span>
               </label>
+              <ClipboardImageButton onImage={handleCoverUpload} label="Colar" />
               {editCover && (
                 <button
                   type="button"

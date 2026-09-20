@@ -259,6 +259,7 @@ export interface GameReference {
   tags: string[]
   notes: string
   checklist: ChecklistItem[]
+  sort_order: number
   created_at: string
   updated_at: string
 }
@@ -287,6 +288,7 @@ export interface FlowchartNode {
   shape: FlowchartNodeShape
   comment: string
   tags: string[]
+  imageUrl: string | null
 }
 
 export type FlowchartLineStyle = 'solid' | 'dashed' | 'dotted'

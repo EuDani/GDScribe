@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { ArrowDown, ArrowUp, Pencil, Plus, Rocket, Trash2 } from 'lucide-react'
 import { useOutletContext } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
+import { ClipboardImageButton } from '@/components/ClipboardImageButton'
 import { Card } from '@/components/ui/Card'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -166,6 +167,7 @@ export function ProjectSettingsPage() {
                 >
                   {uploading ? 'Enviando…' : 'Enviar imagem'}
                 </Button>
+                <ClipboardImageButton onImage={handleCoverUpload} label="Colar" />
                 {coverImageUrl && (
                   <button
                     type="button"

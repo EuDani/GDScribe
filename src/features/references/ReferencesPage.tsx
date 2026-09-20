@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
+import { DndContext, closestCenter, type DragEndEvent } from '@dnd-kit/core'
+import { SortableContext, rectSortingStrategy } from '@dnd-kit/sortable'
 import { ArrowLeft, ArrowRight, ExternalLink, Filter, Plus, Upload, X } from 'lucide-react'
 import { clsx } from 'clsx'
-import { motion } from 'motion/react'
 import { useOutletContext } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
@@ -9,19 +10,26 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { Field, TextInput } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
 import { SidePanel } from '@/components/ui/SidePanel'
-import { Badge, accentFromString } from '@/components/ui/Badge'
 import { ChecklistEditor } from '@/components/ChecklistEditor'
 import { RichTextEditor } from '@/components/RichTextEditor'
 import { ImageLightbox } from '@/components/ImageLightbox'
+import { ClipboardImageButton } from '@/components/ClipboardImageButton'
 import { TagInput } from '@/components/TagInput'
 import { useUploadImage } from '@/lib/useUploadImage'
+import { useDndSensors } from '@/lib/useDndSensors'
 import type { ChecklistItem, GameReference, Project } from '@/lib/types'
 import {
   useCreateReference,
   useDeleteReference,
   useReferences,
+  useReorderReferences,
   useUpdateReference,
 } from '@/features/references/useReferences'
+import { ReferenceCard } from '@/features/references/ReferenceCard'
+
+const ASIDE_WIDTH_KEY = 'gdscribe.referencesAsideWidth'
+const MIN_ASIDE_WIDTH = 160
+const MAX_ASIDE_WIDTH = 420
 
 export function ReferencesPage() {
   const { project } = useOutletContext<{ project: Project }>()
@@ -29,7 +37,13 @@ export function ReferencesPage() {
   const createReference = useCreateReference(project.id)
   const updateReference = useUpdateReference(project.id)
   const deleteReference = useDeleteReference(project.id)
+  const reorderReferences = useReorderReferences(project.id)
   const { uploadMany, uploading } = useUploadImage(project.id)
+  const sensors = useDndSensors()
+  const [asideWidth, setAsideWidth] = useState(() => {
+    const stored = Number(localStorage.getItem(ASIDE_WIDTH_KEY))
+    return stored >= MIN_ASIDE_WIDTH && stored <= MAX_ASIDE_WIDTH ? stored : 200
+  })
 
   const [creating, setCreating] = useState(false)
   const [newTitle, setNewTitle] = useState('')
@@ -57,6 +71,39 @@ export function ReferencesPage() {
 
   function toggleTag(tag: string) {
     setTagFilter((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]))
+  }
+
+  function handleAsideResizeStart(e: React.PointerEvent) {
+    e.preventDefault()
+    const startX = e.clientX
+    const startWidth = asideWidth
+    function handleMove(ev: PointerEvent) {
+      const next = Math.min(MAX_ASIDE_WIDTH, Math.max(MIN_ASIDE_WIDTH, startWidth + (ev.clientX - startX)))
+      setAsideWidth(next)
+    }
+    function handleUp() {
+      window.removeEventListener('pointermove', handleMove)
+      window.removeEventListener('pointerup', handleUp)
+      setAsideWidth((w) => {
+        localStorage.setItem(ASIDE_WIDTH_KEY, String(w))
+        return w
+      })
+    }
+    window.addEventListener('pointermove', handleMove)
+    window.addEventListener('pointerup', handleUp)
+  }
+
+  function handleReorderEnd(event: DragEndEvent) {
+    const { active, over } = event
+    if (!over || active.id === over.id || !references) return
+    const filteredIds = filtered.map((r) => r.id)
+    const oldIndex = filteredIds.indexOf(active.id as string)
+    const newIndex = filteredIds.indexOf(over.id as string)
+    if (oldIndex < 0 || newIndex < 0) return
+    const reordered = [...filtered]
+    const [moved] = reordered.splice(oldIndex, 1)
+    reordered.splice(newIndex, 0, moved)
+    reorderReferences.mutate(reordered.map((r, i) => ({ id: r.id, sort_order: i })))
   }
 
   async function handleCreate(e: React.FormEvent) {
@@ -100,6 +147,11 @@ export function ReferencesPage() {
     if (urls.length > 0) setEditImages((prev) => [...prev, ...urls])
   }
 
+  async function handleClipboardImage(file: File) {
+    const urls = await uploadMany([file], 'reference-images')
+    if (urls.length > 0) setEditImages((prev) => [...prev, ...urls])
+  }
+
   function removeImage(url: string) {
     setEditImages((prev) => prev.filter((u) => u !== url))
     setLightboxIndex(null)
@@ -135,8 +187,11 @@ export function ReferencesPage() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[200px_1fr]">
-        <aside className="space-y-4 border-2 border-line bg-surface p-3 lg:sticky lg:top-4 lg:self-start">
+      <div className="flex flex-col gap-5 lg:flex-row">
+        <aside
+          className="relative w-full shrink-0 space-y-4 border-2 border-line bg-surface p-3 lg:sticky lg:top-4 lg:w-[var(--aside-w)] lg:self-start"
+          style={{ '--aside-w': `${asideWidth}px` } as React.CSSProperties}
+        >
           <div className="flex items-center gap-1.5 text-canvas-fg/70">
             <Filter size={13} />
             <span className="text-label text-[11px]">Filtrar referências</span>
@@ -176,9 +231,15 @@ export function ReferencesPage() {
               limpar filtros
             </button>
           )}
+
+          <div
+            onPointerDown={handleAsideResizeStart}
+            title="Arraste para redimensionar"
+            className="absolute right-0 top-0 hidden h-full w-1.5 cursor-ew-resize touch-none hover:bg-accent-yellow lg:block"
+          />
         </aside>
 
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           {isLoading && <p className="text-label text-sm text-canvas-fg/50">Carregando…</p>}
 
           {!isLoading && filtered.length === 0 && (
@@ -193,52 +254,15 @@ export function ReferencesPage() {
             />
           )}
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {filtered.map((ref, i) => {
-              const done = ref.checklist.filter((c) => c.done).length
-              return (
-                <motion.button
-                  key={ref.id}
-                  type="button"
-                  onClick={() => openEdit(ref)}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.25, delay: i * 0.04 }}
-                  whileHover={{ x: -2, y: -2 }}
-                  className="cursor-pointer overflow-hidden border-2 border-line bg-surface text-left shadow-brutal-sm"
-                >
-                  {(ref.image_urls[0] ?? ref.image_url) ? (
-                    <img
-                      src={ref.image_urls[0] ?? ref.image_url ?? undefined}
-                      alt=""
-                      className="h-28 w-full border-b-2 border-line object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-28 w-full items-center justify-center border-b-2 border-line bg-canvas text-canvas-fg/20">
-                      <Upload size={22} />
-                    </div>
-                  )}
-                  <div className="p-3">
-                    <h3 className="text-display truncate text-sm">{ref.title}</h3>
-                    {ref.checklist.length > 0 && (
-                      <p className="text-label mt-1 text-[10px] text-canvas-fg/50">
-                        {done}/{ref.checklist.length} itens marcados
-                      </p>
-                    )}
-                    {ref.tags.length > 0 && (
-                      <div className="mt-1.5 flex flex-wrap gap-1">
-                        {ref.tags.map((tag) => (
-                          <Badge key={tag} accent={accentFromString(tag)}>
-                            {tag}
-                          </Badge>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </motion.button>
-              )
-            })}
-          </div>
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleReorderEnd}>
+            <SortableContext items={filtered.map((r) => r.id)} strategy={rectSortingStrategy}>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                {filtered.map((ref) => (
+                  <ReferenceCard key={ref.id} reference={ref} onClick={() => openEdit(ref)} />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
         </div>
       </div>
 
@@ -350,22 +374,25 @@ export function ReferencesPage() {
                   ))}
                 </div>
               )}
-              <label className="cursor-pointer">
-                <input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  className="hidden"
-                  onChange={(e) => {
-                    handleImageUpload(e.target.files)
-                    e.target.value = ''
-                  }}
-                />
-                <span className="text-label inline-flex cursor-pointer items-center gap-1.5 border-2 border-line px-2.5 py-1.5 text-[11px] text-canvas-fg/70 hover:bg-accent-blue hover:text-ink">
-                  <Upload size={12} />
-                  {uploading ? 'Enviando…' : 'Enviar imagens'}
-                </span>
-              </label>
+              <div className="flex flex-wrap items-center gap-2">
+                <label className="cursor-pointer">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                    onChange={(e) => {
+                      handleImageUpload(e.target.files)
+                      e.target.value = ''
+                    }}
+                  />
+                  <span className="text-label inline-flex cursor-pointer items-center gap-1.5 border-2 border-line px-2.5 py-1.5 text-[11px] text-canvas-fg/70 hover:bg-accent-blue hover:text-ink">
+                    <Upload size={12} />
+                    {uploading ? 'Enviando…' : 'Enviar imagens'}
+                  </span>
+                </label>
+                <ClipboardImageButton onImage={handleClipboardImage} label="Colar" />
+              </div>
             </div>
           </Field>
 

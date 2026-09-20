@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { DndContext, type DragEndEvent, PointerSensor, closestCenter, useSensor, useSensors } from '@dnd-kit/core'
+import { DndContext, type DragEndEvent, closestCenter } from '@dnd-kit/core'
 import { SortableContext, rectSortingStrategy, useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { Filter, Plus } from 'lucide-react'
@@ -18,6 +18,7 @@ import { isHtmlEmpty, stripHtml } from '@/lib/html'
 import { IDEA_STATUSES, type Idea, type IdeaStatus, type Project } from '@/lib/types'
 import { useCreateIdea, useDeleteIdea, useIdeas, useReorderIdeas, useUpdateIdea } from '@/features/ideas/useIdeas'
 import { useProjectSectors } from '@/features/settings/useProjectSectors'
+import { useDndSensors } from '@/lib/useDndSensors'
 
 const FILTER_ITEMS = [{ value: 'all' as const, label: 'Todas' }, ...IDEA_STATUSES]
 
@@ -29,7 +30,7 @@ export function IdeasPage() {
   const deleteIdea = useDeleteIdea(project.id)
   const reorderIdeas = useReorderIdeas(project.id)
   const { data: sectors } = useProjectSectors(project.id)
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
+  const sensors = useDndSensors()
 
   const [statusFilter, setStatusFilter] = useState<IdeaStatus | 'all'>('all')
   const [tagFilter, setTagFilter] = useState<string[]>([])

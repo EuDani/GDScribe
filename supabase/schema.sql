@@ -404,6 +404,9 @@ alter table public.moodboard_images add column if not exists sort_order integer 
 -- Tags nas referências
 alter table public.game_references add column if not exists tags text[] not null default '{}';
 
+-- Ordem das referências, pra poder reorganizar com arrasta e solta
+alter table public.game_references add column if not exists sort_order integer not null default 0;
+
 -- Estimativa de horas por card + quando ele entrou na coluna "concluído"
 -- (usado pra estimar a tendência de conclusão do projeto)
 alter table public.kanban_cards add column if not exists estimated_hours numeric;

@@ -1,14 +1,5 @@
 import { useState } from 'react'
-import {
-  DndContext,
-  DragOverlay,
-  type DragEndEvent,
-  type DragStartEvent,
-  PointerSensor,
-  closestCorners,
-  useSensor,
-  useSensors,
-} from '@dnd-kit/core'
+import { DndContext, DragOverlay, type DragEndEvent, type DragStartEvent, closestCorners } from '@dnd-kit/core'
 import { Archive, Plus } from 'lucide-react'
 import { clsx } from 'clsx'
 import { motion } from 'motion/react'
@@ -36,6 +27,7 @@ import {
   useFlowTasks,
   useUpdateFlowTask,
 } from '@/features/flow/useFlow'
+import { useDndSensors } from '@/lib/useDndSensors'
 
 export function FlowPage() {
   const { project } = useOutletContext<{ project: Project }>()
@@ -46,7 +38,7 @@ export function FlowPage() {
   const bulkUpdate = useBulkUpdateFlowTasks(project.id)
   const deleteTask = useDeleteFlowTask(project.id)
 
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
+  const sensors = useDndSensors()
   const [activeTask, setActiveTask] = useState<FlowTask | null>(null)
   const [priorityFilter, setPriorityFilter] = useState<Set<FlowPriority>>(new Set())
   const [sectorFilter, setSectorFilter] = useState<string[]>([])

@@ -1,10 +1,11 @@
 import { useState } from 'react'
-import { DndContext, PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
+import { DndContext, closestCenter, type DragEndEvent } from '@dnd-kit/core'
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { GripVertical, Plus, Trash2 } from 'lucide-react'
 import type { ChecklistItem } from '@/lib/types'
 import { TextInput } from '@/components/ui/Input'
+import { useDndSensors } from '@/lib/useDndSensors'
 
 function SortableChecklistRow({
   item,
@@ -62,7 +63,7 @@ export function ChecklistEditor({
 }) {
   const [newText, setNewText] = useState('')
   const done = items.filter((i) => i.done).length
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
+  const sensors = useDndSensors()
 
   function addItem() {
     if (!newText.trim()) return

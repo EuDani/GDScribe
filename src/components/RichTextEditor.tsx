@@ -6,6 +6,7 @@ import Link from '@tiptap/extension-link'
 import Placeholder from '@tiptap/extension-placeholder'
 import {
   Bold,
+  ClipboardPaste,
   Heading2,
   Heading3,
   Image as ImageIcon,
@@ -20,6 +21,7 @@ import {
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { useUploadImage } from '@/lib/useUploadImage'
+import { useToast } from '@/contexts/ToastContext'
 
 function ToolbarButton({
   active,
@@ -66,6 +68,7 @@ export function RichTextEditor({
 }) {
   const { uploadMany, uploading } = useUploadImage(projectId)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const toast = useToast()
 
   const editor = useEditor({
     extensions: [
@@ -114,6 +117,29 @@ export function RichTextEditor({
     const urls = await uploadMany(Array.from(files), 'content-images')
     for (const url of urls) {
       editor.chain().focus().setImage({ src: url }).run()
+    }
+  }
+
+  async function handleClipboardImage() {
+    if (!editor || !navigator.clipboard?.read) {
+      toast.error('Seu navegador não permite colar imagem direto pelo botão — use Ctrl+V no editor.')
+      return
+    }
+    try {
+      const items = await navigator.clipboard.read()
+      for (const item of items) {
+        const imageType = item.types.find((t) => t.startsWith('image/'))
+        if (!imageType) continue
+        const blob = await item.getType(imageType)
+        const ext = imageType.split('/')[1] || 'png'
+        const file = new File([blob], `clipboard-${Date.now()}.${ext}`, { type: imageType })
+        const urls = await uploadMany([file], 'content-images')
+        for (const url of urls) editor.chain().focus().setImage({ src: url }).run()
+        return
+      }
+      toast.error('Nenhuma imagem encontrada na área de transferência.')
+    } catch {
+      toast.error('Não deu para acessar a área de transferência — seu navegador pode ter bloqueado a permissão.')
     }
   }
 
@@ -214,6 +240,9 @@ export function RichTextEditor({
           onClick={() => fileInputRef.current?.click()}
         >
           <ImageIcon size={13} />
+        </ToolbarButton>
+        <ToolbarButton label="Colar imagem da área de transferência" disabled={uploading} onClick={handleClipboardImage}>
+          <ClipboardPaste size={13} />
         </ToolbarButton>
         <div className="mx-1 h-4 w-px bg-line/40" />
         <ToolbarButton label="Desfazer" onClick={() => editor.chain().focus().undo().run()}>

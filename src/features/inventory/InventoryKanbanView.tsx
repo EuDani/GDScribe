@@ -4,11 +4,8 @@ import {
   DragOverlay,
   type DragEndEvent,
   type DragStartEvent,
-  PointerSensor,
   closestCorners,
   useDroppable,
-  useSensor,
-  useSensors,
 } from '@dnd-kit/core'
 import { useDraggable } from '@dnd-kit/core'
 import { clsx } from 'clsx'
@@ -16,6 +13,7 @@ import type { InventoryItem, InventoryType, KanbanColumn } from '@/lib/types'
 import { formatInventoryValue } from '@/features/inventory/ItemForm'
 import { useAllKanbanColumns } from '@/features/kanban/useKanban'
 import { useUpsertInventoryItem } from '@/features/inventory/useInventory'
+import { useDndSensors } from '@/lib/useDndSensors'
 
 const UNSORTED = '__unsorted__'
 
@@ -97,7 +95,7 @@ export function InventoryKanbanView({
 }) {
   const { data: kanbanColumns } = useAllKanbanColumns(projectId)
   const upsertItem = useUpsertInventoryItem(projectId, type.id)
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
+  const sensors = useDndSensors()
   const [activeItem, setActiveItem] = useState<InventoryItem | null>(null)
 
   const statusNames = Array.from(new Set((kanbanColumns ?? []).map((c) => c.name)))

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Bell, Upload } from 'lucide-react'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
+import { ClipboardImageButton } from '@/components/ClipboardImageButton'
 import { Field, Select, TextInput, Textarea } from '@/components/ui/Input'
 import { TagInput } from '@/components/TagInput'
 import { SectorPicker } from '@/components/SectorPicker'
@@ -183,6 +184,7 @@ export function ReminderModal({
             >
               {uploading ? 'Enviando…' : 'Enviar imagem'}
             </Button>
+            <ClipboardImageButton onImage={handleImageUpload} label="Colar" />
             {imageUrl && (
               <button
                 type="button"

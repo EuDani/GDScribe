@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Circle,
   Diamond,
+  Image as ImageIcon,
   Maximize,
   MessageSquareDashed,
   Pencil,
@@ -21,6 +22,8 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { Field, Select, TextInput, Textarea } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
 import { TagInput } from '@/components/TagInput'
+import { ClipboardImageButton } from '@/components/ClipboardImageButton'
+import { useUploadImage } from '@/lib/useUploadImage'
 import type {
   Flowchart,
   FlowchartArrowEnds,
@@ -88,6 +91,7 @@ function newNode(x: number, y: number, shape: FlowchartNodeShape): FlowchartNode
     shape,
     comment: '',
     tags: [],
+    imageUrl: null,
   }
 }
 
@@ -264,7 +268,7 @@ function strokeDasharray(style: FlowchartLineStyle) {
 }
 
 function normalizeNode(n: Partial<FlowchartNode>): FlowchartNode {
-  return { shape: 'rectangle', comment: '', tags: [], ...n } as FlowchartNode
+  return { shape: 'rectangle', comment: '', tags: [], imageUrl: null, ...n } as FlowchartNode
 }
 
 function normalizeEdge(e: Partial<FlowchartEdge>): FlowchartEdge {
@@ -332,6 +336,14 @@ function FlowchartNodeView({
         clipPath: node.shape === 'diamond' ? 'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)' : undefined,
       }}
     >
+      {node.imageUrl && (
+        <img
+          src={node.imageUrl}
+          alt=""
+          className={clsx('pointer-events-none absolute inset-0 h-full w-full object-cover', shapeClassName(node.shape))}
+          style={{ clipPath: node.shape === 'diamond' ? 'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)' : undefined }}
+        />
+      )}
       {editing ? (
         <textarea
           autoFocus
@@ -345,13 +357,19 @@ function FlowchartNodeView({
             }
             if (e.key === 'Escape') onEscape()
           }}
-          className="h-full min-h-[2.5em] w-full resize-none bg-transparent text-center text-xs outline-none"
+          className={clsx(
+            'relative h-full min-h-[2.5em] w-full resize-none text-center text-xs outline-none',
+            node.imageUrl ? 'bg-canvas/80' : 'bg-transparent',
+          )}
           style={{ padding: node.shape === 'diamond' ? '22%' : 0 }}
         />
       ) : (
         <span
-          className="pointer-events-none flex flex-col items-center gap-1"
-          style={{ padding: node.shape === 'diamond' ? '0 12%' : 0, whiteSpace: 'pre-wrap' }}
+          className={clsx(
+            'pointer-events-none relative flex flex-col items-center gap-1',
+            node.imageUrl && 'bg-ink/60 px-1.5 py-0.5 text-canvas-fg',
+          )}
+          style={{ padding: node.shape === 'diamond' ? '0 12%' : undefined, whiteSpace: 'pre-wrap' }}
         >
           {node.text}
           {node.tags.length > 0 && (
@@ -392,6 +410,7 @@ function FlowchartNodeView({
 
 function FlowchartCanvas({ projectId, flowchart }: { projectId: string; flowchart: Flowchart }) {
   const updateContent = useUpdateFlowchartContent(projectId)
+  const { upload: uploadNodeImage, uploading: uploadingNodeImage } = useUploadImage(projectId)
   const [nodes, setNodes] = useState<FlowchartNode[]>(() => flowchart.nodes.map(normalizeNode))
   const [edges, setEdges] = useState<FlowchartEdge[]>(() => flowchart.edges.map(normalizeEdge))
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
@@ -471,6 +490,11 @@ function FlowchartCanvas({ projectId, flowchart }: { projectId: string; flowchar
   function updateNode(id: string, changes: Partial<FlowchartNode>) {
     setNodes((prev) => prev.map((n) => (n.id === id ? { ...n, ...changes } : n)))
     markDirty()
+  }
+
+  async function handleNodeImageUpload(id: string, file: File) {
+    const url = await uploadNodeImage(file, 'flowchart-images')
+    if (url) updateNode(id, { imageUrl: url })
   }
 
   function updateEdge(id: string, changes: Partial<FlowchartEdge>) {
@@ -827,6 +851,42 @@ function FlowchartCanvas({ projectId, flowchart }: { projectId: string; flowchar
                 value={selectedNode.text}
                 onChange={(e) => updateNode(selectedNode.id, { text: e.target.value })}
               />
+            </Field>
+
+            <Field label="Imagem" hint="Aparece preenchendo o nó, com o texto acima como legenda">
+              <div className="space-y-2">
+                {selectedNode.imageUrl && (
+                  <img src={selectedNode.imageUrl} alt="" className="h-20 w-full border-2 border-line object-cover" />
+                )}
+                <div className="flex flex-wrap items-center gap-2">
+                  <label className="cursor-pointer">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0]
+                        if (file) handleNodeImageUpload(selectedNode.id, file)
+                        e.target.value = ''
+                      }}
+                    />
+                    <span className="text-label inline-flex cursor-pointer items-center gap-1.5 border-2 border-line px-2.5 py-1.5 text-[11px] text-canvas-fg/70 hover:bg-accent-blue hover:text-ink">
+                      <ImageIcon size={12} />
+                      {uploadingNodeImage ? 'Enviando…' : 'Enviar imagem'}
+                    </span>
+                  </label>
+                  <ClipboardImageButton onImage={(file) => handleNodeImageUpload(selectedNode.id, file)} label="Colar" />
+                  {selectedNode.imageUrl && (
+                    <button
+                      type="button"
+                      onClick={() => updateNode(selectedNode.id, { imageUrl: null })}
+                      className="text-label text-[11px] text-canvas-fg/40 underline hover:text-canvas-fg"
+                    >
+                      remover
+                    </button>
+                  )}
+                </div>
+              </div>
             </Field>
 
             <Field label="Formato">

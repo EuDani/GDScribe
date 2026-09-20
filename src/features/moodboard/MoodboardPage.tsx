@@ -17,6 +17,7 @@ import { motion } from 'motion/react'
 import { clsx } from 'clsx'
 import { useOutletContext } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
+import { ClipboardImageButton } from '@/components/ClipboardImageButton'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Field, Select, TextInput } from '@/components/ui/Input'
@@ -325,6 +326,7 @@ export function MoodboardPage() {
           >
             {uploading ? 'Enviando…' : 'Enviar imagens'}
           </Button>
+          <ClipboardImageButton onImage={(file) => handleFiles([file])} label="Colar" />
         </div>
 
         {imagesLoading && <p className="text-label text-sm text-canvas-fg/50">Carregando…</p>}

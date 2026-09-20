@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { DndContext, type DragEndEvent, PointerSensor, closestCenter, useSensor, useSensors } from '@dnd-kit/core'
+import { DndContext, type DragEndEvent, closestCenter } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CornerDownRight, Plus, Search, Trash2 } from 'lucide-react'
 import { useOutletContext } from 'react-router-dom'
@@ -15,6 +15,7 @@ import { RichTextEditor } from '@/components/RichTextEditor'
 import { SectorPicker, matchesSectorFilter } from '@/components/SectorPicker'
 import { ALL_PHASES, type ExtraField, type GddModule, type Phase, type Project } from '@/lib/types'
 import { computeNestedDragUpdate } from '@/lib/nestedReorder'
+import { useDndSensors } from '@/lib/useDndSensors'
 import {
   useCreateModule,
   useDeleteModule,
@@ -40,7 +41,7 @@ export function GddPage() {
   const updateModule = useUpdateModule(project.id)
   const deleteModule = useDeleteModule(project.id)
   const reparentModules = useReparentModules(project.id)
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
+  const sensors = useDndSensors()
 
   const phaseItems = useMemo(
     () => [{ value: ALL_PHASES, label: 'Todas as fases' }, ...(phases ?? []).map((p) => ({ value: p.key, label: p.label }))],

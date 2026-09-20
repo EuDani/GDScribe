@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { DndContext, type DragEndEvent, PointerSensor, closestCenter, useSensor, useSensors } from '@dnd-kit/core'
+import { DndContext, type DragEndEvent, closestCenter } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CornerDownRight, Plus, Search, Trash2 } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
@@ -13,6 +13,7 @@ import { RichTextEditor } from '@/components/RichTextEditor'
 import { stripHtml } from '@/lib/html'
 import type { Project, StoryBlock } from '@/lib/types'
 import { computeNestedDragUpdate } from '@/lib/nestedReorder'
+import { useDndSensors } from '@/lib/useDndSensors'
 import { StoryBlockListItem } from '@/features/story/StoryBlockListItem'
 import {
   useCreateStoryBlock,
@@ -30,7 +31,7 @@ export function StoryPage() {
   const deleteBlock = useDeleteStoryBlock(project.id)
   const reparentBlocks = useReparentStoryBlocks(project.id)
 
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
+  const sensors = useDndSensors()
 
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [draft, setDraft] = useState('')
