@@ -1,4 +1,5 @@
 import { Plus, Trash2 } from 'lucide-react'
+import { clsx } from 'clsx'
 import type { FieldType, InventoryField } from '@/lib/types'
 import { Button } from '@/components/ui/Button'
 import { Select, TextInput } from '@/components/ui/Input'
@@ -7,8 +8,9 @@ const FIELD_TYPES: { value: FieldType; label: string }[] = [
   { value: 'text', label: 'Texto curto' },
   { value: 'textarea', label: 'Texto longo' },
   { value: 'number', label: 'Número' },
-  { value: 'select', label: 'Lista de opções' },
+  { value: 'select', label: 'Lista de opções (uma escolha)' },
   { value: 'image', label: 'Imagem (URL)' },
+  { value: 'list', label: 'Sublista (várias linhas)' },
 ]
 
 function slugify(value: string) {
@@ -43,7 +45,7 @@ export function FieldBuilder({
   return (
     <div className="space-y-2.5">
       {fields.map((field, i) => (
-        <div key={i} className="flex flex-wrap items-center gap-2 border-2 border-ink/40 p-2.5">
+        <div key={i} className="flex flex-wrap items-center gap-2 border-2 border-line/40 p-2.5">
           <TextInput
             value={field.label}
             onChange={(e) =>
@@ -83,9 +85,19 @@ export function FieldBuilder({
           )}
           <button
             type="button"
+            onClick={() => updateField(i, { required: !field.required })}
+            className={clsx(
+              'text-label cursor-pointer border-2 border-line px-2 py-1.5 text-[10px]',
+              field.required ? 'bg-accent-red text-canvas-fg' : 'text-canvas-fg/50 hover:text-canvas-fg',
+            )}
+          >
+            Obrigatório
+          </button>
+          <button
+            type="button"
             onClick={() => removeField(i)}
             aria-label="Remover campo"
-            className="cursor-pointer border-2 border-ink p-1.5 text-paper/60 hover:bg-accent-red hover:text-paper"
+            className="cursor-pointer border-2 border-line p-1.5 text-canvas-fg/60 hover:bg-accent-red hover:text-canvas-fg"
           >
             <Trash2 size={14} />
           </button>

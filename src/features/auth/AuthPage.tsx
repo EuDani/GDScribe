@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { Field, TextInput } from '@/components/ui/Input'
 import { Card } from '@/components/ui/Card'
+import { Logo } from '@/components/Logo'
 import { useAuth } from '@/contexts/AuthContext'
 import { isSupabaseConfigured } from '@/lib/supabase'
 
@@ -40,38 +41,42 @@ export function AuthPage({ mode }: { mode: 'login' | 'signup' }) {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-ink px-4 text-paper">
+    <div className="flex min-h-screen items-center justify-center bg-canvas px-4 text-canvas-fg">
       <div className="w-full max-w-sm">
         <Link to="/" className="text-display mb-6 flex items-center justify-center gap-2 text-lg">
-          <span className="flex h-7 w-7 items-center justify-center border-2 border-ink bg-accent-yellow text-ink">
-            G
-          </span>
+          <Logo />
           GDScribe
         </Link>
         <Card>
           <h1 className="text-display mb-5 text-xl">{isLogin ? 'Entrar' : 'Criar conta'}</h1>
 
           {!isSupabaseConfigured && (
-            <p className="mb-4 border-2 border-accent-red bg-ink px-3 py-2 text-xs text-accent-red">
+            <p className="mb-4 border-2 border-accent-red bg-canvas px-3 py-2 text-xs text-accent-red">
               Supabase não configurado. Veja SUPABASE_SETUP.md antes de continuar.
+              {isLogin && (
+                <>
+                  {' '}
+                  Login de teste: <strong>admin</strong> / <strong>12345</strong>.
+                </>
+              )}
             </p>
           )}
 
           <form onSubmit={handleSubmit}>
-            <Field label="E-mail">
+            <Field label={isSupabaseConfigured ? 'E-mail' : 'E-mail ou usuário'}>
               <TextInput
-                type="email"
+                type={isSupabaseConfigured ? 'email' : 'text'}
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="voce@estudio.com"
+                placeholder={isSupabaseConfigured ? 'voce@estudio.com' : 'admin'}
               />
             </Field>
             <Field label="Senha">
               <TextInput
                 type="password"
                 required
-                minLength={6}
+                minLength={isSupabaseConfigured ? 6 : undefined}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
@@ -86,7 +91,7 @@ export function AuthPage({ mode }: { mode: 'login' | 'signup' }) {
             </Button>
           </form>
         </Card>
-        <p className="text-label mt-4 text-center text-xs text-paper/50">
+        <p className="text-label mt-4 text-center text-xs text-canvas-fg/50">
           {isLogin ? (
             <>
               Não tem conta?{' '}

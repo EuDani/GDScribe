@@ -8,7 +8,7 @@ import type {
 } from 'react'
 
 const FIELD_CLASSES =
-  'w-full border-2 border-ink bg-paper px-3 py-2 text-sm text-ink placeholder:text-ink/40 focus:outline-none focus:ring-2 focus:ring-accent-yellow'
+  'w-full border-2 border-line bg-paper px-3 py-2 text-sm text-ink placeholder:text-ink/40 focus:outline-none focus:ring-2 focus:ring-accent-yellow'
 
 export function Field({
   label,
@@ -23,9 +23,9 @@ export function Field({
 }) {
   return (
     <label className="mb-4 block last:mb-0">
-      {label && <span className="text-label mb-1.5 block text-xs text-paper/70">{label}</span>}
+      {label && <span className="text-label mb-1.5 block text-xs text-canvas-fg/70">{label}</span>}
       {children}
-      {hint && !error && <span className="mt-1 block text-xs text-paper/50">{hint}</span>}
+      {hint && !error && <span className="mt-1 block text-xs text-canvas-fg/50">{hint}</span>}
       {error && <span className="mt-1 block text-xs text-accent-red">{error}</span>}
     </label>
   )

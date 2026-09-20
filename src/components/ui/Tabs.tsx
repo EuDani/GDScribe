@@ -15,17 +15,17 @@ export function Tabs<T extends string>({
   onChange: (value: T) => void
 }) {
   return (
-    <div className="flex flex-wrap gap-2 border-b-2 border-ink pb-3">
+    <div className="flex flex-wrap gap-2 border-b-2 border-line pb-3">
       {items.map((item) => (
         <button
           key={item.value}
           type="button"
           onClick={() => onChange(item.value)}
           className={clsx(
-            'text-label cursor-pointer border-2 border-ink px-3 py-1.5 text-xs font-semibold transition-colors',
+            'text-label cursor-pointer border-2 border-line px-3 py-1.5 text-xs font-semibold transition-colors',
             value === item.value
               ? 'bg-accent-yellow text-ink shadow-brutal-sm'
-              : 'bg-transparent text-paper/70 hover:text-paper',
+              : 'bg-transparent text-canvas-fg/70 hover:text-canvas-fg',
           )}
         >
           {item.label}
